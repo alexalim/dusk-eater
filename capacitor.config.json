@@ -1,0 +1,9 @@
+{
+  "appId": "com.example.duskeater",
+  "appName": "Dusk Eater",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#1b1830"
+  }
+}

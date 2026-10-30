@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Dusk Eater</title>
+<style>
+  /* Single dark look on purpose: the game is a dusk world, so no light theme. */
+  :root {
+    color-scheme: dark;
+    --bg: #1b1830;
+    --panel: rgba(20, 18, 38, 0.86);
+    --card: rgba(255, 255, 255, 0.07);
+    --text: #f4efe6;
+    --muted: rgba(244, 239, 230, 0.62);
+    --accent: #ffb35c;
+    --star: #ffd25c;
+    --danger: #ff6b6b;
+    --node: #ffb35c;
+    --map-land: #2a2545;
+    --map-sea: #1d2c4f;
+  }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; }
+  #hud {
+    position: fixed; left: 0; right: 0; top: 0; pointer-events: none;
+    padding: calc(env(safe-area-inset-top) + 10px) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #sunbar { position: relative; height: 8px; border-radius: 4px;
+    background: linear-gradient(90deg, #f3c27a, #fff1b8 50%, #f08a4b 85%, #2b2a55 85%); }
+  #sun { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px;
+    border-radius: 50%; background: #fff3c4; box-shadow: 0 0 10px #ffd27a; }
+  #stats { display: flex; justify-content: space-between; font-weight: 700; font-size: 15px;
+    text-shadow: 0 1px 3px rgba(0,0,0,.6); font-variant-numeric: tabular-nums; }
+  #goals { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; font-weight: 700; }
+  #goals span { padding: 3px 8px; border-radius: 999px; background: rgba(20,18,38,.6); }
+  #goals span.done { color: #2a1a05; background: var(--star); }
+  #warn { text-align: center; color: var(--danger); font-weight: 800; font-size: 15px; opacity: 0;
+    transition: opacity .15s; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+  .overlay {
+    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: safe center; gap: 14px; background: var(--panel); text-align: center;
+    overflow-y: auto; touch-action: pan-y; /* short landscape screens can scroll to the buttons */
+    padding: calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 24px);
+  }
+  .overlay h1 { margin: 0; font-size: 38px; letter-spacing: 1px; color: var(--accent); }
+  .overlay h2 { margin: 0; font-size: 26px; color: var(--accent); }
+  .overlay p { margin: 0; max-width: 320px; line-height: 1.55; font-size: 15px; color: var(--muted); }
+  .overlay .big { font-size: 20px; font-weight: 800; color: var(--text); }
+  .btn { padding: 14px 34px; border-radius: 999px; background: var(--accent);
+    color: #2a1a05; font-weight: 800; font-size: 18px; cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--text); border: 2px solid rgba(244,239,230,.35); }
+  .btns { display: flex; flex-direction: column; gap: 10px; align-items: stretch; margin-top: 6px; }
+  /* Stage map: SVG terrain with real buttons on top, plus a detail sheet for the chosen stage. */
+  #select { gap: 12px; }
+  /* Width leaves ~380px of height for the title and the detail sheet, so "출발" stays on screen. */
+  #map { position: relative; width: clamp(180px, calc((100dvh - 380px) / 1.5), min(100%, 380px)); aspect-ratio: 100 / 150; flex: none; }
+  #map > svg { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 20px; }
+  .trail { fill: none; stroke: rgba(244,239,230,.28); stroke-width: 1.4; stroke-dasharray: 2.2 2.6; stroke-linecap: round; }
+  .trail.open { stroke: var(--accent); }
+  .node { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column;
+    align-items: center; gap: 2px; background: none; border: 0; padding: 0; color: var(--text); font: inherit; cursor: pointer; }
+  .node .disc { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--node); color: #2a1a05; box-shadow: 0 0 0 4px rgba(255,179,92,.25), 0 6px 16px rgba(0,0,0,.45); }
+  .node .disc svg { width: 30px; height: 30px; }
+  .node.sel .disc { box-shadow: 0 0 0 4px var(--star), 0 0 22px rgba(255,210,92,.55); }
+  .node.locked .disc { background: #4a4560; color: rgba(244,239,230,.6); box-shadow: 0 4px 12px rgba(0,0,0,.45); }
+  .node .label { font-size: 13px; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,.8); white-space: nowrap; }
+  .node .stars { font-size: 13px; letter-spacing: 1px; }
+  .sheet { width: min(100%, 380px); display: flex; flex-direction: column; gap: 8px; text-align: left;
+    padding: 16px; border-radius: 16px; background: var(--card); }
+  .sheet .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .sheet .name { font-weight: 800; font-size: 18px; }
+  .sheet .desc { font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .sheet ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.6; }
+  .sheet .btn { text-align: center; margin-top: 4px; }
+  #fps { position: fixed; right: max(8px, env(safe-area-inset-right)); bottom: calc(env(safe-area-inset-bottom) + 8px);
+    font: 700 12px ui-monospace, monospace; padding: 2px 6px; border-radius: 6px; background: rgba(0,0,0,.55); pointer-events: none; }
+  .stars { color: var(--star); letter-spacing: 2px; font-size: 18px; white-space: nowrap; }
+  .stars .off { color: rgba(244,239,230,.25); }
+  .goal-list { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 300px; text-align: left; }
+  .goal-list div { display: flex; gap: 10px; font-size: 15px; }
+  .goal-list .mark { color: var(--star); width: 18px; }
+  .goal-list .miss { color: rgba(244,239,230,.3); }
+  #vignette { position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(10,8,30,0) 45%, rgba(10,8,30,.55) 100%); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="vignette" class="hidden"></div>
+<div id="no3d" class="overlay hidden">
+  <p class="big">이 브라우저에서는 3D 화면을 켤 수 없어요.</p>
+  <p>브라우저의 그래픽 가속(WebGL)이 꺼져 있거나 그래픽 드라이버가 막혀 있어요.</p>
+  <p>휴대폰에서 열거나, 브라우저 설정에서 하드웨어 가속을 켠 뒤 다시 열어 주세요.</p>
+</div>
+<div id="hud">
+  <div id="sunbar"><div id="sun"></div></div>
+  <div id="stats"><span id="size">크기 0</span><span id="score">0</span></div>
+  <div id="goals"></div>
+  <div id="warn">빛 속에선 작아져요!</div>
+</div>
+<div id="title" class="overlay">
+  <h1>Dusk Eater</h1>
+  <p>당신은 그림자입니다.<br>그림자 속에 있는 것만 삼킬 수 있어요.</p>
+  <p>해가 움직이면 그림자도 움직입니다.<br>해가 지면 온 동네가 당신 차지예요.</p>
+  <p>화면 아무 곳이나 끌어서 이동</p>
+  <div class="btn" id="btn-title">시작</div>
+</div>
+<div id="select" class="overlay hidden">
+  <h2>황혼 지도</h2>
+  <div id="map"></div>
+  <div class="sheet" id="sheet"></div>
+</div>
+<div id="fps" class="hidden"></div>
+<div id="pause" class="overlay hidden"><p class="big">일시정지</p><div class="btn" id="btn-resume">계속</div></div>
+<div id="end" class="overlay hidden">
+  <h2 id="end-title">밤이 끝났어요</h2>
+  <div class="stars" id="end-stars"></div>
+  <p class="big" id="result"></p>
+  <div class="goal-list" id="end-goals"></div>
+  <p id="best"></p>
+  <div class="btns">
+    <div class="btn" id="btn-next">다음 스테이지</div>
+    <div class="btn ghost" id="btn-retry">다시 하기</div>
+    <div class="btn ghost" id="btn-select">스테이지 선택</div>
+  </div>
+</div>
+<script src="vendor/three.min.js"></script>
+<script src="core.js"></script>
+<script src="stages.js"></script>
+<script src="render3d.js"></script>
+<script>
+(() => {
+  'use strict';
+  const C = window.DuskCore;
+  const { STAGES, goalLabel } = window.DuskStages;
+  const STAGE_IDS = STAGES.map(s => s.id);
+  const WORLD = 1800, CELL = 225, ROAD = 46;
+
+  const canvas = document.getElementById('c');
+  const $ = id => document.getElementById(id);
+  let vw = 0, vh = 0, R = null;
+  try { R = window.DuskRender.create(canvas); } catch (e) { console.error('3D renderer unavailable:', e); }
+
+  function resize() {
+    vw = window.innerWidth; vh = window.innerHeight;
+    if (R) R.resize(vw, vh, window.devicePixelRatio);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- storage (per device; failures fall back to defaults) ----------
+  function load(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
+  function save(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* storage unavailable */ } }
+  let bestStars = load('dusk-stars', {});
+  let bestScore = load('dusk-best', {});
+
+  // ---------- world ----------
+  const TYPES = {
+    cat:       { r: 4,  color: '#e8a25a' },
+    gull:      { r: 4,  color: '#f7f7f2' },
+    person:    { r: 5,  color: '#5b8def' },
+    worker:    { r: 5,  color: '#ff8a3d' },
+    trash:     { r: 5,  color: '#6f8f6a' },
+    crate:     { r: 5,  color: '#b58a55' },
+    buoy:      { r: 6,  color: '#e5533d' },
+    bench:     { r: 8,  color: '#a0703c' },
+    container: { r: 10, color: '#4f86c6' },
+    tree:      { r: 12, color: '#3f9b4f' },
+    car:       { r: 16, color: '#e2574c' },
+    boat:      { r: 14, color: '#f4f1ea' },
+    kiosk:     { r: 22, color: '#c46fd8' },
+  };
+  const CAR_COLORS = ['#e2574c', '#f2c14e', '#4fb0c6', '#f4f1ea', '#7b68ee'];
+  const CONTAINER_COLORS = ['#4f86c6', '#d9534f', '#5cb85c', '#f0ad4e', '#8e6fc1'];
+
+  let stage, stageIndex, waterY, buildings, objects, guards, lighthouse, player, state, elapsed;
+  let score, stats, shadows, sun, phase, rnd;
+
+  function insideAnyBuilding(x, y, pad) {
+    for (const b of buildings) {
+      if (x > b.x - pad && x < b.x + b.w + pad && y > b.y - pad && y < b.y + b.d + pad) return true;
+    }
+    return false;
+  }
+
+  function addObj(type, x, y, extra) {
+    const t = TYPES[type];
+    objects.push(Object.assign({ type, x, y, r: t.r, color: t.color, state: 0, ft: 0, rot: 0 }, extra));
+  }
+
+  function scatter(list, zoneTop, zoneBottom) {
+    const R = (a, b) => a + rnd() * (b - a);
+    for (const [type, n] of list) {
+      let placed = 0, tries = 0;
+      while (placed < n && tries++ < n * 20) {
+        const x = R(10, WORLD - 10), y = R(zoneTop + 10, zoneBottom - 10);
+        if (insideAnyBuilding(x, y, TYPES[type].r + 2)) continue;
+        const extra = {};
+        if (type === 'container') { extra.color = CONTAINER_COLORS[(rnd() * CONTAINER_COLORS.length) | 0]; extra.rot = rnd() < 0.5 ? 0 : Math.PI / 2; }
+        if (type === 'boat') extra.rot = rnd() * Math.PI;
+        addObj(type, x, y, extra);
+        placed++;
+      }
+    }
+  }
+
+  function buildWorld(seed) {
+    rnd = C.mulberry32(seed);
+    const R = (a, b) => a + rnd() * (b - a);
+    buildings = []; objects = []; guards = [];
+    waterY = stage.waterFrom ? WORLD * stage.waterFrom : WORLD;
+    const cells = WORLD / CELL;
+    const parks = [];
+    for (let gy = 0; gy < cells; gy++) {
+      for (let gx = 0; gx < cells; gx++) {
+        const x0 = gx * CELL + ROAD / 2, y0 = gy * CELL + ROAD / 2, inner = CELL - ROAD;
+        if (y0 + inner > waterY - 40) continue; // keep the quay clear
+        if (rnd() < stage.parkChance) { parks.push([x0, y0, inner]); continue; }
+        const split = rnd() < stage.splitChance;
+        const lots = split ? 2 : 1;
+        for (let i = 0; i < lots; i++) {
+          const w = split ? R(55, inner / 2 - 12) : R(80, inner - 30);
+          const d = split ? R(70, inner - 30) : R(80, inner - 30);
+          const bx = split ? x0 + 8 + i * inner / 2 + rnd() * (inner / 2 - w - 16) : x0 + 10 + rnd() * (inner - w - 20);
+          const by = y0 + 10 + rnd() * (inner - d - 20);
+          const b = { x: bx, y: by, w, d, h: R(stage.height[0], stage.height[1]),
+                      roof: stage.roofs[(rnd() * stage.roofs.length) | 0], state: 0, ft: 0, type: 'building' };
+          b.r = Math.hypot(w, d) / 2 * 0.75;
+          buildings.push(b);
+        }
+      }
+    }
+    // Harbor cranes: tiny footprint, very tall, so they throw long thin shadow bridges.
+    for (let i = 0; i < stage.cranes; i++) {
+      const x = (i + 0.5) * WORLD / stage.cranes + R(-30, 30);
+      const b = { x: x - 9, y: waterY - 34, w: 18, d: 18, h: R(200, 260), roof: '#f2c14e',
+                  state: 0, ft: 0, type: 'building', crane: true };
+      b.r = 12;
+      buildings.push(b);
+    }
+    if (stage.parkItems) {
+      for (const [x0, y0, inner] of parks) {
+        for (let i = 0; i < 9; i++) addObj('tree', x0 + R(15, inner - 15), y0 + R(15, inner - 15));
+        for (let i = 0; i < 3; i++) addObj('bench', x0 + R(15, inner - 15), y0 + R(15, inner - 15));
+        if (rnd() < 0.5) addObj('kiosk', x0 + inner / 2, y0 + inner / 2);
+      }
+    }
+    for (let k = 0; k <= cells; k++) {
+      for (let i = 0; i < stage.carsPerRoad; i++) {
+        const along = R(20, WORLD - 20), lane = k * CELL + (rnd() < 0.5 ? -10 : 10);
+        if (lane < 0 || lane > WORLD) continue;
+        const horiz = rnd() < 0.5;
+        const x = horiz ? along : lane, y = horiz ? lane : along;
+        if (y > waterY - 20) continue;
+        addObj('car', x, y, { color: CAR_COLORS[(rnd() * CAR_COLORS.length) | 0], rot: horiz ? 0 : Math.PI / 2 });
+      }
+    }
+    scatter(stage.small, 0, waterY - 10);
+    if (stage.waterSmall) scatter(stage.waterSmall, waterY + 20, WORLD);
+    for (let i = 0; i < stage.guards; i++) {
+      const g = { x: R(200, WORLD - 200), y: R(200, waterY - 200), dir: rnd() * Math.PI * 2,
+                  half: 0.42, range: 150, r: 9, tx: 0, ty: 0, state: 0, ft: 0, type: 'guard', color: '#2f3e66' };
+      pickTarget(g);
+      guards.push(g);
+    }
+    const L = stage.lighthouse;
+    lighthouse = L ? { x: WORLD * L.x, y: WORLD * L.y, range: L.range, half: L.half, speed: L.speed, dir: 0 } : null;
+  }
+
+  function pickTarget(g) {
+    // Guards walk along road centerlines so their routes stay readable.
+    const cells = WORLD / CELL, maxY = waterY - 30;
+    if (rnd() < 0.5) { g.tx = Math.round(g.x / CELL) * CELL; g.ty = (rnd() * cells | 0) * CELL + CELL / 2; }
+    else { g.ty = Math.round(g.y / CELL) * CELL; g.tx = (rnd() * cells | 0) * CELL + CELL / 2; }
+    g.tx = Math.max(20, Math.min(WORLD - 20, g.tx)); g.ty = Math.max(20, Math.min(maxY, g.ty));
+  }
+
+  // Start in shade nearest the town center, so round one doesn't open by shrinking.
+  // Guards turn toward their route on the first frame, so keep clear of their whole beam radius,
+  // and stay well inside the shadow rather than on its edge.
+  let spawnFallbacks = 0;
+  function pickSpawn() {
+    const mid = { x: WORLD / 2, y: (waterY - 40) / 2 };
+    const beamReach = guards.concat(lighthouse ? [lighthouse] : []);
+    const deepShade = (x, y) => [[0, 0], [20, 0], [-20, 0], [0, 20], [0, -20]].every(([dx, dy]) => C.inAnyShadow(shadows, x + dx, y + dy));
+    let best = null, bd = Infinity;
+    for (let x = 40; x < WORLD - 40; x += 20) for (let y = 40; y < waterY - 60; y += 20) {
+      const d = Math.hypot(x - mid.x, y - mid.y);
+      if (d >= bd || insideAnyBuilding(x, y, 16)) continue;
+      if (!deepShade(x, y) || beamReach.some(b => Math.hypot(b.x - x, b.y - y) < b.range + 30)) continue;
+      bd = d; best = { x, y };
+    }
+    if (!best) spawnFallbacks++;
+    return best || { x: Math.round(mid.x / CELL) * CELL, y: Math.round(mid.y / CELL) * CELL };
+  }
+
+  function setupStage(i) {
+    stageIndex = i; stage = STAGES[i];
+    buildWorld(Date.now() & 0xffff);
+    elapsed = 0; score = 0;
+    stats = { score: 0, eaten: {}, beamHit: false, total: 0 };
+    phase = C.dayPhase(0); sun = C.sunState(phase.dayT);
+    shadows = buildings.map(b => C.shadowPolygon(b, sun));
+    const spawn = pickSpawn();
+    player = { x: spawn.x, y: spawn.y, r: 14, vx: 0, vy: 0, lit: false, face: 0 };
+    cam.view = targetView(); cam.x = player.x; cam.y = player.y;
+    if (R) R.build({ stage, WORLD, CELL, ROAD, waterY, buildings, objects, guards, lighthouse });
+  }
+
+  // ---------- input: relative drag, plus keys for desktop ----------
+  const input = { active: false, ax: 0, ay: 0, dx: 0, dy: 0, keys: new Set() };
+  canvas.addEventListener('pointerdown', e => {
+    input.active = true; input.ax = e.clientX; input.ay = e.clientY; input.dx = input.dy = 0;
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!input.active) return;
+    input.dx = e.clientX - input.ax; input.dy = e.clientY - input.ay;
+    const len = Math.hypot(input.dx, input.dy), max = 70;
+    if (len > max) { // drag the anchor along so reversing direction is instant
+      input.ax = e.clientX - input.dx / len * max; input.ay = e.clientY - input.dy / len * max;
+      input.dx = input.dx / len * max; input.dy = input.dy / len * max;
+    }
+  });
+  const endDrag = () => { input.active = false; input.dx = input.dy = 0; };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+  window.addEventListener('keydown', e => input.keys.add(e.key));
+  window.addEventListener('keyup', e => input.keys.delete(e.key));
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('gesturestart', e => e.preventDefault());
+
+  // ---------- update ----------
+  // `view` = world units across the shorter screen side; grows with the player.
+  const cam = { x: 0, y: 0, view: 400 };
+  const targetView = () => 300 + player.r * 7;
+
+  function beams() {
+    const list = guards.filter(g => g.state === 0);
+    if (lighthouse) list.push(lighthouse);
+    return list;
+  }
+  // A guard stands at the tip of its own cone, so its own beam is skipped via `exclude`.
+  function inBeam(x, y, exclude) { return beams().some(b => b !== exclude && C.inCone(b, x, y)); }
+
+  function isShaded(o, exclude) {
+    if (inBeam(o.x, o.y, exclude)) return false;
+    if (phase.night) return true;
+    return C.inAnyShadow(shadows, o.x, o.y, exclude);
+  }
+
+  function centerOf(b) { return { x: b.x + b.w / 2, y: b.y + b.d / 2 }; }
+
+  function startSwallow(o, ox, oy) {
+    o.state = 1; o.ft = 0; o.fx = ox; o.fy = oy;
+    o.spin = Math.atan2(oy - player.y, ox - player.x);
+  }
+
+  function update(dt) {
+    elapsed += dt;
+    const gameT = Math.min(elapsed / C.DURATION, 1);
+    phase = C.dayPhase(gameT);
+    sun = C.sunState(phase.dayT);
+    shadows = phase.night ? [] : buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun));
+    if (lighthouse) lighthouse.dir = elapsed * lighthouse.speed;
+
+    let mx = input.dx / 70, my = input.dy / 70;
+    if (input.keys.has('ArrowLeft') || input.keys.has('a')) mx -= 1;
+    if (input.keys.has('ArrowRight') || input.keys.has('d')) mx += 1;
+    if (input.keys.has('ArrowUp') || input.keys.has('w')) my -= 1;
+    if (input.keys.has('ArrowDown') || input.keys.has('s')) my += 1;
+    const ml = Math.hypot(mx, my);
+    if (ml > 1) { mx /= ml; my /= ml; }
+    const speed = 150 + player.r * 1.6;
+    player.vx += (mx * speed - player.vx) * Math.min(1, dt * 10);
+    player.vy += (my * speed - player.vy) * Math.min(1, dt * 10);
+    player.x = Math.max(0, Math.min(WORLD, player.x + player.vx * dt));
+    player.y = Math.max(0, Math.min(WORLD, player.y + player.vy * dt));
+    if (ml > 0.1) player.face = Math.atan2(my, mx);
+
+    for (const g of guards) {
+      if (g.state !== 0) continue;
+      const dx = g.tx - g.x, dy = g.ty - g.y, d = Math.hypot(dx, dy);
+      if (d < 4) pickTarget(g);
+      else { g.x += dx / d * 45 * dt; g.y += dy / d * 45 * dt; }
+      g.dir = Math.atan2(dy, dx) + Math.sin(elapsed * 1.7 + g.tx) * 0.5;
+    }
+
+    // Light hurts: slow shrink in sunlight, fast in a beam.
+    const beamed = inBeam(player.x, player.y);
+    if (beamed) stats.beamHit = true;
+    player.lit = beamed || !isShaded(player, null);
+    if (player.lit) player.r = Math.max(10, player.r - (beamed ? 7 : 1.6) * dt);
+
+    const tryEat = (o, ox, oy, exclude) => {
+      const dist = Math.hypot(ox - player.x, oy - player.y);
+      if (dist > player.r + o.r) return;
+      if (C.canEat(player.r, o.r, isShaded({ x: ox, y: oy }, exclude), dist)) startSwallow(o, ox, oy);
+    };
+    for (const o of objects) if (o.state === 0) tryEat(o, o.x, o.y, null);
+    for (const g of guards) if (g.state === 0) tryEat(g, g.x, g.y, g);
+    for (const b of buildings) if (b.state === 0) { const c = centerOf(b); tryEat(b, c.x, c.y, b); }
+
+    // Swallow animation: spiral in and shrink, then grow the player.
+    for (const list of [objects, guards, buildings]) for (const o of list) {
+      if (o.state !== 1) continue;
+      o.ft += dt / 0.32;
+      if (o.ft >= 1) {
+        o.state = 2;
+        player.r = C.grow(player.r, o.r);
+        score += Math.round(o.r * o.r / 2);
+        stats.score = score;
+        stats.eaten[o.type] = (stats.eaten[o.type] || 0) + 1;
+        stats.total++;
+      }
+    }
+
+    cam.view += (targetView() - cam.view) * Math.min(1, dt * 2);
+    cam.x += (player.x - cam.x) * Math.min(1, dt * 6);
+    cam.y += (player.y - cam.y) * Math.min(1, dt * 6);
+
+    if (gameT >= 1) finish();
+  }
+
+  // ---------- render ----------
+  function render(t) {
+    if (!R || !stage) return;
+    // Hint rings for things the player could eat right now (nearby only).
+    const hints = [];
+    for (const o of objects) {
+      if (o.state !== 0 || o.r >= player.r * C.EAT_RATIO) continue;
+      if (Math.hypot(o.x - player.x, o.y - player.y) > 260 + player.r) continue;
+      if (isShaded(o, null)) hints.push({ x: o.x, y: o.y, r: o.r + 2 });
+    }
+    for (const g of guards) {
+      if (g.state === 0 && g.r < player.r * C.EAT_RATIO && isShaded(g, g)) hints.push({ x: g.x, y: g.y, r: g.r + 3 });
+    }
+    for (const b of buildings) {
+      if (b.state !== 0 || b.r >= player.r * C.EAT_RATIO) continue;
+      const c = centerOf(b);
+      if (isShaded(c, b)) hints.push({ x: c.x, y: c.y, r: Math.hypot(b.w, b.d) / 2 });
+    }
+    R.draw({ t, phase, sun, player, view: cam.view, camX: cam.x, camY: cam.y, swallowPos, hints });
+    $('vignette').classList.toggle('hidden', !phase.night);
+    if (state === 'play') renderHud();
+  }
+
+  function swallowPos(o) {
+    // Spiral from where it was eaten into the player's center, shrinking as it goes.
+    const t = o.ft, ease = t * t;
+    const dist0 = Math.hypot(o.fx - player.x, o.fy - player.y);
+    const ang = o.spin + ease * Math.PI * 2.2;
+    const dist = dist0 * (1 - ease);
+    return { x: player.x + Math.cos(ang) * dist, y: player.y + Math.sin(ang) * dist, s: 1 - ease * 0.9 };
+  }
+
+  function renderHud() {
+    $('sun').style.left = (Math.min(elapsed / C.DURATION, 1) * 100) + '%';
+    $('size').textContent = '크기 ' + (player.r / 4).toFixed(1) + 'm';
+    $('score').textContent = score.toLocaleString();
+    $('warn').style.opacity = player.lit ? 1 : 0;
+    const chips = stage.goals.map(g => {
+      const p = C.goalProgress(g, stats);
+      const count = g.kind === 'eat' ? ` ${Math.min(p.cur, p.n)}/${p.n}` : '';
+      return `<span class="${p.done ? 'done' : ''}">${goalLabel(g)}${count}</span>`;
+    }).join('');
+    if ($('goals').innerHTML !== chips) $('goals').innerHTML = chips;
+  }
+
+  // ---------- screens ----------
+  function show(id) {
+    for (const o of ['title', 'select', 'pause', 'end', 'no3d']) $(o).classList.toggle('hidden', o !== id);
+    $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
+  }
+
+  function starText(n) {
+    return '★'.repeat(n) + `<span class="off">${'★'.repeat(3 - n)}</span>`;
+  }
+
+  // ---------- stage map ----------
+  const ICONS = {
+    town: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5V20H3z" fill="currentColor"/><rect x="10" y="13.5" width="4" height="6.5" fill="#ffe2b8"/></svg>',
+    harbor: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v13M8 10h8M4.5 13a7.5 7.5 0 0 0 15 0"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>',
+  };
+  // Terrain drawn in the map's own 100 × 150 units: land, a bay in the north-east, town blocks, quay cranes, lighthouse.
+  const MAP_ART = `
+    <rect width="100" height="150" fill="var(--map-land)"/>
+    <path d="M38 0H100V78C88 72 80 76 72 70C62 62 60 50 52 40C46 30 44 14 38 0Z" fill="var(--map-sea)"/>
+    <g stroke="rgba(150,180,230,.35)" stroke-width=".6" stroke-linecap="round">
+      <path d="M70 18h7M84 30h6M76 44h5M88 56h6M60 24h5"/></g>
+    <g fill="rgba(244,239,230,.10)">
+      <rect x="18" y="100" width="7" height="6"/><rect x="38" y="98" width="6" height="8"/><rect x="20" y="120" width="8" height="5"/>
+      <rect x="40" y="122" width="6" height="6"/><rect x="12" y="110" width="5" height="5"/><rect x="46" y="110" width="5" height="4"/></g>
+    <g fill="rgba(110,170,110,.35)"><circle cx="24" cy="134" r="2.4"/><circle cx="29" cy="137" r="2"/><circle cx="19" cy="139" r="2.2"/></g>
+    <g stroke="rgba(242,193,78,.55)" stroke-width=".9" stroke-linecap="round" fill="none">
+      <path d="M78 71v-8h5M86 74v-8h5M94 76v-8h5"/></g>
+    <circle cx="86" cy="20" r="2" fill="#f4f1ea"/><circle cx="86" cy="20" r="1" fill="#d9534f"/>
+    <path d="M86 20 L72 8 L70 12Z" fill="rgba(255,241,168,.18)"/>`;
+  let selected = 0;
+
+  function lastUnlocked() {
+    let i = 0;
+    while (i + 1 < STAGES.length && C.isUnlocked(STAGE_IDS, i + 1, bestStars)) i++;
+    return i;
+  }
+
+  function openSelect() {
+    state = 'menu';
+    let svg = `<svg viewBox="0 0 100 150" aria-hidden="true">${MAP_ART}`;
+    for (let i = 1; i < STAGES.length; i++) {
+      const a = STAGES[i - 1].map, b = STAGES[i].map;
+      const cx = (a.x + b.x) / 2 - (b.y - a.y) * 0.3, cy = (a.y + b.y) / 2 + (b.x - a.x) * 0.3; // bend the trail
+      svg += `<path class="trail${C.isUnlocked(STAGE_IDS, i, bestStars) ? ' open' : ''}" d="M${a.x} ${a.y}Q${cx} ${cy} ${b.x} ${b.y}"/>`;
+    }
+    svg += '</svg>';
+    $('map').innerHTML = svg + STAGES.map((s, i) => {
+      const open = C.isUnlocked(STAGE_IDS, i, bestStars);
+      return `<button class="node${open ? '' : ' locked'}${i === selected ? ' sel' : ''}" data-i="${i}"
+        style="left:${s.map.x}%;top:${s.map.y / 150 * 100}%" aria-label="${s.name}">
+        <span class="disc">${open ? ICONS[s.id] : ICONS.lock}</span>
+        <span class="stars">${starText(bestStars[s.id] || 0)}</span><span class="label">${s.name}</span></button>`;
+    }).join('');
+    $('map').querySelectorAll('.node').forEach(n =>
+      n.addEventListener('pointerup', () => { selected = +n.dataset.i; openSelect(); }));
+    renderSheet();
+    show('select');
+  }
+
+  function renderSheet() {
+    const s = STAGES[selected], open = C.isUnlocked(STAGE_IDS, selected, bestStars);
+    $('sheet').innerHTML = `<div class="row"><span class="name">${s.name}</span><span class="stars">${starText(bestStars[s.id] || 0)}</span></div>
+      <div class="desc">${open ? s.desc : '이전 스테이지에서 별 1개를 모으면 열려요.'}</div>` +
+      (open ? `<ul>${s.goals.map(g => `<li>${goalLabel(g)}</li>`).join('')}</ul><div class="btn" id="btn-go">출발</div>` : '');
+    if (open) $('btn-go').addEventListener('pointerup', () => start(selected));
+  }
+
+  function start(i) {
+    setupStage(i);
+    endDrag();
+    state = 'play';
+    show(null);
+  }
+
+  function finish() {
+    state = 'end';
+    const got = C.evaluateStars(stage.goals, stats);
+    const n = got.filter(Boolean).length;
+    bestStars[stage.id] = Math.max(bestStars[stage.id] || 0, n);
+    bestScore[stage.id] = Math.max(bestScore[stage.id] || 0, score);
+    save('dusk-stars', bestStars); save('dusk-best', bestScore);
+
+    $('end-title').textContent = n === 3 ? '완벽한 밤이었어요' : '밤이 끝났어요';
+    $('end-stars').innerHTML = starText(n);
+    $('result').textContent = `${stats.total}개 삼킴 · ${score.toLocaleString()}점`;
+    $('end-goals').innerHTML = stage.goals.map((g, k) =>
+      `<div><span class="mark ${got[k] ? '' : 'miss'}">${got[k] ? '★' : '☆'}</span><span>${goalLabel(g)}</span></div>`).join('');
+    $('best').textContent = `${stage.name} 최고 기록 ${bestScore[stage.id].toLocaleString()}점`;
+    const next = stageIndex + 1;
+    $('btn-next').classList.toggle('hidden', !(next < STAGES.length && C.isUnlocked(STAGE_IDS, next, bestStars)));
+    show('end');
+  }
+
+  $('btn-title').addEventListener('pointerup', () => { selected = lastUnlocked(); openSelect(); });
+  $('btn-retry').addEventListener('pointerup', () => start(stageIndex));
+  $('btn-next').addEventListener('pointerup', () => start(stageIndex + 1));
+  $('btn-select').addEventListener('pointerup', () => {
+    // After unlocking the next stage, point the map at it; otherwise stay on the stage just played.
+    const next = stageIndex + 1;
+    selected = next < STAGES.length && C.isUnlocked(STAGE_IDS, next, bestStars) && (bestStars[STAGES[next].id] || 0) === 0 ? next : stageIndex;
+    openSelect();
+  });
+  $('btn-resume').addEventListener('pointerup', () => { state = 'play'; show(null); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && state === 'play') { state = 'paused'; endDrag(); show('pause'); }
+  });
+
+  // ---------- loop ----------
+  // Open the page with #fps to show a frame-rate readout (for checking performance on a phone).
+  const showFps = location.hash === '#fps';
+  if (showFps) $('fps').classList.remove('hidden');
+  let last = 0, fpsN = 0, fpsT = 0;
+  function frame(now) {
+    const t = now / 1000;
+    const dt = Math.min(0.05, t - last || 0);
+    last = t;
+    if (showFps && (fpsN++, t - fpsT >= 0.5)) { $('fps').textContent = Math.round(fpsN / (t - fpsT)) + ' fps'; fpsN = 0; fpsT = t; }
+    if (state === 'play') update(dt);
+    render(t);
+    requestAnimationFrame(frame);
+  }
+
+  // Title screen shows the first stage idling behind the overlay.
+  setupStage(0);
+  state = 'title';
+  show(R ? 'title' : 'no3d'); // without WebGL there is nothing to play, so don't offer Start
+  requestAnimationFrame(frame);
+
+  // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
+  if (window.__DUSK_TEST__) {
+    window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; }, R,
+      freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
+      get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase }; } };
+  }
+})();
+</script>
+</body>
+</html>

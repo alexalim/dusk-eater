@@ -1,0 +1,11 @@
+node_modules/
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+*.p12
+*.mobileprovision
+*.key
+*.pem
+.env
+*credentials*
+test-results/
