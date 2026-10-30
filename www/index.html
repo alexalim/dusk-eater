@@ -61,8 +61,8 @@
   .btns { display: flex; flex-direction: column; gap: 10px; align-items: stretch; margin-top: 6px; }
   /* Stage map: SVG terrain with real buttons on top, plus a detail sheet for the chosen stage. */
   #select { gap: 12px; }
-  /* Width leaves ~380px of height for the title and the detail sheet, so "출발" stays on screen. */
-  #map { position: relative; width: clamp(180px, calc((100dvh - 380px) / 1.5), min(100%, 380px)); aspect-ratio: 100 / 150; flex: none; }
+  /* Width leaves ~470px of height for the top bar, title and the detail sheet, so "출발" stays on screen. */
+  #map { position: relative; width: clamp(130px, calc((100dvh - 470px) / 1.5), min(100%, 380px)); aspect-ratio: 100 / 150; flex: none; }
   #map > svg { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 20px; }
   .trail { fill: none; stroke: rgba(244,239,230,.28); stroke-width: 1.4; stroke-dasharray: 2.2 2.6; stroke-linecap: round; }
   .trail.open { stroke: var(--accent); }
@@ -92,6 +92,32 @@
   .goal-list .miss { color: rgba(244,239,230,.3); }
   #vignette { position: fixed; inset: 0; pointer-events: none;
     background: radial-gradient(ellipse at center, rgba(10,8,30,0) 45%, rgba(10,8,30,.55) 100%); }
+  /* Shop, gem counter and boosts. */
+  .gem { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .gem svg { width: 16px; height: 16px; }
+  .topbar { width: min(100%, 380px); display: flex; justify-content: space-between; align-items: center; }
+  .chip { padding: 8px 14px; border-radius: 999px; background: var(--card); color: var(--text); font-weight: 800; font-size: 14px; cursor: pointer; }
+  #shop { justify-content: flex-start; }
+  #shop h3 { margin: 6px 0 0; width: min(100%, 380px); text-align: left; font-size: 15px; color: var(--muted); }
+  .note { font-size: 13px !important; color: var(--star) !important; }
+  .grid { width: min(100%, 380px); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; border-radius: 14px;
+    background: var(--card); border: 2px solid transparent; font: inherit; color: var(--text); cursor: pointer; }
+  .item.on { border-color: var(--star); }
+  .item .nm { font-weight: 800; font-size: 14px; }
+  .item .pr { font-size: 13px; font-weight: 800; color: var(--accent); }
+  .item .pr.own { color: var(--muted); }
+  .swatch { position: relative; width: 52px; height: 52px; border-radius: 50%; border: 3px solid; box-sizing: border-box; }
+  .swatch i { position: absolute; top: 15px; width: 9px; height: 9px; border-radius: 50%; }
+  .swatch i:first-child { left: 11px; } .swatch i:last-child { right: 11px; }
+  #shop-msg { min-height: 1.4em; }
+  .boosts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .boost { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border-radius: 12px;
+    border: 2px solid rgba(244,239,230,.18); font-size: 14px; cursor: pointer; }
+  .boost .row { display: flex; justify-content: space-between; align-items: center; }
+  .boost.on { border-color: var(--star); background: rgba(255,210,92,.12); }
+  .boost.off { opacity: .45; }
+  .boost small { color: var(--muted); }
   .hidden { display: none !important; }
 </style>
 </head>
@@ -114,9 +140,13 @@
   <p>당신은 그림자입니다.<br>그림자 속에 있는 것만 삼킬 수 있어요.</p>
   <p>해가 움직이면 그림자도 움직입니다.<br>해가 지면 온 동네가 당신 차지예요.</p>
   <p>화면 아무 곳이나 끌어서 이동</p>
-  <div class="btn" id="btn-title">시작</div>
+  <div class="btns">
+    <div class="btn" id="btn-title">시작</div>
+    <div class="btn ghost" id="btn-shop-title">상점</div>
+  </div>
 </div>
 <div id="select" class="overlay hidden">
+  <div class="topbar"><span class="gem gem-count"></span><span class="chip" id="btn-shop-map">상점</span></div>
   <h2>황혼 지도</h2>
   <div id="map"></div>
   <div class="sheet" id="sheet"></div>
@@ -129,16 +159,33 @@
   <p class="big" id="result"></p>
   <div class="goal-list" id="end-goals"></div>
   <p id="best"></p>
+  <p class="note hidden" id="end-gems"></p>
   <div class="btns">
     <div class="btn" id="btn-next">다음 스테이지</div>
     <div class="btn ghost" id="btn-retry">다시 하기</div>
     <div class="btn ghost" id="btn-select">스테이지 선택</div>
   </div>
 </div>
+<div id="shop" class="overlay hidden">
+  <div class="topbar"><h2>상점</h2><span class="gem gem-count"></span></div>
+  <p class="note hidden" id="shop-demo">체험 모드: 실제 결제는 일어나지 않아요.</p>
+  <h3>그림자 스킨</h3>
+  <div class="grid" id="shop-skins"></div>
+  <h3>보석</h3>
+  <div class="grid" id="shop-gems"></div>
+  <p>보석은 스테이지 출발 전에 부스터로 쓸 수 있어요. 별을 처음 얻을 때마다 보석 10개를 드려요.</p>
+  <p id="shop-msg"></p>
+  <div class="btns">
+    <div class="btn ghost" id="btn-restore">구매 복원</div>
+    <div class="btn ghost" id="btn-shop-back">돌아가기</div>
+  </div>
+</div>
 <script src="vendor/three.min.js"></script>
 <script src="core.js"></script>
 <script src="stages.js"></script>
 <script src="render3d.js"></script>
+<script src="shop.js"></script>
+<script src="store.js"></script>
 <script>
 (() => {
   'use strict';
@@ -159,11 +206,11 @@
   window.addEventListener('resize', resize);
   resize();
 
-  // ---------- storage (per device; failures fall back to defaults) ----------
-  function load(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
-  function save(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* storage unavailable */ } }
-  let bestStars = load('dusk-stars', {});
-  let bestScore = load('dusk-best', {});
+  // ---------- storage (iOS UserDefaults in the app, localStorage in a browser; loaded at boot) ----------
+  const Shop = window.DuskShop, Store = window.DuskStore;
+  const save = (key, v) => { Store.kv.set(key, v); };
+  let bestStars = {};
+  let bestScore = {};
 
   // ---------- world ----------
   const TYPES = {
@@ -186,6 +233,7 @@
 
   let stage, stageIndex, waterY, buildings, objects, guards, lighthouse, player, state, elapsed;
   let score, stats, shadows, sun, phase, rnd;
+  let runDuration = C.DURATION; // seconds of day + night this run (the time boost stretches it)
 
   function insideAnyBuilding(x, y, pad) {
     for (const b of buildings) {
@@ -305,15 +353,18 @@
     return best || { x: Math.round(mid.x / CELL) * CELL, y: Math.round(mid.y / CELL) * CELL };
   }
 
-  function setupStage(i) {
+  function setupStage(i, boosts = []) {
     stageIndex = i; stage = STAGES[i];
     buildWorld(Date.now() & 0xffff);
     elapsed = 0; score = 0;
+    const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
+    runDuration = C.DURATION + used.reduce((a, b) => a + (b.extraTime || 0), 0);
     stats = { score: 0, eaten: {}, beamHit: false, total: 0 };
     phase = C.dayPhase(0); sun = C.sunState(phase.dayT);
     shadows = buildings.map(b => C.shadowPolygon(b, sun));
     const spawn = pickSpawn();
-    player = { x: spawn.x, y: spawn.y, r: 14, vx: 0, vy: 0, lit: false, face: 0 };
+    const r0 = Math.max(14, ...used.map(b => b.startR || 0));
+    player = { x: spawn.x, y: spawn.y, r: r0, vx: 0, vy: 0, lit: false, face: 0 };
     cam.view = targetView(); cam.x = player.x; cam.y = player.y;
     if (R) R.build({ stage, WORLD, CELL, ROAD, waterY, buildings, objects, guards, lighthouse });
   }
@@ -369,7 +420,7 @@
 
   function update(dt) {
     elapsed += dt;
-    const gameT = Math.min(elapsed / C.DURATION, 1);
+    const gameT = Math.min(elapsed / runDuration, 1);
     phase = C.dayPhase(gameT);
     sun = C.sunState(phase.dayT);
     shadows = phase.night ? [] : buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun));
@@ -466,7 +517,7 @@
   }
 
   function renderHud() {
-    $('sun').style.left = (Math.min(elapsed / C.DURATION, 1) * 100) + '%';
+    $('sun').style.left = (Math.min(elapsed / runDuration, 1) * 100) + '%';
     $('size').textContent = '크기 ' + (player.r / 4).toFixed(1) + 'm';
     $('score').textContent = score.toLocaleString();
     $('warn').style.opacity = player.lit ? 1 : 0;
@@ -480,7 +531,7 @@
 
   // ---------- screens ----------
   function show(id) {
-    for (const o of ['title', 'select', 'pause', 'end', 'no3d']) $(o).classList.toggle('hidden', o !== id);
+    for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop']) $(o).classList.toggle('hidden', o !== id);
     $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
   }
 
@@ -538,16 +589,39 @@
     show('select');
   }
 
+  // Boosts picked on the sheet for the next departure only; paid when the run starts.
+  const chosen = new Set();
+  const boostCost = () => Shop.BOOSTS.filter(b => chosen.has(b.id)).reduce((a, b) => a + b.cost, 0);
+
   function renderSheet() {
     const s = STAGES[selected], open = C.isUnlocked(STAGE_IDS, selected, bestStars);
+    const gems = Store.wallet.gems;
+    const boosts = Shop.BOOSTS.map(b => {
+      const on = chosen.has(b.id), affordable = on || boostCost() + b.cost <= gems;
+      return `<div class="boost${on ? ' on' : ''}${affordable ? '' : ' off'}" data-b="${b.id}">
+        <span class="row"><b>${b.name}</b><span class="gem">${GEM}${b.cost}</span></span><small>${b.desc}</small></div>`;
+    }).join('');
     $('sheet').innerHTML = `<div class="row"><span class="name">${s.name}</span><span class="stars">${starText(bestStars[s.id] || 0)}</span></div>
       <div class="desc">${open ? s.desc : '이전 스테이지에서 별 1개를 모으면 열려요.'}</div>` +
-      (open ? `<ul>${s.goals.map(g => `<li>${goalLabel(g)}</li>`).join('')}</ul><div class="btn" id="btn-go">출발</div>` : '');
-    if (open) $('btn-go').addEventListener('pointerup', () => start(selected));
+      (open ? `<ul>${s.goals.map(g => `<li>${goalLabel(g)}</li>`).join('')}</ul>
+        <div class="boosts">${boosts}</div><div class="btn" id="btn-go">출발</div>` : '');
+    if (!open) return;
+    $('sheet').querySelectorAll('.boost').forEach(el => el.addEventListener('pointerup', () => {
+      const id = el.dataset.b;
+      if (chosen.has(id)) chosen.delete(id);
+      else if (!el.classList.contains('off')) chosen.add(id);
+      renderSheet();
+    }));
+    $('btn-go').addEventListener('pointerup', () => start(selected, [...chosen]));
   }
 
-  function start(i) {
-    setupStage(i);
+  function start(i, boosts = []) {
+    if (boosts.length) {
+      const paid = Shop.startBoosts(Store.wallet, boosts);
+      if (!paid) boosts = []; else Store.update(paid);
+    }
+    chosen.clear();
+    setupStage(i, boosts);
     endDrag();
     state = 'play';
     show(null);
@@ -557,9 +631,14 @@
     state = 'end';
     const got = C.evaluateStars(stage.goals, stats);
     const n = got.filter(Boolean).length;
-    bestStars[stage.id] = Math.max(bestStars[stage.id] || 0, n);
+    const before = bestStars[stage.id] || 0;
+    bestStars[stage.id] = Math.max(before, n);
     bestScore[stage.id] = Math.max(bestScore[stage.id] || 0, score);
     save('dusk-stars', bestStars); save('dusk-best', bestScore);
+    Store.update(Shop.finishRun(Shop.awardStars(Store.wallet, before, n)));
+    const earned = Math.max(0, n - before) * Shop.GEMS_PER_STAR;
+    $('end-gems').textContent = `새 별 보상: 보석 ${earned}개`;
+    $('end-gems').classList.toggle('hidden', !earned);
 
     $('end-title').textContent = n === 3 ? '완벽한 밤이었어요' : '밤이 끝났어요';
     $('end-stars').innerHTML = starText(n);
@@ -572,7 +651,82 @@
     show('end');
   }
 
-  $('btn-title').addEventListener('pointerup', () => { selected = lastUnlocked(); openSelect(); });
+  // ---------- shop ----------
+  const GEM = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h8l3 4-7 8-7-8z" fill="#7fd8ff"/><path d="M1 6h14M8 14 5 6l3-4 3 4z" fill="none" stroke="#e6f8ff" stroke-width=".8"/></svg>';
+  const hex = n => '#' + n.toString(16).padStart(6, '0');
+  const skinById = id => Shop.SKINS.find(s => s.id === id) || Shop.SKINS[0];
+  let shopReturn = 'title', busy = false;
+
+  function renderGems() {
+    document.querySelectorAll('.gem-count').forEach(el => { el.innerHTML = GEM + Store.wallet.gems.toLocaleString(); });
+  }
+
+  function renderShop() {
+    const w = Store.wallet;
+    $('shop-skins').innerHTML = Shop.SKINS.map(s => {
+      const own = !s.product || w.owned.includes(s.id), on = w.equipped === s.id, price = s.product && Store.price(s.product);
+      const label = on ? '장착 중' : own ? '장착하기' : price || '준비 중';
+      return `<button class="item${on ? ' on' : ''}" data-skin="${s.id}"${own || price ? '' : ' disabled'}>
+        <span class="swatch" style="background:${hex(s.body)};border-color:${hex(s.rim)}"><i style="background:${hex(s.eye)}"></i><i style="background:${hex(s.eye)}"></i></span>
+        <span class="nm">${s.name}</span><span class="pr${own ? ' own' : ''}">${label}</span></button>`;
+    }).join('');
+    $('shop-gems').innerHTML = Shop.GEM_PACKS.map(p => {
+      const price = Store.price(p.product);
+      return `<button class="item" data-pack="${p.product}"${price ? '' : ' disabled'}>
+        <span class="gem" style="font-size:18px">${GEM}${p.gems.toLocaleString()}</span><span class="pr">${price || '준비 중'}</span></button>`;
+    }).join('');
+    $('shop-skins').querySelectorAll('.item').forEach(el => el.addEventListener('pointerup', async () => {
+      const s = skinById(el.dataset.skin);
+      if (s.product && !Store.wallet.owned.includes(s.id)) { if (!(await buy(s.product))) return; }
+      Store.update(Shop.equip(Store.wallet, s.id));
+    }));
+    $('shop-gems').querySelectorAll('.item').forEach(el => el.addEventListener('pointerup', () => buy(el.dataset.pack)));
+  }
+
+  async function buy(product) {
+    if (busy) return false;
+    busy = true; $('shop-msg').textContent = '결제 진행 중…';
+    const r = await Store.buy(product);
+    busy = false;
+    $('shop-msg').textContent = r.ok ? '구매가 완료됐어요.' : r.cancelled ? ''
+      : r.pending ? '승인을 기다리고 있어요. 승인되면 자동으로 들어와요.' : '결제를 완료하지 못했어요. 잠시 후 다시 시도해 주세요.';
+    return !!r.ok;
+  }
+
+  function openShop(from) {
+    shopReturn = from; $('shop-msg').textContent = '';
+    renderShop(); show('shop');
+  }
+
+  $('btn-restore').addEventListener('pointerup', async () => {
+    if (busy) return;
+    busy = true; $('shop-msg').textContent = '구매 내역을 확인하는 중…';
+    const ok = await Store.restore();
+    busy = false;
+    $('shop-msg').textContent = ok ? '구매 내역을 복원했어요.' : '복원하지 못했어요. 네트워크를 확인하고 다시 시도해 주세요.';
+  });
+  $('btn-shop-back').addEventListener('pointerup', () => {
+    if (shopReturn === 'select') openSelect(); else { state = 'title'; show('title'); }
+  });
+
+  Store.onChange(w => {
+    renderGems();
+    if (R) R.setSkin(skinById(w.equipped));
+    if (!$('shop').classList.contains('hidden')) renderShop();
+  });
+
+  // Menus wait until saved progress and the store have loaded.
+  const ready = (async () => {
+    bestStars = (await Store.kv.get('dusk-stars')) || {};
+    bestScore = (await Store.kv.get('dusk-best')) || {};
+    await Store.init();
+    $('shop-demo').classList.toggle('hidden', !Store.demo);
+  })();
+  const whenReady = f => () => ready.then(f);
+
+  $('btn-shop-title').addEventListener('pointerup', whenReady(() => openShop('title')));
+  $('btn-shop-map').addEventListener('pointerup', () => openShop('select'));
+  $('btn-title').addEventListener('pointerup', whenReady(() => { selected = lastUnlocked(); openSelect(); }));
   $('btn-retry').addEventListener('pointerup', () => start(stageIndex));
   $('btn-next').addEventListener('pointerup', () => start(stageIndex + 1));
   $('btn-select').addEventListener('pointerup', () => {
@@ -609,7 +763,8 @@
 
   // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
   if (window.__DUSK_TEST__) {
-    window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; }, R,
+    window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; }, R, Store, Shop, ready,
+      get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
       get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase }; } };
   }

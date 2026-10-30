@@ -61,7 +61,9 @@
     const blob = new T.Mesh(blobGeo, blobMat);
     blob.renderOrder = 5;
     const ringGeo = new T.RingGeometry(1.0, 1.12, BLOB_N); ringGeo.rotateX(-Math.PI / 2);
-    // Rim: lavender in the dark so the blob stays visible at night, red while lit.
+    // Rim: the skin's color in the dark so the blob stays visible at night, always red while lit.
+    const LIT_RIM = 0xff6b6b;
+    let rimColor = 0xb9a8ff;
     const rimMat = new T.MeshBasicMaterial({ color: 0xb9a8ff, transparent: true, opacity: 0.85, depthWrite: false });
     const litRing = new T.Mesh(ringGeo, rimMat);
     litRing.renderOrder = 6;
@@ -339,7 +341,7 @@
       blob.position.set(player.x, 1.2, player.y);
       blob.scale.setScalar(player.r);
       blobMat.opacity = player.lit ? 0.6 + Math.sin(t * 30) * 0.2 : 0.92;
-      rimMat.color.set(player.lit ? 0xff6b6b : 0xb9a8ff);
+      rimMat.color.set(player.lit ? LIT_RIM : rimColor);
       rimMat.opacity = player.lit ? 0.85 : 0.55;
       litRing.position.copy(blob.position).setY(1.3);
       litRing.scale.setScalar(player.r);
@@ -370,7 +372,14 @@
     }
 
     // `debug` is read by the QA scripts (pixel checks, memory counters); the game never uses it.
-    return { build, resize, draw, debug: { renderer, camera, scene } };
+    // Cosmetic skin: body, unlit rim and eye colors. The lit warning stays red regardless.
+    function setSkin(skin) {
+      blobMat.color.setHex(skin.body);
+      rimColor = skin.rim;
+      eyeMat.color.setHex(skin.eye);
+    }
+
+    return { build, resize, draw, setSkin, debug: { renderer, camera, scene, rimMat } };
   }
 
   root.DuskRender = { create };

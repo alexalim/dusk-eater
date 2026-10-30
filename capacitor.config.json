@@ -5,5 +5,10 @@
   "ios": {
     "contentInset": "never",
     "backgroundColor": "#1b1830"
+  },
+  "plugins": {
+    "NativePurchases": {
+      "autoFinishTransactions": false
+    }
   }
 }
