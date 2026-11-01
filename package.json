@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "node --test test/core.unit.test.js test/shop.unit.test.js",
+    "test": "node --test test/core.unit.test.js test/shop.unit.test.js test/stages.unit.test.js",
     "test:e2e": "python3 test/e2e/qa.e2e.py www test-results",
     "sync": "cap sync ios"
   },

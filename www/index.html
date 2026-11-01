@@ -18,8 +18,6 @@
     --star: #ffd25c;
     --danger: #ff6b6b;
     --node: #ffb35c;
-    --map-land: #2a2545;
-    --map-sea: #1d2c4f;
   }
   html, body {
     margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
@@ -59,22 +57,21 @@
     color: #2a1a05; font-weight: 800; font-size: 18px; cursor: pointer; }
   .btn.ghost { background: transparent; color: var(--text); border: 2px solid rgba(244,239,230,.35); }
   .btns { display: flex; flex-direction: column; gap: 10px; align-items: stretch; margin-top: 6px; }
-  /* Stage map: SVG terrain with real buttons on top, plus a detail sheet for the chosen stage. */
+  /* Level picker: one page of numbered levels, paged with ‹ ›, plus a detail sheet for the chosen level. */
   #select { gap: 12px; }
-  /* Width leaves ~470px of height for the top bar, title and the detail sheet, so "출발" stays on screen. */
-  #map { position: relative; width: clamp(130px, calc((100dvh - 470px) / 1.5), min(100%, 380px)); aspect-ratio: 100 / 150; flex: none; }
-  #map > svg { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 20px; }
-  .trail { fill: none; stroke: rgba(244,239,230,.28); stroke-width: 1.4; stroke-dasharray: 2.2 2.6; stroke-linecap: round; }
-  .trail.open { stroke: var(--accent); }
-  .node { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column;
-    align-items: center; gap: 2px; background: none; border: 0; padding: 0; color: var(--text); font: inherit; cursor: pointer; }
-  .node .disc { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center;
-    background: var(--node); color: #2a1a05; box-shadow: 0 0 0 4px rgba(255,179,92,.25), 0 6px 16px rgba(0,0,0,.45); }
-  .node .disc svg { width: 30px; height: 30px; }
-  .node.sel .disc { box-shadow: 0 0 0 4px var(--star), 0 0 22px rgba(255,210,92,.55); }
-  .node.locked .disc { background: #4a4560; color: rgba(244,239,230,.6); box-shadow: 0 4px 12px rgba(0,0,0,.45); }
-  .node .label { font-size: 13px; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,.8); white-space: nowrap; }
-  .node .stars { font-size: 13px; letter-spacing: 1px; }
+  #map { width: min(100%, 380px); display: flex; flex-direction: column; gap: 10px; flex: none; }
+  .levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .node { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; height: 54px;
+    border-radius: 14px; border: 0; padding: 0; font: inherit; cursor: pointer; color: #2a1a05; background: var(--node); }
+  .node.harbor { background: #8fc3e0; }
+  .node .num { font-size: 17px; font-weight: 900; line-height: 1; }
+  .node .stars { font-size: 10px; letter-spacing: 0; color: #2a1a05; }
+  .node .stars .off { color: rgba(42,26,5,.25); }
+  .node.sel { box-shadow: 0 0 0 3px var(--star), 0 0 16px rgba(255,210,92,.55); }
+  .node.locked { background: #4a4560; color: rgba(244,239,230,.55); }
+  .node.locked svg { width: 18px; height: 18px; }
+  .pager { display: flex; justify-content: space-between; align-items: center; font-weight: 800; }
+  .pager .chip.off { opacity: .35; }
   .sheet { width: min(100%, 380px); display: flex; flex-direction: column; gap: 8px; text-align: left;
     padding: 16px; border-radius: 16px; background: var(--card); }
   .sheet .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -147,7 +144,7 @@
 </div>
 <div id="select" class="overlay hidden">
   <div class="topbar"><span class="gem gem-count"></span><span class="chip" id="btn-shop-map">상점</span></div>
-  <h2>황혼 지도</h2>
+  <h2>황혼 레벨</h2>
   <div id="map"></div>
   <div class="sheet" id="sheet"></div>
 </div>
@@ -161,9 +158,9 @@
   <p id="best"></p>
   <p class="note hidden" id="end-gems"></p>
   <div class="btns">
-    <div class="btn" id="btn-next">다음 스테이지</div>
+    <div class="btn" id="btn-next">다음 레벨</div>
     <div class="btn ghost" id="btn-retry">다시 하기</div>
-    <div class="btn ghost" id="btn-select">스테이지 선택</div>
+    <div class="btn ghost" id="btn-select">레벨 선택</div>
   </div>
 </div>
 <div id="shop" class="overlay hidden">
@@ -540,26 +537,9 @@
   }
 
   // ---------- stage map ----------
-  const ICONS = {
-    town: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5V20H3z" fill="currentColor"/><rect x="10" y="13.5" width="4" height="6.5" fill="#ffe2b8"/></svg>',
-    harbor: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v13M8 10h8M4.5 13a7.5 7.5 0 0 0 15 0"/></svg>',
-    lock: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>',
-  };
-  // Terrain drawn in the map's own 100 × 150 units: land, a bay in the north-east, town blocks, quay cranes, lighthouse.
-  const MAP_ART = `
-    <rect width="100" height="150" fill="var(--map-land)"/>
-    <path d="M38 0H100V78C88 72 80 76 72 70C62 62 60 50 52 40C46 30 44 14 38 0Z" fill="var(--map-sea)"/>
-    <g stroke="rgba(150,180,230,.35)" stroke-width=".6" stroke-linecap="round">
-      <path d="M70 18h7M84 30h6M76 44h5M88 56h6M60 24h5"/></g>
-    <g fill="rgba(244,239,230,.10)">
-      <rect x="18" y="100" width="7" height="6"/><rect x="38" y="98" width="6" height="8"/><rect x="20" y="120" width="8" height="5"/>
-      <rect x="40" y="122" width="6" height="6"/><rect x="12" y="110" width="5" height="5"/><rect x="46" y="110" width="5" height="4"/></g>
-    <g fill="rgba(110,170,110,.35)"><circle cx="24" cy="134" r="2.4"/><circle cx="29" cy="137" r="2"/><circle cx="19" cy="139" r="2.2"/></g>
-    <g stroke="rgba(242,193,78,.55)" stroke-width=".9" stroke-linecap="round" fill="none">
-      <path d="M78 71v-8h5M86 74v-8h5M94 76v-8h5"/></g>
-    <circle cx="86" cy="20" r="2" fill="#f4f1ea"/><circle cx="86" cy="20" r="1" fill="#d9534f"/>
-    <path d="M86 20 L72 8 L70 12Z" fill="rgba(255,241,168,.18)"/>`;
-  let selected = 0;
+  const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>';
+  const PAGE = 15;
+  let selected = 0, page = 0;
 
   function lastUnlocked() {
     let i = 0;
@@ -569,25 +549,26 @@
 
   function openSelect() {
     state = 'menu';
-    let svg = `<svg viewBox="0 0 100 150" aria-hidden="true">${MAP_ART}`;
-    for (let i = 1; i < STAGES.length; i++) {
-      const a = STAGES[i - 1].map, b = STAGES[i].map;
-      const cx = (a.x + b.x) / 2 - (b.y - a.y) * 0.3, cy = (a.y + b.y) / 2 + (b.x - a.x) * 0.3; // bend the trail
-      svg += `<path class="trail${C.isUnlocked(STAGE_IDS, i, bestStars) ? ' open' : ''}" d="M${a.x} ${a.y}Q${cx} ${cy} ${b.x} ${b.y}"/>`;
-    }
-    svg += '</svg>';
-    $('map').innerHTML = svg + STAGES.map((s, i) => {
-      const open = C.isUnlocked(STAGE_IDS, i, bestStars);
-      return `<button class="node${open ? '' : ' locked'}${i === selected ? ' sel' : ''}" data-i="${i}"
-        style="left:${s.map.x}%;top:${s.map.y / 150 * 100}%" aria-label="${s.name}">
-        <span class="disc">${open ? ICONS[s.id] : ICONS.lock}</span>
-        <span class="stars">${starText(bestStars[s.id] || 0)}</span><span class="label">${s.name}</span></button>`;
+    const from = page * PAGE, pages = Math.ceil(STAGES.length / PAGE);
+    const cells = STAGES.slice(from, from + PAGE).map((s, k) => {
+      const i = from + k, open = C.isUnlocked(STAGE_IDS, i, bestStars);
+      return `<button class="node ${s.theme}${open ? '' : ' locked'}${i === selected ? ' sel' : ''}" data-i="${i}" aria-label="${s.name}">
+        ${open ? `<span class="num">${s.n}</span><span class="stars">${starText(bestStars[s.id] || 0)}</span>` : LOCK}</button>`;
     }).join('');
+    $('map').innerHTML = `<div class="levels">${cells}</div>
+      <div class="pager"><span class="chip${page ? '' : ' off'}" data-p="-1">‹</span>
+      <span>${from + 1}–${Math.min(from + PAGE, STAGES.length)} / ${STAGES.length}</span>
+      <span class="chip${page < pages - 1 ? '' : ' off'}" data-p="1">›</span></div>`;
     $('map').querySelectorAll('.node').forEach(n =>
       n.addEventListener('pointerup', () => { selected = +n.dataset.i; openSelect(); }));
+    $('map').querySelectorAll('.pager .chip').forEach(el => el.addEventListener('pointerup', () => {
+      page = Math.max(0, Math.min(pages - 1, page + +el.dataset.p)); openSelect();
+    }));
     renderSheet();
     show('select');
   }
+  // Open the map on the page that holds the selected level.
+  function openSelectAt(i) { selected = i; page = Math.floor(i / PAGE); openSelect(); }
 
   // Boosts picked on the sheet for the next departure only; paid when the run starts.
   const chosen = new Set();
@@ -602,7 +583,7 @@
         <span class="row"><b>${b.name}</b><span class="gem">${GEM}${b.cost}</span></span><small>${b.desc}</small></div>`;
     }).join('');
     $('sheet').innerHTML = `<div class="row"><span class="name">${s.name}</span><span class="stars">${starText(bestStars[s.id] || 0)}</span></div>
-      <div class="desc">${open ? s.desc : '이전 스테이지에서 별 1개를 모으면 열려요.'}</div>` +
+      <div class="desc">${open ? s.desc : '이전 레벨에서 별 1개를 모으면 열려요.'}</div>` +
       (open ? `<ul>${s.goals.map(g => `<li>${goalLabel(g)}</li>`).join('')}</ul>
         <div class="boosts">${boosts}</div><div class="btn" id="btn-go">출발</div>` : '');
     if (!open) return;
@@ -726,14 +707,13 @@
 
   $('btn-shop-title').addEventListener('pointerup', whenReady(() => openShop('title')));
   $('btn-shop-map').addEventListener('pointerup', () => openShop('select'));
-  $('btn-title').addEventListener('pointerup', whenReady(() => { selected = lastUnlocked(); openSelect(); }));
+  $('btn-title').addEventListener('pointerup', whenReady(() => openSelectAt(lastUnlocked())));
   $('btn-retry').addEventListener('pointerup', () => start(stageIndex));
   $('btn-next').addEventListener('pointerup', () => start(stageIndex + 1));
   $('btn-select').addEventListener('pointerup', () => {
-    // After unlocking the next stage, point the map at it; otherwise stay on the stage just played.
+    // After unlocking the next level, point the map at it; otherwise stay on the stage just played.
     const next = stageIndex + 1;
-    selected = next < STAGES.length && C.isUnlocked(STAGE_IDS, next, bestStars) && (bestStars[STAGES[next].id] || 0) === 0 ? next : stageIndex;
-    openSelect();
+    openSelectAt(next < STAGES.length && C.isUnlocked(STAGE_IDS, next, bestStars) && (bestStars[STAGES[next].id] || 0) === 0 ? next : stageIndex);
   });
   $('btn-resume').addEventListener('pointerup', () => { state = 'play'; show(null); });
   document.addEventListener('visibilitychange', () => {

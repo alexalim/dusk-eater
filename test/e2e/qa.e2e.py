@@ -27,10 +27,11 @@ def page(p, w=390, h=844, storage=None):
     return b, pg, errs
 
 A = 'window.__DUSK_TEST__.api'
+HARB = 13  # level 14, the first harbor level (index into STAGES)
 def frames_wait(pg, n=3):
     pg.evaluate(f'new Promise(r => {{ let k = {n}; const f = () => --k <= 0 ? r() : requestAnimationFrame(f); requestAnimationFrame(f); }})')
 with sync_playwright() as p:
-    # S1 flow: title -> select, harbor locked, locked card ignores taps
+    # S1 flow: title -> level picker, level 2 locked, locked card ignores taps
     b, pg, errs = page(p)
     t = pg.is_visible('#title')
     pg.tap('#btn-title'); frames_wait(pg)
@@ -39,7 +40,7 @@ with sync_playwright() as p:
     nodes[1].tap(); frames_wait(pg)
     still = pg.is_visible('#select'); go_locked = pg.query_selector('#btn-go')
     sheet = pg.evaluate("document.querySelector('#sheet').textContent")
-    rec('S1', 'title->map, harbor node locked, locked node shows no start', t and 'locked' in locked[1] and 'locked' not in locked[0] and still and go_locked is None and '별 1개' in sheet, str(locked))
+    rec('S1', 'title->levels, level 2 locked, locked node shows no start', t and 'locked' in locked[1] and 'locked' not in locked[0] and still and go_locked is None and '별 1개' in sheet, str(locked))
     # S2 touch drag moves the player
     pg.query_selector_all('.node')[0].tap(); frames_wait(pg); pg.tap('#btn-go'); frames_wait(pg)
     x0 = pg.evaluate(f'{A}.s.player.x')
@@ -56,7 +57,7 @@ with sync_playwright() as p:
     rec('S2', 'touch drag moves right, release stops', x1 - x0 > 30 and v_after < 5, f'dx={x1-x0:.0f} v_after={v_after:.1f}')
     # S10 spawn state for several rounds of each stage
     lit = []
-    for si in (0, 1):
+    for si in (0, HARB):
         for _ in range(15):
             pg.evaluate(f'{A}.start({si})'); frames_wait(pg)
             lit.append(pg.evaluate(f'{A}.s.player.lit'))
@@ -74,23 +75,23 @@ with sync_playwright() as p:
     end_vis = pg.is_visible('#end'); goals = len(pg.query_selector_all('#end-goals > div'))
     stars = pg.evaluate("JSON.parse(localStorage.getItem('dusk-stars') || '{}')")
     nxt = pg.is_visible('#btn-next')
-    rec('S3', 'end screen, goals listed, stars saved, next hidden w/o star', end_vis and goals == 3 and 'town' in stars and nxt == (stars['town'] >= 1), f'stars={stars} next={nxt}')
+    rec('S3', 'end screen, goals listed, stars saved, next hidden w/o star', end_vis and goals == 3 and 'L1' in stars and nxt == (stars['L1'] >= 1), f'stars={stars} next={nxt}')
     # S6 memory: restart 12 times
     info = lambda: pg.evaluate(f'(() => {{ const m = {A}.R.debug.renderer.info.memory; return [m.geometries, m.textures]; }})()')
-    [pg.evaluate(f'{A}.start({i % 2})') or frames_wait(pg) for i in range(4)]; pg.evaluate(f'{A}.start(1)'); frames_wait(pg); m0 = info()
+    [pg.evaluate(f'{A}.start({i % 2 * HARB})') or frames_wait(pg) for i in range(4)]; pg.evaluate(f'{A}.start({HARB})'); frames_wait(pg); m0 = info()
     for i in range(12):
-        pg.evaluate(f'{A}.start({i % 2})'); frames_wait(pg)
-    pg.evaluate(f'{A}.start(1)'); frames_wait(pg); m1 = info()
+        pg.evaluate(f'{A}.start({i % 2 * HARB})'); frames_wait(pg)
+    pg.evaluate(f'{A}.start({HARB})'); frames_wait(pg); m1 = info()
     rec('S6', 'no GPU memory growth over 12 restarts', m1[0] <= m0[0] + 2 and m1[1] <= m0[1], f'geo/tex before={m0} after={m1}')
     rec('S0', 'no page errors (iPhone 390x844)', not errs, '; '.join(errs)[:200])
     b.close()
 
     # S4 unlock via saved star
-    b, pg, errs = page(p, storage={'town': 1})
+    b, pg, errs = page(p, storage={'L1': 1})
     pg.tap('#btn-title'); frames_wait(pg)
     sel0 = pg.evaluate("document.querySelector('.node.sel').dataset.i")
     pg.query_selector_all('.node')[1].tap(); frames_wait(pg); pg.tap('#btn-go'); frames_wait(pg)
-    rec('S4', 'harbor opens after 1 town star, map preselects it', sel0 == '1' and pg.evaluate(f'{A}.s.state') == 'play' and pg.evaluate("document.querySelector('#goals').textContent").find('배') >= 0)
+    rec('S4', 'level 2 opens after 1 star on level 1, picker preselects it', sel0 == '1' and pg.evaluate(f'{A}.s.state') == 'play' and '고양이' in pg.evaluate("document.querySelector('#goals').textContent"))
     # S7/S11 frame cost: early, late-big, night transition
     def stats(setup):
         pg.evaluate(setup); frames_wait(pg, 2)
@@ -100,7 +101,7 @@ with sync_playwright() as p:
         ft = sorted(pg.evaluate('window.__ft'))
         pg.evaluate(f'(() => {{ const r = {A}.R.debug.renderer; r.render = r.__render; }})()')
         return calls, tris, statistics.median(ft), ft[int(len(ft) * .95)]
-    for si in (0, 1):
+    for si in (0, HARB):
         e = stats(f'{A}.start({si}); {A}.skipTo(10)')
         l = stats(f'{A}.s.player.r = 110; {A}.skipTo(90)')
         rec('S7', f'stage{si} draw calls / triangles / JS ms (median,p95)', e[0] < 300 and l[0] < 300 and l[3] < 8,
@@ -115,7 +116,7 @@ with sync_playwright() as p:
     for w, h in [(375, 667), (430, 932), (844, 390)]:
         b, pg, errs = page(p, w, h)
         pg.screenshot(path=str(out / f'layout-{w}x{h}-title.png'))
-        pg.evaluate(f'{A}.start(1)'); frames_wait(pg)
+        pg.evaluate(f'{A}.start({HARB})'); frames_wait(pg)
         pg.screenshot(path=str(out / f'layout-{w}x{h}-play.png'))
         ov = pg.evaluate('document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight')
         hud = pg.evaluate("(() => { const r = document.querySelector('#hud').getBoundingClientRect(); return [Math.round(r.height), innerHeight]; })()")
@@ -128,7 +129,7 @@ with sync_playwright() as p:
 
     # S9 rendered shadow vs rule polygons, pixel by pixel
     b, pg, errs = page(p)
-    for si, sec in [(0, 12), (0, 55), (0, 95), (1, 30), (1, 95)]:
+    for si, sec in [(0, 12), (0, 55), (0, 95), (HARB, 30), (HARB, 95)]:
         pg.evaluate(f'{A}.start({si}); {A}.skipTo({sec})'); frames_wait(pg, 2); pg.evaluate(f'{A}.freeze()'); frames_wait(pg, 2)
         pts = pg.evaluate('''(() => {
           const A = window.__DUSK_TEST__.api, C = window.DuskCore, s = A.s, T = window.THREE;
