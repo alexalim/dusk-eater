@@ -70,6 +70,28 @@ with sync_playwright() as p:
     pg.evaluate("Object.defineProperty(document, 'hidden', {configurable: true, get: () => false})")
     pg.tap('#btn-resume'); frames_wait(pg)
     rec('S5', 'pause on background, resume', e0 == 'paused' and paused_vis and pg.evaluate(f'{A}.s.state') == 'play', f'state={e0}')
+    # S12 all three missions done -> night falls at once with a banner; two of three keeps the day going
+    meet = lambda k: f"""(() => {{ const s = {A}.s; const goals = window.DuskStages.STAGES[0].goals.slice(0, {k});
+        for (const g of goals) {{ if (g.kind === 'score') s.stats.score = g.n; if (g.kind === 'eat') s.stats.eaten[g.what] = g.n; }} }})()"""
+    pg.evaluate(f'{A}.start(0); {A}.skipTo(20)'); pg.evaluate(meet(2)); frames_wait(pg, 4)
+    partial = pg.evaluate(f'{A}.s.phase.night')
+    pg.evaluate(meet(3)); frames_wait(pg, 4)
+    night, t_left = pg.evaluate(f'[{A}.s.phase.night, {A}.runDuration * (1 - window.DuskCore.NIGHT_START)]')
+    banner = pg.evaluate("getComputedStyle(document.querySelector('#banner')).opacity")
+    rec('S12', 'all missions done -> early night + banner; partial does not', not partial and night and float(banner) > 0.5,
+        f'partial_night={partial} night={night} banner={banner} night_len={t_left:.0f}s')
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    # S13 pause button -> quit: back to the level picker, boost gems refunded, no stars or best score saved
+    pg.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ gems: 100 }})); {A}.start(0, ['time'])"); frames_wait(pg)
+    paid = pg.evaluate(f'{A}.Store.wallet.gems')
+    pg.tap('#btn-pause'); frames_wait(pg)
+    paused = pg.is_visible('#pause') and pg.evaluate(f'{A}.s.state') == 'paused'
+    pg.tap('#btn-quit'); frames_wait(pg)
+    w = pg.evaluate(f'[{A}.Store.wallet.gems, {A}.Store.wallet.pending]')
+    saved = pg.evaluate("[localStorage.getItem('dusk-stars'), localStorage.getItem('dusk-best')]")
+    rec('S13', 'pause button -> quit returns to levels, refunds boost, saves nothing', paid == 60 and paused and pg.is_visible('#select')
+        and w == [100, 0] and saved == [None, None], f'paid->{paid} wallet={w} saved={saved}')
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
     # S3 round end: stars + goal list + next button rule
     pg.evaluate(f'{A}.skipTo(119.9)'); frames_wait(pg)
     end_vis = pg.is_visible('#end'); goals = len(pg.query_selector_all('#end-goals > div'))

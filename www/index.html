@@ -43,6 +43,11 @@
   #goals span.done { color: #2a1a05; background: var(--star); }
   #warn { text-align: center; color: var(--danger); font-weight: 800; font-size: 15px; opacity: 0;
     transition: opacity .15s; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+  #stats .right { display: flex; align-items: center; gap: 10px; }
+  #btn-pause { pointer-events: auto; width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+    background: rgba(20,18,38,.6); color: var(--text); font: 800 14px system-ui, sans-serif; }
+  #banner { position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); white-space: nowrap; padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 15px;
+    color: #2a1a05; background: var(--star); opacity: 0; transition: opacity .3s; }
   .overlay {
     position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
     justify-content: safe center; gap: 14px; background: var(--panel); text-align: center;
@@ -128,9 +133,10 @@
 </div>
 <div id="hud">
   <div id="sunbar"><div id="sun"></div></div>
-  <div id="stats"><span id="size">크기 0</span><span id="score">0</span></div>
+  <div id="stats"><span id="size">크기 0</span><span class="right"><span id="score">0</span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></span></div>
   <div id="goals"></div>
   <div id="warn">빛 속에선 작아져요!</div>
+  <div id="banner">미션 완료! 밤이 일찍 찾아와요</div>
 </div>
 <div id="title" class="overlay">
   <h1>Dusk Eater</h1>
@@ -149,7 +155,9 @@
   <div class="sheet" id="sheet"></div>
 </div>
 <div id="fps" class="hidden"></div>
-<div id="pause" class="overlay hidden"><p class="big">일시정지</p><div class="btn" id="btn-resume">계속</div></div>
+<div id="pause" class="overlay hidden"><p class="big">일시정지</p>
+  <div class="btns"><div class="btn" id="btn-resume">계속</div><div class="btn ghost" id="btn-quit">그만두기</div></div>
+  <p>그만두면 이번 판 기록은 남지 않고, 부스터 보석은 돌려받아요.</p></div>
 <div id="end" class="overlay hidden">
   <h2 id="end-title">밤이 끝났어요</h2>
   <div class="stars" id="end-stars"></div>
@@ -230,6 +238,7 @@
 
   let stage, stageIndex, waterY, buildings, objects, guards, lighthouse, player, state, elapsed;
   let score, stats, shadows, sun, phase, rnd;
+  let bannerUntil = 0; // elapsed second until which the mission-complete banner shows
   let runDuration = C.DURATION; // seconds of day + night this run (the time boost stretches it)
 
   function insideAnyBuilding(x, y, pad) {
@@ -353,7 +362,7 @@
   function setupStage(i, boosts = []) {
     stageIndex = i; stage = STAGES[i];
     buildWorld(Date.now() & 0xffff);
-    elapsed = 0; score = 0;
+    elapsed = 0; score = 0; bannerUntil = 0;
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
     runDuration = C.DURATION + used.reduce((a, b) => a + (b.extraTime || 0), 0);
     stats = { score: 0, eaten: {}, beamHit: false, total: 0 };
@@ -474,6 +483,12 @@
       }
     }
 
+    // All three missions done: night falls at once, a short finale where everything is shade.
+    if (!phase.night && C.evaluateStars(stage.goals, stats).every(Boolean)) {
+      elapsed = runDuration * C.NIGHT_START;
+      bannerUntil = elapsed + 3;
+    }
+
     cam.view += (targetView() - cam.view) * Math.min(1, dt * 2);
     cam.x += (player.x - cam.x) * Math.min(1, dt * 6);
     cam.y += (player.y - cam.y) * Math.min(1, dt * 6);
@@ -518,6 +533,7 @@
     $('size').textContent = '크기 ' + (player.r / 4).toFixed(1) + 'm';
     $('score').textContent = score.toLocaleString();
     $('warn').style.opacity = player.lit ? 1 : 0;
+    $('banner').style.opacity = elapsed < bannerUntil ? 1 : 0;
     const chips = stage.goals.map(g => {
       const p = C.goalProgress(g, stats);
       const count = g.kind === 'eat' ? ` ${Math.min(p.cur, p.n)}/${p.n}` : '';
@@ -717,7 +733,14 @@
   });
   $('btn-resume').addEventListener('pointerup', () => { state = 'play'; show(null); });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && state === 'play') { state = 'paused'; endDrag(); show('pause'); }
+    if (document.hidden && state === 'play') pause();
+  });
+  function pause() { state = 'paused'; endDrag(); show('pause'); }
+  $('btn-pause').addEventListener('pointerup', () => { if (state === 'play') pause(); });
+  // Quitting drops the run: no stars or best score, and boost gems held for it go back to the wallet.
+  $('btn-quit').addEventListener('pointerup', () => {
+    Store.update(Shop.refundPending(Store.wallet));
+    openSelectAt(stageIndex);
   });
 
   // ---------- loop ----------
