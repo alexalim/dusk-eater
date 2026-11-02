@@ -83,8 +83,12 @@
   .node .stars { font-size: 10px; letter-spacing: 0; color: #2a1a05; }
   .node .stars .off { color: rgba(42,26,5,.25); }
   .node.sel { box-shadow: 0 0 0 3px var(--star), 0 0 16px rgba(255,210,92,.55); }
-  .node.locked { background: #4a4560; color: rgba(244,239,230,.55); }
+  .levels .node.locked { background: #4a4560; color: rgba(244,239,230,.55); }
   .node.locked svg { width: 18px; height: 18px; }
+  .tabs { display: flex; gap: 8px; }
+  .tabs .chip.on { background: var(--star); color: #2a1a05; }
+  .event-note { font-size: 13px; font-weight: 700; color: var(--star); text-align: left; word-break: keep-all; }
+  .node.xmas { background: #e05a5a; color: #fff6e8; } .node.xmas .stars, .node.xmas .stars .off { color: #fff6e8; }
   .pager { display: flex; justify-content: space-between; align-items: center; font-weight: 800; }
   .pager .chip.off { opacity: .35; }
   .sheet { width: min(100%, 380px); display: flex; flex-direction: column; gap: 8px; text-align: left;
@@ -207,8 +211,18 @@
 (() => {
   'use strict';
   const C = window.DuskCore;
-  const { STAGES, goalLabel } = window.DuskStages;
+  const { STAGES, goalLabel, EVENTS, EVENT_LEVELS, activeEvents } = window.DuskStages;
   const STAGE_IDS = STAGES.map(s => s.id);
+  // The level list being played and picked from: the 150-level ladder ('main') or an event's levels.
+  let listKey = 'main', list = STAGES, listIds = STAGE_IDS;
+  function useList(key) {
+    listKey = key; list = key === 'main' ? STAGES : EVENT_LEVELS[key]; listIds = list.map(s => s.id);
+  }
+  // Events open by device date; tests can pin a date via __DUSK_TEST__.today ('YYYY-MM-DD').
+  const today = () => (window.__DUSK_TEST__ && window.__DUSK_TEST__.today ? new Date(window.__DUSK_TEST__.today + 'T12:00:00') : new Date());
+  // Korean object particle: 을 after a final consonant, 를 after a vowel.
+  const withObject = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return w + (c >= 0 && c < 11172 && c % 28 ? '을' : '를'); };
+  const eventStars = ev => EVENT_LEVELS[ev.id].reduce((a, s) => a + (bestStars[s.id] || 0), 0);
   const WORLD = 1800, CELL = 225, ROAD = 46;
 
   const canvas = document.getElementById('c');
@@ -259,6 +273,12 @@
     snowman:   { r: 7,  color: '#f7f9fc' },
     sled:      { r: 6,  color: '#c0392b' },
     pine:      { r: 12, color: '#2f6b4a' },
+    // Christmas event
+    gift:      { r: 4,  color: '#d62c3a', colors: ['#d62c3a', '#2f9e5a', '#3a6fd6', '#f2c14e', '#f4f6fa'] },
+    caroler:   { r: 5,  color: '#c0392b', colors: ['#c0392b', '#2f7d4a', '#7a4fbf'] },
+    reindeer:  { r: 8,  color: '#8a5a3a' },
+    xtree:     { r: 30, color: '#1f6b3a' },
+    sleigh:    { r: 16, color: '#c0392b' },
     // farm
     chicken:   { r: 3,  color: '#f7f7f2' },
     sheep:     { r: 6,  color: '#f2efe6' },
@@ -423,10 +443,10 @@
   }
 
   function setupStage(i, boosts = []) {
-    stageIndex = i; stage = STAGES[i];
+    stageIndex = i; stage = list[i];
     buildWorld(Date.now() & 0xffff);
     elapsed = 0; score = 0; bannerUntil = 0;
-    tut = i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
+    tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
     runDuration = C.DURATION + used.reduce((a, b) => a + (b.extraTime || 0), 0);
     stats = { score: 0, eaten: {}, beamHit: false, total: 0 };
@@ -671,24 +691,36 @@
 
   function lastUnlocked() {
     let i = 0;
-    while (i + 1 < STAGES.length && C.isUnlocked(STAGE_IDS, i + 1, bestStars)) i++;
+    while (i + 1 < list.length && C.isUnlocked(listIds, i + 1, bestStars)) i++;
     return i;
   }
 
   function openSelect() {
     state = 'menu';
-    const from = page * PAGE, pages = Math.ceil(STAGES.length / PAGE);
-    const cells = STAGES.slice(from, from + PAGE).map((s, k) => {
-      const i = from + k, open = C.isUnlocked(STAGE_IDS, i, bestStars);
+    const live = activeEvents(today());
+    if (listKey !== 'main' && !live.some(ev => ev.id === listKey)) { useList('main'); selected = lastUnlocked(); page = Math.floor(selected / PAGE); }
+    const ev = EVENTS.find(e => e.id === listKey);
+    const tabs = live.length ? `<div class="tabs"><span class="chip${ev ? '' : ' on'}" data-l="main">레벨</span>` +
+      live.map(e => `<span class="chip${ev === e ? ' on' : ''}" data-l="${e.id}">${e.icon} 이벤트</span>`).join('') + '</div>' : '';
+    const reward = ev && Shop.SKINS.find(k => k.id === ev.reward.skin);
+    const progress = ev ? `<div class="event-note">${ev.title} · 별 ${eventStars(ev)}/${list.length * 3} — ` +
+      (Store.wallet.owned.includes(reward.id) ? `${reward.name} 획득!` : `별 ${ev.reward.stars}개를 모으면 ${reward.name}`) + '</div>' : '';
+    const from = page * PAGE, pages = Math.ceil(list.length / PAGE);
+    const cells = list.slice(from, from + PAGE).map((s, k) => {
+      const i = from + k, open = C.isUnlocked(listIds, i, bestStars);
       return `<button class="node ${s.theme}${open ? '' : ' locked'}${i === selected ? ' sel' : ''}" data-i="${i}" aria-label="${s.name}">
         ${open ? `<span class="num">${s.n}</span><span class="stars">${starText(bestStars[s.id] || 0)}</span>` : LOCK}</button>`;
     }).join('');
-    $('map').innerHTML = `<div class="levels">${cells}</div>
+    $('map').innerHTML = `${tabs}${progress}<div class="levels">${cells}</div>
       <div class="pager"><span class="chip${page ? '' : ' off'}" data-p="-1">‹</span>
-      <span>${from + 1}–${Math.min(from + PAGE, STAGES.length)} / ${STAGES.length}</span>
+      <span>${from + 1}–${Math.min(from + PAGE, list.length)} / ${list.length}</span>
       <span class="chip${page < pages - 1 ? '' : ' off'}" data-p="1">›</span></div>`;
     $('map').querySelectorAll('.node').forEach(n =>
       n.addEventListener('pointerup', () => { selected = +n.dataset.i; openSelect(); }));
+    $('map').querySelectorAll('.tabs .chip').forEach(el => el.addEventListener('pointerup', () => {
+      if (el.dataset.l === listKey) return;
+      useList(el.dataset.l); chosen.clear(); openSelectAt(lastUnlocked());
+    }));
     $('map').querySelectorAll('.pager .chip').forEach(el => el.addEventListener('pointerup', () => {
       page = Math.max(0, Math.min(pages - 1, page + +el.dataset.p)); openSelect();
     }));
@@ -703,7 +735,7 @@
   const boostCost = () => Shop.BOOSTS.filter(b => chosen.has(b.id)).reduce((a, b) => a + b.cost, 0);
 
   function renderSheet() {
-    const s = STAGES[selected], open = C.isUnlocked(STAGE_IDS, selected, bestStars);
+    const s = list[selected], open = C.isUnlocked(listIds, selected, bestStars);
     const gems = Store.wallet.gems;
     const boosts = Shop.BOOSTS.map(b => {
       const on = chosen.has(b.id), affordable = on || boostCost() + b.cost <= gems;
@@ -744,10 +776,18 @@
     bestStars[stage.id] = Math.max(before, n);
     bestScore[stage.id] = Math.max(bestScore[stage.id] || 0, score);
     save('dusk-stars', bestStars); save('dusk-best', bestScore);
-    Store.update(Shop.finishRun(Shop.awardStars(Store.wallet, before, n)));
+    let w = Shop.finishRun(Shop.awardStars(Store.wallet, before, n));
+    // Event reward: enough stars across the event's levels grants its skin (once).
+    const ev = EVENTS.find(e => e.id === listKey);
+    const gotReward = ev && !w.owned.includes(ev.reward.skin) && eventStars(ev) >= ev.reward.stars;
+    if (gotReward) w = Shop.grantReward(w, ev.reward.skin);
+    Store.update(w);
     const earned = Math.max(0, n - before) * Shop.GEMS_PER_STAR;
-    $('end-gems').textContent = `새 별 보상: 보석 ${earned}개`;
-    $('end-gems').classList.toggle('hidden', !earned);
+    const notes = [];
+    if (earned) notes.push(`새 별 보상: 보석 ${earned}개`);
+    if (gotReward) notes.push(`🎁 ${withObject(Shop.SKINS.find(k => k.id === ev.reward.skin).name)} 받았어요! 상점에서 장착하세요.`);
+    $('end-gems').textContent = notes.join(' · ');
+    $('end-gems').classList.toggle('hidden', !notes.length);
 
     $('end-title').textContent = n === 3 ? '완벽한 밤이었어요' : '밤이 끝났어요';
     $('end-stars').innerHTML = starText(n);
@@ -756,7 +796,7 @@
       `<div><span class="mark ${got[k] ? '' : 'miss'}">${got[k] ? '★' : '☆'}</span><span>${goalLabel(g)}</span></div>`).join('');
     $('best').textContent = `${stage.name} 최고 기록 ${bestScore[stage.id].toLocaleString()}점`;
     const next = stageIndex + 1;
-    $('btn-next').classList.toggle('hidden', !(next < STAGES.length && C.isUnlocked(STAGE_IDS, next, bestStars)));
+    $('btn-next').classList.toggle('hidden', !(next < list.length && C.isUnlocked(listIds, next, bestStars)));
     show('end');
   }
 
@@ -773,8 +813,9 @@
   function renderShop() {
     const w = Store.wallet;
     $('shop-skins').innerHTML = Shop.SKINS.map(s => {
-      const own = !s.product || w.owned.includes(s.id), on = w.equipped === s.id, price = s.product && Store.price(s.product);
-      const label = on ? '장착 중' : own ? '장착하기' : price || '준비 중';
+      const own = (!s.product && !s.reward) || w.owned.includes(s.id), on = w.equipped === s.id, price = s.product && Store.price(s.product);
+      const ev = s.reward && EVENTS.find(e => e.id === s.reward);
+      const label = on ? '장착 중' : own ? '장착하기' : ev ? `${ev.icon} 이벤트 별 ${ev.reward.stars}개` : price || '준비 중';
       return `<button class="item${on ? ' on' : ''}" data-skin="${s.id}"${own || price ? '' : ' disabled'}>
         <span class="swatch" style="background:${hex(s.body)};border-color:${hex(s.rim)}"><i style="background:${hex(s.eye)}"></i><i style="background:${hex(s.eye)}"></i></span>
         <span class="nm">${s.name}</span><span class="pr${own ? ' own' : ''}">${label}</span></button>`;
@@ -786,6 +827,7 @@
     }).join('');
     $('shop-skins').querySelectorAll('.item').forEach(el => el.addEventListener('pointerup', async () => {
       const s = skinById(el.dataset.skin);
+      if (s.reward && !Store.wallet.owned.includes(s.id)) return; // earned in its event, not sold
       if (s.product && !Store.wallet.owned.includes(s.id)) { if (!(await buy(s.product))) return; }
       Store.update(Shop.equip(Store.wallet, s.id));
     }));
@@ -841,7 +883,7 @@
   $('btn-select').addEventListener('pointerup', () => {
     // After unlocking the next level, point the map at it; otherwise stay on the stage just played.
     const next = stageIndex + 1;
-    openSelectAt(next < STAGES.length && C.isUnlocked(STAGE_IDS, next, bestStars) && (bestStars[STAGES[next].id] || 0) === 0 ? next : stageIndex);
+    openSelectAt(next < list.length && C.isUnlocked(listIds, next, bestStars) && (bestStars[list[next].id] || 0) === 0 ? next : stageIndex);
   });
   $('btn-resume').addEventListener('pointerup', () => { state = 'play'; show(null); });
   document.addEventListener('visibilitychange', () => {
@@ -897,7 +939,7 @@
 
   // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
   if (window.__DUSK_TEST__) {
-    window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; tut = null; }, view, watchFrames, get tut() { return tut; }, R, Store, Shop, ready,
+    window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; tut = null; }, view, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
       get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase, sun }; } };

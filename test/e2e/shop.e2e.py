@@ -35,8 +35,9 @@ with sync_playwright() as p:
     pg.tap('#btn-shop-title'); frames_wait(pg)
     skins = pg.query_selector_all('#shop-skins .item'); packs = pg.query_selector_all('#shop-gems .item')
     prices = [e.inner_text() for e in pg.query_selector_all('#shop-gems .pr')]
-    rec('H1', 'shop lists 5 skins + 3 gem packs, demo notice shown', pg.is_visible('#shop') and pg.is_visible('#shop-demo')
-        and len(skins) == 5 and len(packs) == 3 and all('₩' in x for x in prices), str(prices))
+    santa = pg.inner_text('.item[data-skin=santa] .pr')
+    rec('H1', 'shop lists 6 skins (santa locked to its event) + 3 gem packs, demo notice shown', pg.is_visible('#shop') and pg.is_visible('#shop-demo')
+        and len(skins) == 6 and '이벤트' in santa and len(packs) == 3 and all('₩' in x for x in prices), str(prices))
 
     # H2 buying a gem pack credits gems and saves them
     packs[0].tap(); frames_wait(pg, 5)
@@ -52,7 +53,7 @@ with sync_playwright() as p:
     pg.query_selector_all('#shop-skins .item')[1].tap(); frames_wait(pg, 5)
     w = wallet(pg)
     bought = w['equipped'] == 'mint' and 'mint' in w['owned']
-    pg.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ owned: {A}.Shop.SKINS.filter(s => s.product).map(s => s.id) }}))")
+    pg.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ owned: {A}.Shop.SKINS.filter(s => s.product || s.reward).map(s => s.id) }}))")
     pg.evaluate(f'{A}.start(0)'); frames_wait(pg); pg.evaluate(f'{A}.freeze()')
     rims = {}
     for sid in pg.evaluate(f'{A}.Shop.SKINS.map(s => s.id)'):

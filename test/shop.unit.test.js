@@ -100,3 +100,16 @@ test('product ids are unique and live under the app bundle id', () => {
   assert.equal(new Set(ids).size, ids.length);
   for (const id of ids) assert.match(id, /^com\.aspynlim\.duskeater\.[a-z0-9_.]+$/);
 });
+
+test('event reward skin: granted once, survives save/load and an App Store entitlement refresh, never sold', () => {
+  let w = S.grantReward(S.emptyWallet(), 'santa');
+  assert.deepEqual(w.owned, ['santa']);
+  assert.equal(S.grantReward(w, 'santa'), w);
+  assert.deepEqual(S.grantReward(S.emptyWallet(), 'mint').owned, []); // bought skins are never granted
+  w = S.normalize(JSON.parse(JSON.stringify(S.equip(w, 'santa'))));
+  assert.equal(w.equipped, 'santa');
+  w = S.applyEntitlements(w, [tx(SKIN.product, 't9')]);
+  assert.deepEqual(w.owned.sort(), ['santa', SKIN.id].sort());
+  assert.equal(w.equipped, 'santa');
+  assert.ok(!S.allProducts().some(p => p.includes('santa')));
+});

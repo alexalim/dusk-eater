@@ -1,7 +1,7 @@
 // Layer: Unit — the 150-level table from www/stages.js (ids, goal labels, reachable goals, difficulty curve), no DOM.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { STAGES, THEMES, goalLabel } = require('../www/stages.js');
+const { STAGES, THEMES, goalLabel, EVENT_LEVELS, activeEvents } = require('../www/stages.js');
 
 const spawned = (s, what) => (s.small.find(([t]) => t === what) || [0, 0])[1];
 const scoreGoal = s => s.goals[0].n;
@@ -43,7 +43,20 @@ test('difficulty never drops from one level to the next within a theme', () => {
 });
 
 test('every map appears, in blocks of five after the ten town levels; only snow lowers the sun', () => {
-  assert.deepEqual([...new Set(STAGES.map(s => s.theme))].sort(), Object.keys(THEMES).sort());
+  const ladder = Object.keys(THEMES).filter(k => !THEMES[k].event);
+  assert.deepEqual([...new Set(STAGES.map(s => s.theme))].sort(), ladder.sort());
   for (let i = 10; i < STAGES.length; i += 5) assert.equal(new Set(STAGES.slice(i, i + 5).map(s => s.theme)).size, 1, `L${i + 1}`);
   for (const s of STAGES) assert.equal(s.sunMax !== undefined, s.theme === 'snow', s.id);
+});
+
+test('Christmas event: 10 levels with their own ids, varied targets, rising difficulty; open Dec 1 - Jan 6 only', () => {
+  const L = EVENT_LEVELS.xmas;
+  assert.equal(L.length, 10);
+  assert.deepEqual(L.map(s => s.id), Array.from({ length: 10 }, (_, i) => `xmas-${i + 1}`));
+  assert.ok(L.every(s => s.theme === 'xmas' && !STAGES.some(m => m.id === s.id)));
+  assert.equal(new Set(L.map(s => s.goals[1].what)).size, 4);
+  for (let i = 1; i < L.length; i++) assert.ok(L[i].goals[0].n > L[i - 1].goals[0].n && L[i].sunDrain >= L[i - 1].sunDrain);
+  const on = d => activeEvents(new Date(d + 'T12:00:00')).map(e => e.id);
+  assert.deepEqual(['2026-11-30', '2026-12-01', '2026-12-31', '2027-01-01', '2027-01-06', '2027-01-07'].map(on),
+    [[], ['xmas'], ['xmas'], ['xmas'], ['xmas'], []]);
 });

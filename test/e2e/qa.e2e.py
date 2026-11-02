@@ -166,8 +166,37 @@ with sync_playwright() as p:
         t0[0] == 0 and t0[2] and '끌면' in t0[1] and t1[0] == 1 and t1b[0] >= expect_b and sun0 == sun1 == '0%' and t2[0] >= 3 and sun2 != '0%'
         and lv2[0] is None and not lv2[2] and skipped[0] is None and not skipped[2],
         f'start={t0[:1]} after_drag={t1[0]} ate_while_dragging={ate} after_wait={t1b[0]} sun {sun0}->{sun1}->{sun2} after_swallow={t2[0]} level2={lv2[0]} skipped={skipped[0]}')
-    # S3 round end: stars + goal list + next button rule
-    pg.evaluate(f'{A}.skipTo(119.9)'); frames_wait(pg)
+    # S17 Christmas event: no tab before Dec 1; a tab and 10 levels from Dec 1; 15 event stars grant the santa skin once;
+    # the shop shows it locked until then; the event closes after Jan 6
+    T = lambda: pg.evaluate("[...document.querySelectorAll('.tabs .chip')].map(e => e.dataset.l)")
+    pg.evaluate("window.__DUSK_TEST__.today = '2026-11-30'"); pg.evaluate(f'{A}.freeze()')
+    pg.evaluate("document.querySelector('#btn-title').dispatchEvent(new PointerEvent('pointerup'))"); frames_wait(pg, 3)
+    nov = T()
+    pg.evaluate("window.__DUSK_TEST__.today = '2026-12-10'")
+    pg.evaluate("document.querySelector('#btn-title').dispatchEvent(new PointerEvent('pointerup'))"); frames_wait(pg, 3)
+    dec = T(); pg.tap('.tabs .chip[data-l=xmas]'); frames_wait(pg, 3)
+    nodes = len(pg.query_selector_all('.levels .node')); note0 = pg.inner_text('.event-note')
+    MEET = f"""(() => {{ const s = {A}.s; for (const g of window.DuskStages.EVENT_LEVELS.xmas[%d].goals) {{
+        if (g.kind === 'score') s.stats.score = Math.max(s.stats.score, g.n); if (g.kind === 'eat') s.stats.eaten[g.what] = g.n; }} }})()"""
+    owned = []
+    for k in range(5):
+        pg.evaluate(f'{A}.start({k})'); frames_wait(pg, 2)
+        pg.evaluate(MEET % k); frames_wait(pg, 3)
+        pg.evaluate(f'{A}.skipTo({A}.runDuration - 0.02)'); frames_wait(pg, 4)
+        owned.append('santa' in pg.evaluate(f'{A}.Store.wallet.owned'))
+    note = pg.inner_text('#end-gems')
+    pg.evaluate("document.querySelector('#btn-select').dispatchEvent(new PointerEvent('pointerup'))"); frames_wait(pg, 3)
+    note1 = pg.inner_text('.event-note')
+    pg.evaluate("window.__DUSK_TEST__.today = '2027-01-07'")
+    pg.evaluate("document.querySelector('#btn-select').dispatchEvent(new PointerEvent('pointerup'))"); frames_wait(pg, 3)
+    jan = [T(), pg.evaluate(f'{A}.listKey')]
+    rec('S17', 'Christmas event: tab only Dec 1 - Jan 6, 10 levels, santa skin at 15 stars',
+        nov == [] and dec == ['main', 'xmas'] and nodes == 10 and '0/30' in note0 and owned == [False] * 4 + [True]
+        and '산타 그림자' in note and '획득' in note1 and jan == [[], 'main'],
+        f'nov={nov} dec={dec} nodes={nodes} owned_after_each={owned} note={note!r} jan={jan}')
+    pg.evaluate("window.__DUSK_TEST__.today = null"); pg.evaluate(f'{A}.useList("main"); {A}.start(0)'); frames_wait(pg)
+    # S3 round end: stars + goal list + next button rule (fast frames can be ~16 ms, so leave 10 ms and wait 8)
+    pg.evaluate(f'{A}.skipTo(119.99)'); frames_wait(pg, 8)
     end_vis = pg.is_visible('#end'); goals = len(pg.query_selector_all('#end-goals > div'))
     stars = pg.evaluate("JSON.parse(localStorage.getItem('dusk-stars') || '{}')")
     nxt = pg.is_visible('#btn-next')

@@ -81,11 +81,36 @@
       waterFrom: null, cranes: 0,
       eat: [['chicken', 8, 45], ['sheep', 4, 25], ['cow', 2, 14]],
     },
+    // Seasonal: only played through EVENTS below, never in the 150-level ladder.
+    xmas: {
+      theme: 'xmas', event: true,
+      name: '크리스마스 마을',
+      desc: '눈 내린 광장에 커다란 트리와 선물이 가득해요. 겨울 해라 그림자가 길어요.',
+      ground: ['#eef3f8', '#f6f8fb', '#f6d9cf'], groundNight: '#1f2a4a',
+      roofs: ['#c0392b', '#2f7d4a', '#f4f6fa', '#d9e2ec'],
+      parkChance: 0.25, splitChance: 0.45, height: [25, 90],
+      small: [['caroler', 180], ['gift', 120], ['snowman', 40], ['reindeer', 40]],
+      parkItems: [['xtree', 0.7, 'center'], ['gift', 6], ['pine', 4]], carsPerRoad: 2, vehicle: 'sleigh',
+      sunMax: 30 * Math.PI / 180,
+      waterFrom: null, cranes: 0,
+      eat: [['gift', 6, 40], ['caroler', 6, 40], ['reindeer', 2, 14], ['snowman', 3, 16]],
+    },
   };
+
+  // Limited-time events, judged by the device date. [month, day] bounds are inclusive and may wrap the new year.
+  const EVENTS = [
+    { id: 'xmas', theme: 'xmas', title: '크리스마스 이벤트', icon: '🎄', from: [12, 1], to: [1, 6], count: 10,
+      reward: { skin: 'santa', stars: 15 } },
+  ];
+  function eventActive(ev, date) {
+    const md = (date.getMonth() + 1) * 100 + date.getDate(), a = ev.from[0] * 100 + ev.from[1], b = ev.to[0] * 100 + ev.to[1];
+    return a <= b ? md >= a && md <= b : md >= a || md <= b;
+  }
+  const activeEvents = date => EVENTS.filter(ev => eventActive(ev, date));
 
   const COUNT = 150;
   // First-star score at level 1 and level 150 for each map (tuned with the bot; see docs).
-  const SCORE = { town: [1000, 22000], harbor: [700, 10000], city: [900, 40000], park: [400, 7000], snow: [700, 16000], farm: [500, 7000] };
+  const SCORE = { xmas: [700, 16000], town: [1000, 22000], harbor: [700, 10000], city: [900, 40000], park: [400, 7000], snow: [700, 16000], farm: [500, 7000] };
   const HARBOR_FROM = 11; // the first ten levels stay in town
 
   // Levels 11+ run in blocks of five, cycling through every map.
@@ -93,14 +118,15 @@
   const themeOf = n => (n < HARBOR_FROM ? 'town' : CYCLE[Math.floor((n - HARBOR_FROM) / 5) % CYCLE.length]);
   const lerp = (a, b, t) => a + (b - a) * t;
 
-  function level(n) {
-    const t = THEMES[themeOf(n)];
+  // `pick` rotates the eat target; event levels pass their own order so targets vary.
+  function level(n, theme = themeOf(n), pick = n) {
+    const t = THEMES[theme];
     const d = Math.pow((n - 1) / (COUNT - 1), 1.3); // 0 at level 1, 1 at level 150; flat early, steeper late
     const ramp = Math.min(1, (n - 1) / 60); // light damage reaches full strength by level 61
     const guards = n < 4 ? 0 : Math.min(5, 1 + Math.floor((n - 4) / 25));
     const [s0, s1] = SCORE[t.theme];
     const score = Math.round(lerp(s0, s1, d) / 100) * 100;
-    const [what, lo, hi] = t.eat[(n - 1) % t.eat.length];
+    const [what, lo, hi] = t.eat[(pick - 1) % t.eat.length];
     const goals = [
       { kind: 'score', n: score },
       { kind: 'eat', what, n: Math.round(lerp(lo, hi, d)) },
@@ -117,6 +143,11 @@
   }
 
   const STAGES = Array.from({ length: COUNT }, (_, i) => level(i + 1));
+  // Event level k borrows the ladder's difficulty at level 4 + 8(k - 1): gentle start, mid-ladder finish.
+  const EVENT_LEVELS = Object.fromEntries(EVENTS.map(ev => [ev.id, Array.from({ length: ev.count }, (_, i) => {
+    const k = i + 1, base = level(4 + 8 * i, ev.theme, k);
+    return Object.assign(base, { id: `${ev.id}-${k}`, n: k, name: `${ev.icon} ${k}. ${base.name.replace(/^\d+\. /, '')}` });
+  })]));
 
   // How each goal reads on screen; counters follow Korean usage.
   const NAMES = {
@@ -126,6 +157,7 @@
     visitor: ['관람객', '명'], balloon: ['풍선', '개'], candy: ['솜사탕 가판', '개'],
     skier: ['스키어', '명'], snowman: ['눈사람', '개'], sled: ['썰매', '개'], pine: ['전나무', '그루'],
     chicken: ['닭', '마리'], sheep: ['양', '마리'], cow: ['소', '마리'],
+    gift: ['선물 상자', '개'], caroler: ['캐럴 합창단', '명'], reindeer: ['순록', '마리'],
     guard: ['경비원', '명'],
   };
 
@@ -136,7 +168,7 @@
     return g.kind;
   }
 
-  const api = { THEMES, STAGES, NAMES, goalLabel, themeOf };
+  const api = { THEMES, STAGES, NAMES, goalLabel, themeOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DuskStages = api;
 })(this);

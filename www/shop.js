@@ -16,6 +16,8 @@
     { id: 'starry', name: '별밤 그림자', body: 0x101833, rim: 0x9fd0ff, eye: 0xfff3c4, product: PREFIX + 'skin.starry', price: '₩1,500' },
     { id: 'gold', name: '황금 그림자', body: 0x221a0c, rim: 0xffe08a, eye: 0xffffff, product: PREFIX + 'skin.gold', price: '₩2,200' },
     { id: 'ghost', name: '유령 그림자', body: 0x2a2d3a, rim: 0xf4f6ff, eye: 0xb9f6ff, product: PREFIX + 'skin.ghost', price: '₩2,200' },
+    // Earned, not bought: `reward` names the event whose stars unlock it.
+    { id: 'santa', name: '산타 그림자', body: 0x3a0d14, rim: 0x7fe08a, eye: 0xffffff, reward: 'xmas' },
   ];
 
   const GEM_PACKS = [
@@ -42,7 +44,7 @@
     if (!w || typeof w !== 'object') return e;
     const int = v => (Number.isInteger(v) && v > 0 ? v : 0);
     const strs = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string') : []);
-    const owned = strs(w.owned).filter(id => SKINS.some(s => s.id === id && s.product));
+    const owned = strs(w.owned).filter(id => SKINS.some(s => s.id === id && (s.product || s.reward)));
     const equipped = owned.includes(w.equipped) ? w.equipped : DEFAULT_SKIN;
     return { gems: int(w.gems), owned, equipped, credited: strs(w.credited).slice(-CREDIT_LOG), pending: int(w.pending) };
   }
@@ -61,14 +63,22 @@
     return next;
   }
 
-  // Skins are non-consumable: the App Store's current entitlements are the truth (covers refunds and restores).
+  // Skins are non-consumable: the App Store's current entitlements are the truth for bought skins
+  // (covers refunds and restores). Event-reward skins never come from the store, so they are kept.
   function applyEntitlements(w, purchases) {
-    const owned = [];
+    const owned = w.owned.filter(id => SKINS.some(s => s.id === id && s.reward));
     for (const p of purchases || []) {
       const s = skinFor(p.productIdentifier);
       if (s && !p.revocationDate && !owned.includes(s.id)) owned.push(s.id);
     }
     return Object.assign({}, w, { owned, equipped: owned.includes(w.equipped) ? w.equipped : DEFAULT_SKIN });
+  }
+
+  // Event reward: grant the skin once (idempotent).
+  function grantReward(w, id) {
+    const s = SKINS.find(k => k.id === id);
+    if (!s || !s.reward || w.owned.includes(id)) return w;
+    return Object.assign({}, w, { owned: w.owned.concat(id) });
   }
 
   function equip(w, id) {
@@ -96,7 +106,7 @@
 
   const api = {
     PREFIX, DEFAULT_SKIN, GEMS_PER_STAR, CREDIT_LOG, SKINS, GEM_PACKS, BOOSTS, allProducts,
-    emptyWallet, normalize, creditTransaction, applyEntitlements, equip, spend,
+    emptyWallet, normalize, creditTransaction, applyEntitlements, grantReward, equip, spend,
     startBoosts, finishRun, refundPending, awardStars,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
