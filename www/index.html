@@ -375,13 +375,32 @@
     if (R) R.build({ stage, WORLD, CELL, ROAD, waterY, buildings, objects, guards, lighthouse });
   }
 
-  // ---------- input: relative drag, plus keys for desktop ----------
+  // ---------- input: relative drag, two-finger pinch zoom, plus keys for desktop ----------
   const input = { active: false, ax: 0, ay: 0, dx: 0, dy: 0, keys: new Set() };
+  // view.zoom multiplies the automatic camera distance; pinching in past ZOOM_MIN enters first person
+  // (experimental), pinching out of first person returns to the top-down view.
+  const ZOOM_MIN = 0.5, ZOOM_MAX = 2;
+  const view = { zoom: 1, fp: false };
+  const touches = new Map();
+  let pinch = null;
+  const spread = () => { const [a, b] = [...touches.values()]; return Math.hypot(a.x - b.x, a.y - b.y) || 1; };
   canvas.addEventListener('pointerdown', e => {
-    input.active = true; input.ax = e.clientX; input.ay = e.clientY; input.dx = input.dy = 0;
     canvas.setPointerCapture(e.pointerId);
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2) { endDrag(); pinch = { d0: spread(), zoom0: view.zoom, fp0: view.fp }; return; }
+    if (touches.size > 2 || pinch) return;
+    input.active = true; input.ax = e.clientX; input.ay = e.clientY; input.dx = input.dy = 0;
   });
   canvas.addEventListener('pointermove', e => {
+    if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && touches.size === 2) {
+      const ratio = spread() / pinch.d0; // > 1 fingers apart = zoom in
+      if (pinch.fp0) { if (ratio < 0.75) { view.fp = false; view.zoom = ZOOM_MIN; pinch = { d0: spread(), zoom0: ZOOM_MIN, fp0: false }; } return; }
+      const z = pinch.zoom0 / ratio;
+      if (z < ZOOM_MIN * 0.8) { view.fp = true; view.zoom = ZOOM_MIN; pinch = { d0: spread(), zoom0: ZOOM_MIN, fp0: true }; return; }
+      view.zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+      return;
+    }
     if (!input.active) return;
     input.dx = e.clientX - input.ax; input.dy = e.clientY - input.ay;
     const len = Math.hypot(input.dx, input.dy), max = 70;
@@ -391,8 +410,10 @@
     }
   });
   const endDrag = () => { input.active = false; input.dx = input.dy = 0; };
-  canvas.addEventListener('pointerup', endDrag);
-  canvas.addEventListener('pointercancel', endDrag);
+  // Lifting a finger ends the pinch; movement waits for a fresh touch so the zoom gesture doesn't steer.
+  const lift = e => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null; endDrag(); };
+  canvas.addEventListener('pointerup', lift);
+  canvas.addEventListener('pointercancel', lift);
   window.addEventListener('keydown', e => input.keys.add(e.key));
   window.addEventListener('keyup', e => input.keys.delete(e.key));
   document.addEventListener('contextmenu', e => e.preventDefault());
@@ -401,7 +422,7 @@
   // ---------- update ----------
   // `view` = world units across the shorter screen side; grows with the player.
   const cam = { x: 0, y: 0, view: 400 };
-  const targetView = () => 300 + player.r * 7;
+  const targetView = () => (300 + player.r * 7) * view.zoom;
 
   function beams() {
     const list = guards.filter(g => g.state === 0);
@@ -437,6 +458,11 @@
     if (input.keys.has('ArrowRight') || input.keys.has('d')) mx += 1;
     if (input.keys.has('ArrowUp') || input.keys.has('w')) my -= 1;
     if (input.keys.has('ArrowDown') || input.keys.has('s')) my += 1;
+    if (view.fp) { // first person: sideways turns, up/down walks along the facing direction
+      player.face += mx * 1.8 * dt;
+      const fwd = -my;
+      mx = Math.cos(player.face) * fwd; my = Math.sin(player.face) * fwd;
+    }
     const ml = Math.hypot(mx, my);
     if (ml > 1) { mx /= ml; my /= ml; }
     const speed = 150 + player.r * 1.6;
@@ -444,7 +470,7 @@
     player.vy += (my * speed - player.vy) * Math.min(1, dt * 10);
     player.x = Math.max(0, Math.min(WORLD, player.x + player.vx * dt));
     player.y = Math.max(0, Math.min(WORLD, player.y + player.vy * dt));
-    if (ml > 0.1) player.face = Math.atan2(my, mx);
+    if (ml > 0.1 && !view.fp) player.face = Math.atan2(my, mx);
 
     for (const g of guards) {
       if (g.state !== 0) continue;
@@ -514,7 +540,7 @@
       const c = centerOf(b);
       if (isShaded(c, b)) hints.push({ x: c.x, y: c.y, r: Math.hypot(b.w, b.d) / 2 });
     }
-    R.draw({ t, phase, sun, player, view: cam.view, camX: cam.x, camY: cam.y, swallowPos, hints });
+    R.draw({ t, phase, sun, player, view: cam.view, camX: cam.x, camY: cam.y, swallowPos, hints, fp: view.fp && state !== 'title' });
     $('vignette').classList.toggle('hidden', !phase.night);
     if (state === 'play') renderHud();
   }
@@ -766,7 +792,7 @@
 
   // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
   if (window.__DUSK_TEST__) {
-    window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; }, R, Store, Shop, ready,
+    window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; }, view, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
       get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase }; } };

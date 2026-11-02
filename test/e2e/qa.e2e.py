@@ -92,6 +92,41 @@ with sync_playwright() as p:
     rec('S13', 'pause button -> quit returns to levels, refunds boost, saves nothing', paid == 60 and paused and pg.is_visible('#select')
         and w == [100, 0] and saved == [None, None], f'paid->{paid} wallet={w} saved={saved}')
     pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    # S14 two-finger pinch: zoom in, past the limit into first person (no shader recompiles), steer, pinch back out
+    def pinch(d0, d1, steps=12):
+        cdp = pg.context.new_cdp_session(pg)
+        pts = lambda d: [{'x': 195 - d / 2, 'y': 500, 'id': 1}, {'x': 195 + d / 2, 'y': 500, 'id': 2}]
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': pts(d0)})
+        for i in range(1, steps + 1):
+            cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': pts(d0 + (d1 - d0) * i / steps)}); pg.wait_for_timeout(16)
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); frames_wait(pg)
+    def drag(dx, dy, ms=600):
+        cdp = pg.context.new_cdp_session(pg)
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': 195, 'y': 600}]})
+        for i in range(1, 11):
+            cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': 195 + dx * i / 10, 'y': 600 + dy * i / 10}]}); pg.wait_for_timeout(16)
+        pg.wait_for_timeout(ms)
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); frames_wait(pg, 10)
+    V = lambda: pg.evaluate(f'[{A}.view.zoom, {A}.view.fp]')
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    x0 = pg.evaluate(f'{A}.s.player.x')
+    pinch(100, 150); z1 = V()
+    moved = abs(pg.evaluate(f'{A}.s.player.x') - x0)
+    progs0 = pg.evaluate(f'{A}.R.debug.renderer.info.programs.length')
+    pinch(80, 300); fp1 = V(); frames_wait(pg, 4)
+    progs1 = pg.evaluate(f'{A}.R.debug.renderer.info.programs.length')
+    face0, p0 = pg.evaluate(f'[{A}.s.player.face, [{A}.s.player.x, {A}.s.player.y]]')
+    drag(60, 0); face1, p1 = pg.evaluate(f'[{A}.s.player.face, [{A}.s.player.x, {A}.s.player.y]]')
+    drag(0, -60); face2, p2 = pg.evaluate(f'[{A}.s.player.face, [{A}.s.player.x, {A}.s.player.y]]')
+    import math
+    step = (p2[0] - p1[0], p2[1] - p1[1]); along = step[0] * math.cos(face2) + step[1] * math.sin(face2)
+    pinch(300, 100); back = V()
+    rec('S14', 'pinch zooms, deeper pinch = first person (no recompile), turn + walk forward, pinch out returns',
+        z1[0] < 0.9 and not z1[1] and moved < 1 and fp1[1] and progs1 == progs0 and face1 - face0 > 0.3
+        and math.dist(p0, p1) < 15 and along > 40 and not back[1],
+        f'zoom={z1[0]:.2f} pinch_moved={moved:.1f} fp={fp1[1]} programs {progs0}->{progs1} turn={face1 - face0:.2f} '
+        f'turn_drift={math.dist(p0, p1):.1f} forward={along:.0f} back_fp={back[1]}')
+    pg.evaluate(f'{A}.view.zoom = 1; {A}.start(0)'); frames_wait(pg)
     # S3 round end: stars + goal list + next button rule
     pg.evaluate(f'{A}.skipTo(119.9)'); frames_wait(pg)
     end_vis = pg.is_visible('#end'); goals = len(pg.query_selector_all('#end-goals > div'))

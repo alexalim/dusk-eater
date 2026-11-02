@@ -81,6 +81,13 @@
 
     const scene = new T.Scene();
     const camera = new T.OrthographicCamera(-1, 1, 1, -1, 1, 6000);
+    // First person (experimental): a perspective camera at the shadow's eye height. Fog is always on so
+    // switching views never recompiles shaders; top-down pushes it far out of sight.
+    const fpCamera = new T.PerspectiveCamera(72, 1, 1, 2000);
+    const FAR_FOG = 1e5;
+    scene.fog = new T.Fog(0xbcd9f0, FAR_FOG, FAR_FOG * 2);
+    const SKY = { day: col('#bcd9f0'), dusk: col('#f0a46e'), night: col('#1b1830') };
+    const skyCol = new T.Color();
     const hemi = new T.HemisphereLight(0xffffff, 0x8a7f70, 0.55);
     scene.add(hemi);
     const sunLight = new T.DirectionalLight(0xfff4dd, 0.9);
@@ -361,7 +368,11 @@
       const { phase, sun, player, t } = f;
 
       // Camera: orthographic, tilted 55°, `view` world units across the shorter screen side.
+      // In first person the light/shadow box centers ahead of the player instead of under the camera.
       const aspect = vw / vh;
+      const fp = !!f.fp, eye = Math.max(10, player.r * 0.9);
+      const lookX = player.x + Math.cos(player.face) * 300, lookY = player.y + Math.sin(player.face) * 300;
+      const focusX = fp ? player.x + Math.cos(player.face) * 260 : f.camX, focusY = fp ? player.y + Math.sin(player.face) * 260 : f.camY;
       const halfW = aspect < 1 ? f.view / 2 : f.view / 2 * aspect;
       const halfH = halfW / aspect;
       camera.left = -halfW; camera.right = halfW; camera.top = halfH; camera.bottom = -halfH;
@@ -369,6 +380,17 @@
       const D = 2500;
       camera.position.set(f.camX, D * Math.sin(TILT), f.camY + D * Math.cos(TILT));
       camera.lookAt(f.camX, 0, f.camY);
+      if (fp) {
+        fpCamera.aspect = aspect; fpCamera.updateProjectionMatrix();
+        fpCamera.position.set(player.x - Math.cos(player.face) * player.r * 0.3, eye, player.y - Math.sin(player.face) * player.r * 0.3);
+        fpCamera.lookAt(lookX, eye * 0.45, lookY);
+        skyCol.copy(phase.night ? SKY.night : SKY.day.clone().lerp(SKY.dusk, Math.max(0, phase.dayT - 0.6) / 0.4));
+        scene.fog.color.copy(skyCol); scene.fog.near = 350; scene.fog.far = 1300;
+        renderer.setClearColor(skyCol);
+      } else {
+        scene.fog.near = FAR_FOG; scene.fog.far = FAR_FOG * 2;
+        renderer.setClearColor(0x000000);
+      }
 
       // Sun: same vector the game rule uses, so rendered shadows match the eat polygons.
       world.groundMat.color.copy(dayColor(world.stage.ground, world.stage.groundNight, phase));
@@ -397,9 +419,9 @@
         for (const m of world.wallMats) { m.emissiveMap = TEX.plain; m.emissive.copy(m.userData.day); }
         world.lampMat.color.set('#d8d4c8'); world.haloMat.opacity = 0;
         const ce = Math.cos(sun.elev);
-        sunLight.position.set(f.camX - sun.sx * ce * 3000, Math.sin(sun.elev) * 3000, f.camY - sun.sy * ce * 3000);
-        sunLight.target.position.set(f.camX, 0, f.camY);
-        const S = f.view * 1.5 + 60, sc = sunLight.shadow.camera;
+        sunLight.position.set(focusX - sun.sx * ce * 3000, Math.sin(sun.elev) * 3000, focusY - sun.sy * ce * 3000);
+        sunLight.target.position.set(focusX, 0, focusY);
+        const S = fp ? 520 : f.view * 1.5 + 60, sc = sunLight.shadow.camera;
         sc.left = -S; sc.right = S; sc.top = S; sc.bottom = -S;
         sc.updateProjectionMatrix();
       }
@@ -468,6 +490,7 @@
       rimMat.opacity = player.lit ? 0.85 : 0.55;
       litRing.position.copy(blob.position).setY(1.3);
       litRing.scale.setScalar(player.r);
+      eyes.forEach(({ e, p }) => { e.visible = p.visible = !fp; }); // the eyes would sit inside the first-person camera
       eyes.forEach(({ e, p }, k) => {
         const side = k ? 1 : -1, a = player.face + side * 0.5;
         const ex = player.x + Math.cos(a) * player.r * 0.42, ey = player.y + Math.sin(a) * player.r * 0.42;
@@ -491,7 +514,7 @@
       hints.instanceMatrix.needsUpdate = true;
       hintMat.opacity = 0.35 + pulse * 0.45;
 
-      renderer.render(scene, camera);
+      renderer.render(scene, fp ? fpCamera : camera);
     }
 
     // `debug` is read by the QA scripts (pixel checks, memory counters); the game never uses it.
