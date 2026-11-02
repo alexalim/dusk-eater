@@ -109,5 +109,17 @@ with sync_playwright() as p:
     rec('H9', 'stage sheet with boosts keeps 출발 on screen at 375x667', go['y'] + go['height'] <= 667, f'bottom={go["y"] + go["height"]:.0f}')
     b.close()
 
+    # H10 iPhone 16 Pro (402x874): a two-line shop message must not run into the buttons below it (TestFlight feedback)
+    b = p.chromium.launch(args=GL)
+    pg3, _ = open_page(b, 402, 874)
+    pg3.tap('#btn-shop-title'); frames_wait(pg3)
+    pg3.evaluate("document.querySelector('#shop-msg').textContent = '결제를 완료하지 못했어요. 잠시 후 다시 시도해 주세요.'"); frames_wait(pg3)
+    gap = pg3.evaluate("""(() => { const els = [...document.querySelectorAll('#shop > *')].filter(e => e.offsetParent);
+      const r = els.map(e => e.getBoundingClientRect()); let worst = 99;
+      for (let i = 1; i < r.length; i++) worst = Math.min(worst, r[i].top - r[i - 1].bottom);
+      const m = document.querySelector('#shop-msg'); return [Math.round(worst), m.scrollHeight - m.clientHeight]; })()""")
+    rec('H10', 'shop blocks never overlap at 402x874 (no squeezed message)', gap[0] >= 8 and gap[1] <= 0, f'min gap={gap[0]}px msg overflow={gap[1]}px')
+    b.close()
+
 print(f'{sum(res)}/{len(res)} passed')
 sys.exit(0 if all(res) else 1)

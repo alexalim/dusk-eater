@@ -54,6 +54,9 @@
     overflow-y: auto; touch-action: pan-y; /* short landscape screens can scroll to the buttons */
     padding: calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 24px);
   }
+  /* Tall content scrolls instead of squeezing blocks into each other; Korean wraps between words. */
+  .overlay > * { flex-shrink: 0; }
+  .overlay p { word-break: keep-all; }
   .overlay h1 { margin: 0; font-size: 38px; letter-spacing: 1px; color: var(--accent); }
   .overlay h2 { margin: 0; font-size: 26px; color: var(--accent); }
   .overlay p { margin: 0; max-width: 320px; line-height: 1.55; font-size: 15px; color: var(--muted); }
