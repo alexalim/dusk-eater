@@ -46,6 +46,12 @@
   #stats .right { display: flex; align-items: center; gap: 10px; }
   #btn-pause { pointer-events: auto; width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
     background: rgba(20,18,38,.6); color: var(--text); font: 800 14px system-ui, sans-serif; }
+  #tutorial { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 24px);
+    width: min(calc(100% - 32px), 360px); box-sizing: border-box; padding: 14px 16px; border-radius: 16px;
+    background: rgba(20,18,38,.82); color: var(--text); font-size: 16px; font-weight: 700; line-height: 1.45;
+    word-break: keep-all; text-align: center; pointer-events: none; }
+  #tutorial .step { display: block; font-size: 12px; color: var(--star); margin-bottom: 4px; }
+  #tutorial .skip { pointer-events: auto; display: inline-block; margin-top: 8px; font-size: 13px; color: var(--muted); cursor: pointer; }
   #banner { position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); white-space: nowrap; padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 15px;
     color: #2a1a05; background: var(--star); opacity: 0; transition: opacity .3s; }
   .overlay {
@@ -141,6 +147,7 @@
   <div id="warn">빛 속에선 작아져요!</div>
   <div id="banner">미션 완료! 밤이 일찍 찾아와요</div>
 </div>
+<div id="tutorial" class="hidden"><span class="step" id="tut-step"></span><span id="tut-text"></span><br><span class="skip" id="tut-skip">설명 건너뛰기</span></div>
 <div id="title" class="overlay">
   <h1>Dusk Eater</h1>
   <p>당신은 그림자입니다.<br>그림자 속에 있는 것만 삼킬 수 있어요.</p>
@@ -243,6 +250,19 @@
   let stage, stageIndex, waterY, buildings, objects, guards, lighthouse, player, state, elapsed;
   let score, stats, shadows, sun, phase, rnd;
   let bannerUntil = 0; // elapsed second until which the mission-complete banner shows
+
+  // Level 1 teaches by doing: each step waits for its condition (or a few seconds) before the next.
+  // The clock stays frozen until the first swallow, so nobody learns under time pressure.
+  const TUTORIAL = [
+    { text: '화면을 손가락으로 끌면 그림자가 움직여요.', done: tt => tt.moved > 120 },
+    { text: '햇빛에 나가면 몸이 작아져요. 건물 그림자 안에 머무르세요.', done: tt => tt.t > 4 },
+    { text: '주황 고리가 보이는 건 삼킬 수 있어요. 다가가 보세요!', done: () => stats.total >= 1 },
+    { text: '삼킬수록 커지고, 커지면 더 큰 것도 삼킬 수 있어요.', done: tt => tt.t > 4, clock: true },
+    { text: '해가 지나가면 그림자도 따라 움직여요. 맨 위 막대가 하루예요.', done: tt => tt.t > 5, clock: true },
+    { text: '위의 미션 3개를 모두 끝내면 밤이 일찍 찾아와요.', done: tt => tt.t > 5, clock: true },
+    { text: '두 손가락을 벌리면 확대, 오므리면 축소예요.', done: tt => tt.t > 5, clock: true },
+  ];
+  let tut = null; // { i, t, moved, lx, ly } while the level-1 tutorial runs
   let runDuration = C.DURATION; // seconds of day + night this run (the time boost stretches it)
 
   function insideAnyBuilding(x, y, pad) {
@@ -367,6 +387,7 @@
     stageIndex = i; stage = STAGES[i];
     buildWorld(Date.now() & 0xffff);
     elapsed = 0; score = 0; bannerUntil = 0;
+    tut = i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
     runDuration = C.DURATION + used.reduce((a, b) => a + (b.extraTime || 0), 0);
     stats = { score: 0, eaten: {}, beamHit: false, total: 0 };
@@ -457,8 +478,16 @@
     o.spin = Math.atan2(oy - player.y, ox - player.x);
   }
 
+  function stepTutorial(dt) {
+    if (tut.lx !== null) tut.moved += Math.hypot(player.x - tut.lx, player.y - tut.ly);
+    tut.lx = player.x; tut.ly = player.y; tut.t += dt;
+    if (TUTORIAL[tut.i].done(tut)) { tut.i++; tut.t = 0; }
+    if (tut.i >= TUTORIAL.length) tut = null;
+  }
+
   function update(dt) {
-    elapsed += dt;
+    if (tut) stepTutorial(dt);
+    if (!tut || TUTORIAL[tut.i].clock) elapsed += dt;
     const gameT = Math.min(elapsed / runDuration, 1);
     phase = C.dayPhase(gameT);
     sun = C.sunState(phase.dayT);
@@ -572,6 +601,11 @@
     $('score').textContent = score.toLocaleString();
     $('warn').style.opacity = player.lit ? 1 : 0;
     $('banner').style.opacity = elapsed < bannerUntil ? 1 : 0;
+    $('tutorial').classList.toggle('hidden', !tut);
+    if (tut) {
+      const step = `${tut.i + 1} / ${TUTORIAL.length}`;
+      if ($('tut-step').textContent !== step) { $('tut-step').textContent = step; $('tut-text').textContent = TUTORIAL[tut.i].text; }
+    }
     const chips = stage.goals.map(g => {
       const p = C.goalProgress(g, stats);
       const count = g.kind === 'eat' ? ` ${Math.min(p.cur, p.n)}/${p.n}` : '';
@@ -584,6 +618,7 @@
   function show(id) {
     for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop']) $(o).classList.toggle('hidden', o !== id);
     $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
+    if (id !== null) $('tutorial').classList.add('hidden');
   }
 
   function starText(n) {
@@ -773,6 +808,7 @@
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && state === 'play') pause();
   });
+  $('tut-skip').addEventListener('pointerup', () => { tut = null; $('tutorial').classList.add('hidden'); });
   function pause() { state = 'paused'; endDrag(); show('pause'); }
   $('btn-pause').addEventListener('pointerup', () => { if (state === 'play') pause(); });
   // Quitting drops the run: no stars or best score, and boost gems held for it go back to the wallet.
@@ -822,7 +858,7 @@
 
   // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
   if (window.__DUSK_TEST__) {
-    window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; }, view, watchFrames, R, Store, Shop, ready,
+    window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; tut = null; }, view, watchFrames, get tut() { return tut; }, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
       get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase }; } };

@@ -147,6 +147,24 @@ with sync_playwright() as p:
     pg.evaluate('window.__DUSK_TEST__.fixedQuality = true')
     rec('S15', 'slow frames lower quality step by step, stopping at the floor', q0 == [0, 2] and steps == [[1, 1.5], [2, 1], [2, 1]] and restored == [0, 2],
         f'start={q0} steps={steps}')
+    # S16 level 1 tutorial: clock frozen until the first swallow, steps advance by doing; level 2 has none; skip works
+    T = lambda: pg.evaluate(f"[{A}.tut && {A}.tut.i, document.querySelector('#tut-text').textContent, !document.querySelector('#tutorial').classList.contains('hidden')]")
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg, 10)
+    t0 = T(); sun0 = pg.evaluate("document.querySelector('#sun').style.left")
+    drag(0, -60, 3000); t1 = T()
+    sun1 = pg.evaluate("document.querySelector('#sun').style.left")  # steps 1-2: clock still frozen
+    ate = pg.evaluate(f'{A}.s.stats.total')
+    pg.evaluate(f'{A}.tut.t = 10'); frames_wait(pg, 3); t1b = T()  # the timed "stay in shade" step
+    # step 3 waits for a swallow: if the drag already swallowed something it passes at once
+    expect_b = 2 if ate == 0 else 3
+    pg.evaluate(f'{A}.s.stats.total = 1'); frames_wait(pg, 8)
+    t2 = T(); sun2 = pg.evaluate("document.querySelector('#sun').style.left")
+    pg.evaluate(f'{A}.start(1)'); frames_wait(pg, 3); lv2 = T()
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg, 3); pg.tap('#tut-skip'); frames_wait(pg, 3); skipped = T()
+    rec('S16', 'level 1 tutorial: frozen clock until first swallow, steps advance, none on level 2, skippable',
+        t0[0] == 0 and t0[2] and '끌면' in t0[1] and t1[0] == 1 and t1b[0] >= expect_b and sun0 == sun1 == '0%' and t2[0] >= 3 and sun2 != '0%'
+        and lv2[0] is None and not lv2[2] and skipped[0] is None and not skipped[2],
+        f'start={t0[:1]} after_drag={t1[0]} ate_while_dragging={ate} after_wait={t1b[0]} sun {sun0}->{sun1}->{sun2} after_swallow={t2[0]} level2={lv2[0]} skipped={skipped[0]}')
     # S3 round end: stars + goal list + next button rule
     pg.evaluate(f'{A}.skipTo(119.9)'); frames_wait(pg)
     end_vis = pg.is_visible('#end'); goals = len(pg.query_selector_all('#end-goals > div'))
