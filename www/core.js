@@ -29,10 +29,11 @@
 
   // Sun rises in the east (+x) and sets in the west (-x). (sx, sy) is the unit
   // direction shadows are cast in, i.e. away from the sun.
-  function sunState(dayT) {
+  // maxElev lets a stage keep the sun low all day (winter), which stretches every shadow.
+  function sunState(dayT, maxElev = MAX_ELEV) {
     const az = Math.PI * dayT;
     return {
-      elev: Math.max(MIN_ELEV, MAX_ELEV * Math.sin(Math.PI * dayT)),
+      elev: Math.max(MIN_ELEV, maxElev * Math.sin(Math.PI * dayT)),
       sx: -Math.cos(az),
       sy: Math.sin(az),
     };

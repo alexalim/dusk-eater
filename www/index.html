@@ -78,6 +78,7 @@
   .node { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; height: 54px;
     border-radius: 14px; border: 0; padding: 0; font: inherit; cursor: pointer; color: #2a1a05; background: var(--node); }
   .node.harbor { background: #8fc3e0; }
+  .node.city { background: #a9b8d6; } .node.park { background: #ff9ec4; } .node.snow { background: #e3eef9; } .node.farm { background: #b6d98a; }
   .node .num { font-size: 17px; font-weight: 900; line-height: 1; }
   .node .stars { font-size: 10px; letter-spacing: 0; color: #2a1a05; }
   .node .stars .off { color: rgba(42,26,5,.25); }
@@ -243,6 +244,27 @@
     car:       { r: 16, color: '#e2574c' },
     boat:      { r: 14, color: '#f4f1ea' },
     kiosk:     { r: 22, color: '#c46fd8' },
+    // city
+    officer:   { r: 5,  color: '#3b3f52', colors: ['#3b3f52', '#5a5f73', '#2f3e66', '#6b5b4b'] },
+    vending:   { r: 6,  color: '#d9534f', colors: ['#d9534f', '#4fb0c6', '#f4f1ea'] },
+    taxi:      { r: 16, color: '#f2c14e' },
+    bus:       { r: 22, color: '#4fb06a' },
+    // amusement park
+    visitor:   { r: 5,  color: '#ff8fb1', colors: ['#ff8fb1', '#5bc0eb', '#ffd25c', '#9bc53d', '#c46fd8'] },
+    balloon:   { r: 4,  color: '#ff5d73', colors: ['#ff5d73', '#ffd25c', '#5bc0eb', '#9bc53d', '#c46fd8'] },
+    candy:     { r: 9,  color: '#ff9ec4' },
+    carousel:  { r: 26, color: '#ff7aa8' },
+    // snow village
+    skier:     { r: 5,  color: '#e5533d', colors: ['#e5533d', '#2f6fd6', '#f2c14e', '#2fa36b'] },
+    snowman:   { r: 7,  color: '#f7f9fc' },
+    sled:      { r: 6,  color: '#c0392b' },
+    pine:      { r: 12, color: '#2f6b4a' },
+    // farm
+    chicken:   { r: 3,  color: '#f7f7f2' },
+    sheep:     { r: 6,  color: '#f2efe6' },
+    cow:       { r: 10, color: '#f4f1ea' },
+    tractor:   { r: 14, color: '#3f9b4f' },
+    haystack:  { r: 9,  color: '#e8c66a' },
   };
   const CAR_COLORS = ['#e2574c', '#f2c14e', '#4fb0c6', '#f4f1ea', '#7b68ee'];
   const CONTAINER_COLORS = ['#4f86c6', '#d9534f', '#5cb85c', '#f0ad4e', '#8e6fc1'];
@@ -274,7 +296,8 @@
 
   function addObj(type, x, y, extra) {
     const t = TYPES[type];
-    objects.push(Object.assign({ type, x, y, r: t.r, color: t.color, state: 0, ft: 0, rot: 0 }, extra));
+    const color = t.colors ? t.colors[(rnd() * t.colors.length) | 0] : t.color;
+    objects.push(Object.assign({ type, x, y, r: t.r, color, state: 0, ft: 0, rot: 0 }, extra));
   }
 
   function scatter(list, zoneTop, zoneBottom) {
@@ -312,7 +335,7 @@
           const d = split ? R(70, inner - 30) : R(80, inner - 30);
           const bx = split ? x0 + 8 + i * inner / 2 + rnd() * (inner / 2 - w - 16) : x0 + 10 + rnd() * (inner - w - 20);
           const by = y0 + 10 + rnd() * (inner - d - 20);
-          const b = { x: bx, y: by, w, d, h: R(stage.height[0], stage.height[1]),
+          const b = { x: bx, y: by, w, d, h: R(stage.height[0], stage.height[1]), plain: !!stage.plainWalls,
                       roof: stage.roofs[(rnd() * stage.roofs.length) | 0], state: 0, ft: 0, type: 'building' };
           b.r = Math.hypot(w, d) / 2 * 0.75;
           buildings.push(b);
@@ -327,13 +350,27 @@
       b.r = 12;
       buildings.push(b);
     }
-    if (stage.parkItems) {
-      for (const [x0, y0, inner] of parks) {
-        for (let i = 0; i < 9; i++) addObj('tree', x0 + R(15, inner - 15), y0 + R(15, inner - 15));
-        for (let i = 0; i < 3; i++) addObj('bench', x0 + R(15, inner - 15), y0 + R(15, inner - 15));
-        if (rnd() < 0.5) addObj('kiosk', x0 + inner / 2, y0 + inner / 2);
+    // Towers (silos, ride towers): small footprint, tall, standing in open lots; real shadow casters.
+    const T_ = stage.towers;
+    for (let i = 0, tries = 0; T_ && i < T_.n && tries < T_.n * 40; tries++) {
+      const x = R(40, WORLD - 40 - T_.w), y = R(40, waterY - 80 - T_.w);
+      if (insideAnyBuilding(x + T_.w / 2, y + T_.w / 2, T_.w)) continue;
+      const b = { x, y, w: T_.w, d: T_.w, h: R(T_.h[0], T_.h[1]), roof: T_.color, plain: true,
+                  state: 0, ft: 0, type: 'building' };
+      b.r = T_.w * 0.6;
+      buildings.push(b); i++;
+    }
+    // Open lots get the theme's props: [type, count (a fraction is a chance), 'center' to place it mid-lot].
+    for (const [x0, y0, inner] of parks) {
+      for (const [type, n, at] of stage.parkItems || []) {
+        const k = n < 1 ? (rnd() < n ? 1 : 0) : n;
+        for (let i = 0; i < k; i++) {
+          const x = at ? x0 + inner / 2 : x0 + R(15, inner - 15), y = at ? y0 + inner / 2 : y0 + R(15, inner - 15);
+          if (!insideAnyBuilding(x, y, TYPES[type].r)) addObj(type, x, y);
+        }
       }
     }
+    const vehicle = stage.vehicle || 'car';
     for (let k = 0; k <= cells; k++) {
       for (let i = 0; i < stage.carsPerRoad; i++) {
         const along = R(20, WORLD - 20), lane = k * CELL + (rnd() < 0.5 ? -10 : 10);
@@ -341,7 +378,9 @@
         const horiz = rnd() < 0.5;
         const x = horiz ? along : lane, y = horiz ? lane : along;
         if (y > waterY - 20) continue;
-        addObj('car', x, y, { color: CAR_COLORS[(rnd() * CAR_COLORS.length) | 0], rot: horiz ? 0 : Math.PI / 2 });
+        const extra = { rot: horiz ? 0 : Math.PI / 2 };
+        if (vehicle === 'car') extra.color = CAR_COLORS[(rnd() * CAR_COLORS.length) | 0];
+        addObj(vehicle, x, y, extra);
       }
     }
     scatter(stage.small, 0, waterY - 10);
@@ -391,7 +430,7 @@
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
     runDuration = C.DURATION + used.reduce((a, b) => a + (b.extraTime || 0), 0);
     stats = { score: 0, eaten: {}, beamHit: false, total: 0 };
-    phase = C.dayPhase(0); sun = C.sunState(phase.dayT);
+    phase = C.dayPhase(0); sun = C.sunState(phase.dayT, stage.sunMax);
     shadows = buildings.map(b => C.shadowPolygon(b, sun));
     const spawn = pickSpawn();
     const r0 = Math.max(14, ...used.map(b => b.startR || 0));
@@ -490,7 +529,7 @@
     if (!tut || TUTORIAL[tut.i].clock) elapsed += dt;
     const gameT = Math.min(elapsed / runDuration, 1);
     phase = C.dayPhase(gameT);
-    sun = C.sunState(phase.dayT);
+    sun = C.sunState(phase.dayT, stage.sunMax);
     shadows = phase.night ? [] : buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun));
     if (lighthouse) lighthouse.dir = elapsed * lighthouse.speed;
 
@@ -861,7 +900,7 @@
     window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; tut = null; }, view, watchFrames, get tut() { return tut; }, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
-      get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase }; } };
+      get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase, sun }; } };
   }
 })();
 </script>

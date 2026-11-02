@@ -18,9 +18,9 @@ test('every goal has a label and three goals per level', () => {
   }
 });
 
-test('eat goals ask for at most half of what spawns (cars spawn on roads, guards per level)', () => {
+test('eat goals ask for at most half of what spawns (road vehicles, guards per level)', () => {
   for (const s of STAGES) for (const g of s.goals.filter(g => g.kind === 'eat')) {
-    const cap = g.what === 'guard' ? s.guards : g.what === 'car' ? s.carsPerRoad * 4 : spawned(s, g.what) / 2;
+    const cap = g.what === 'guard' ? s.guards : g.what === (s.vehicle || 'car') ? s.carsPerRoad * 4 : spawned(s, g.what) / 2;
     assert.ok(g.n >= 1 && g.n <= cap, `${s.id} ${g.what} ${g.n}`);
   }
 });
@@ -40,4 +40,10 @@ test('difficulty never drops from one level to the next within a theme', () => {
       assert.ok(scoreGoal(b) >= scoreGoal(a) && b.sunDrain >= a.sunDrain && b.beamDrain >= a.beamDrain && b.guards >= a.guards, `${a.id} -> ${b.id}`);
     }
   }
+});
+
+test('every map appears, in blocks of five after the ten town levels; only snow lowers the sun', () => {
+  assert.deepEqual([...new Set(STAGES.map(s => s.theme))].sort(), Object.keys(THEMES).sort());
+  for (let i = 10; i < STAGES.length; i += 5) assert.equal(new Set(STAGES.slice(i, i + 5).map(s => s.theme)).size, 1, `L${i + 1}`);
+  for (const s of STAGES) assert.equal(s.sunMax !== undefined, s.theme === 'snow', s.id);
 });

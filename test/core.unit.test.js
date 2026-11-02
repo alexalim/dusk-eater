@@ -88,3 +88,10 @@ test('day phase reaches night only in the final stretch', () => {
   assert.equal(C.dayPhase(C.NIGHT_START).night, true);
   assert.ok(C.dayPhase(0).dayT > 0 && C.dayPhase(0.84).dayT < 1);
 });
+
+test('a lower sun ceiling keeps the sun lower and shadows longer at the same time of day', () => {
+  const noon = C.sunState(0.5), winter = C.sunState(0.5, 35 * Math.PI / 180);
+  assert.ok(winter.elev < noon.elev);
+  assert.ok(C.shadowLength(50, winter.elev) > 2 * C.shadowLength(50, noon.elev));
+  assert.deepEqual([winter.sx, winter.sy], [noon.sx, noon.sy]); // same direction, only the height changes
+});

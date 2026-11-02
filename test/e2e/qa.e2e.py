@@ -27,7 +27,8 @@ def page(p, w=390, h=844, storage=None):
     return b, pg, errs
 
 A = 'window.__DUSK_TEST__.api'
-HARB = 13  # level 14, the first harbor level (index into STAGES)
+HARB = 13  # level 14, a harbor level (index into STAGES)
+CITY, PARK, SNOW, FARM = 15, 20, 25, 30  # first level of each newer map
 def frames_wait(pg, n=3):
     pg.evaluate(f'new Promise(r => {{ let k = {n}; const f = () => --k <= 0 ? r() : requestAnimationFrame(f); requestAnimationFrame(f); }})')
 with sync_playwright() as p:
@@ -198,7 +199,7 @@ with sync_playwright() as p:
         ft = sorted(pg.evaluate('window.__ft'))
         pg.evaluate(f'(() => {{ const r = {A}.R.debug.renderer; r.render = r.__render; }})()')
         return calls, tris, statistics.median(ft), ft[int(len(ft) * .95)]
-    for si in (0, HARB):
+    for si in (0, HARB, CITY, PARK, SNOW, FARM):
         e = stats(f'{A}.start({si}); {A}.skipTo(10)')
         l = stats(f'{A}.s.player.r = 110; {A}.skipTo(90)')
         rec('S7', f'stage{si} draw calls / triangles / JS ms (median,p95)', e[0] < 300 and l[0] < 300 and l[3] < 8,
@@ -226,12 +227,12 @@ with sync_playwright() as p:
 
     # S9 rendered shadow vs rule polygons, pixel by pixel
     b, pg, errs = page(p)
-    for si, sec in [(0, 12), (0, 55), (0, 95), (HARB, 30), (HARB, 95)]:
+    for si, sec in [(0, 12), (0, 55), (0, 95), (HARB, 30), (HARB, 95), (CITY, 50), (SNOW, 30), (SNOW, 70), (FARM, 50)]:
         pg.evaluate(f'{A}.start({si}); {A}.skipTo({sec})'); frames_wait(pg, 2); pg.evaluate(f'{A}.freeze()'); frames_wait(pg, 2)
         pts = pg.evaluate('''(() => {
           const A = window.__DUSK_TEST__.api, C = window.DuskCore, s = A.s, T = window.THREE;
           const { camera, scene } = A.R.debug;
-          const sun = C.sunState(s.phase.dayT);
+          const sun = s.sun; // the stage's own sun (snow keeps it low)
           const sh = s.buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun));
           const things = s.objects.filter(o => o.state === 0).concat(s.guards);
           const ray = new T.Raycaster(), out = [];

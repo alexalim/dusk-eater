@@ -46,6 +46,40 @@
                 P('box', [0.95, 0.08, 0.9], 1.2, 'inst', [-0.1, 0]), P('box', [0.06, 0.16, 0.8], 0.55, '#fff3c4', [1.0, 0], true)],
     boat:      [P('box', [2.0, 0.5, 0.9], 0.25, 'inst'), P('box', [0.7, 0.6, 0.6], 0.8, '#3d5a80'), P('cyl', [0.06, 1.8, 0.06], 1.3, '#dddddd', [0.5, 0])],
     kiosk:     [P('box', [2.0, 1.4, 2.0], 0.7, 'inst'), P('box', [2.3, 0.2, 2.3], 1.5, '#f4f1ea'), P('box', [2.32, 0.3, 0.3], 1.3, '#d9534f', [0, 1.0])],
+    // city
+    officer:   [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.58, 0.3, 0.58], 2.72, '#2a2420'),
+                P('box', [0.5, 0.4, 0.15], 0.8, '#5a3d2b', [0, 0.7])],
+    vending:   [P('box', [1.0, 2.2, 0.8], 1.1, 'inst'), P('box', [0.06, 1.2, 0.6], 1.4, '#cfe8ff', [0.52, 0], true)],
+    taxi:      [P('box', [1.6, 0.32, 1.16], 0.18, '#26262e'), P('box', [2.0, 0.5, 1.1], 0.5, 'inst'), P('box', [1.1, 0.42, 0.96], 0.96, '#9fc3e6', [-0.1, 0]),
+                P('box', [0.95, 0.08, 0.9], 1.2, 'inst', [-0.1, 0]), P('box', [0.3, 0.2, 0.5], 1.34, '#fff3c4', [-0.1, 0], true),
+                P('box', [0.06, 0.16, 0.8], 0.55, '#fff3c4', [1.0, 0], true)],
+    bus:       [P('box', [2.2, 0.3, 0.95], 0.15, '#26262e'), P('box', [2.4, 0.9, 1.0], 0.65, 'inst'), P('box', [2.42, 0.28, 1.02], 0.85, '#9fc3e6'),
+                P('box', [0.06, 0.14, 0.7], 0.45, '#fff3c4', [1.2, 0], true)],
+    // amusement park
+    visitor:   [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.58, 0.32, 0.58], 2.7, HAIR)],
+    balloon:   [P('cyl', [0.04, 2.4, 0.04], 1.2, '#dddddd'), P('sphere', [0.9, 1.1, 0.9], 3.2, 'inst')],
+    candy:     [P('box', [1.6, 1.0, 1.0], 0.5, '#f4f1ea'), P('sphere', [0.45, 0.45, 0.45], 1.4, 'inst', [0.4, 0]), P('sphere', [0.45, 0.45, 0.45], 1.4, '#c9f0ff', [-0.4, 0]),
+                P('cone', [1.3, 0.5, 1.3], 2.3, '#ffd25c'), P('cyl', [0.06, 1.0, 0.06], 1.6, '#dddddd')],
+    carousel:  [P('cyl', [1.0, 0.25, 1.0], 0.12, '#f4f1ea'), P('cyl', [0.15, 1.5, 0.15], 0.9, '#ffd27a'), P('cone', [1.1, 0.6, 1.1], 1.9, 'inst'),
+                P('box', [0.5, 0.35, 0.18], 0.7, '#fff3c4', [0.65, 0]), P('box', [0.5, 0.35, 0.18], 0.7, '#7fd1e8', [-0.65, 0]),
+                P('box', [0.18, 0.35, 0.5], 0.7, '#ffd25c', [0, 0.65]), P('box', [0.18, 0.35, 0.5], 0.7, '#c9a0ff', [0, -0.65])],
+    // snow village
+    skier:     [P('box', [0.2, 0.08, 2.4], 0.05, '#2b3550'), P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN),
+                P('sphere', [0.6, 0.36, 0.6], 2.72, '#f7f9fc')],
+    snowman:   [P('sphere', [0.8, 0.8, 0.8], 0.8, 'inst'), P('sphere', [0.55, 0.55, 0.55], 1.9, 'inst'), P('cyl', [0.35, 0.4, 0.35], 2.55, '#222222'),
+                P('cone', [0.08, 0.3, 0.08], 1.95, '#f28c28', [0.55, 0])],
+    sled:      [P('box', [1.8, 0.2, 0.9], 0.35, 'inst'), P('box', [1.9, 0.08, 0.1], 0.08, '#555555', [0, 0.38]), P('box', [1.9, 0.08, 0.1], 0.08, '#555555', [0, -0.38])],
+    pine:      [P('cyl', [0.2, 0.9, 0.2], 0.45, '#7a5233'), P('cone', [1.0, 1.8, 1.0], 1.7, 'inst'), P('cone', [0.72, 1.3, 0.72], 2.6, 'inst'),
+                P('cone', [0.4, 0.55, 0.4], 3.3, '#f7f9fc')],
+    // farm
+    chicken:   [P('blob', [0.8, 0.7, 0.6], 0.7, 'inst'), P('sphere', [0.35, 0.35, 0.35], 1.3, 'inst', [0.5, 0]), P('box', [0.1, 0.25, 0.08], 1.65, '#e5533d', [0.5, 0]),
+                P('cone', [0.08, 0.2, 0.08], 1.3, '#f2a33a', [0.85, 0])],
+    sheep:     [P('blob', [1.1, 0.75, 0.85], 0.95, 'inst'), P('sphere', [0.38, 0.38, 0.38], 1.15, '#3a3330', [1.0, 0]), P('box', [0.9, 0.5, 0.6], 0.25, '#3a3330')],
+    cow:       [P('box', [1.8, 0.8, 0.8], 1.0, 'inst'), P('box', [0.55, 0.82, 0.5], 1.0, '#2a2420', [-0.3, 0]), P('box', [0.5, 0.5, 0.45], 1.2, 'inst', [1.1, 0]),
+                P('box', [1.5, 0.6, 0.6], 0.3, '#2a2420')],
+    tractor:   [P('box', [1.4, 0.8, 1.0], 0.7, 'inst'), P('box', [0.7, 0.7, 0.8], 1.45, '#9fc3e6', [-0.3, 0]), P('box', [0.8, 0.9, 1.25], 0.45, '#26262e', [-0.45, 0]),
+                P('box', [0.5, 0.5, 1.15], 0.25, '#26262e', [0.55, 0]), P('box', [0.06, 0.16, 0.6], 0.8, '#fff3c4', [0.72, 0], true)],
+    haystack:  [P('cyl', [1.0, 1.1, 1.0], 0.55, 'inst'), P('cone', [1.02, 0.4, 1.02], 1.3, '#d9b55a')],
   };
 
   // Canvas textures made once: wall windows by day, a lit-window pattern for night, a roof rim.
@@ -67,6 +101,8 @@
       windows: mk(g => cells(g, '#ffffff', () => '#8796ad')),
       plain: mk(g => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 256); }),
       lit: mk(g => cells(g, '#121212', () => (rnd() < 0.55 ? '#ffffff' : '#262626'))),
+      dark: mk(g => { g.fillStyle = '#121212'; g.fillRect(0, 0, 256, 256); }),
+      planks: mk(g => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#d6d6d6'; for (let x = 0; x < 256; x += 32) g.fillRect(x, 0, 3, 256); }),
       roof: mk(g => { g.fillStyle = '#c8c8c8'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#ffffff'; g.fillRect(12, 12, 232, 232); }),
     };
   }
@@ -266,12 +302,13 @@
       w.wallMats = [];
       const propMat = lambert('#a19d94');
       for (const b of w.buildings) {
-        const key = b.crane ? 'crane' : b.roof;
+        const key = b.crane ? 'crane' : b.roof + (b.plain ? '/plain' : '');
         if (!mats[key]) {
           const wallCol = col(b.roof).lerp(col('#ffffff'), 0.35), glow = wallCol.clone().multiplyScalar(0.35);
+          // Plain walls (barns, silos, ride towers) get boards instead of windows and stay dark at night.
           const wall = b.crane ? lambert(wallCol, { emissive: glow })
-            : lambert(wallCol, { map: TEX.windows, emissive: glow, emissiveMap: TEX.plain });
-          wall.userData.day = glow;
+            : lambert(wallCol, { map: b.plain ? TEX.planks : TEX.windows, emissive: glow, emissiveMap: TEX.plain });
+          wall.userData.day = glow; wall.userData.night = b.plain ? TEX.dark : TEX.lit;
           if (!b.crane) w.wallMats.push(wall);
           const roof = lambert(b.roof, b.crane ? {} : { map: TEX.roof });
           mats[key] = { roof, faces: [wall, wall, roof, wall, wall, wall] }; // +x -x +y -y +z -z
@@ -439,7 +476,7 @@
         world.roadMat.color.set('#3b3958');
         world.paintMat.color.set('#6f6c92'); world.curbMat.color.set('#4b4868');
         for (const m of world.roofMats) m.emissive.set(0x1c1606);
-        for (const m of world.wallMats) { m.emissiveMap = TEX.lit; m.emissive.copy(NIGHT_WINDOWS); }
+        for (const m of world.wallMats) { m.emissiveMap = m.userData.night; m.emissive.copy(NIGHT_WINDOWS); }
         world.lampMat.color.set('#ffe2a0'); world.haloMat.opacity = 0.28;
       } else {
         // Sunlit ground lands at exactly its palette color (hemi + sun·sin(elev) = 1) instead of
