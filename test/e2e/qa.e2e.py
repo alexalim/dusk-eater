@@ -218,7 +218,7 @@ with sync_playwright() as p:
         pg.screenshot(path=str(out / f'layout-{w}x{h}-play.png'))
         ov = pg.evaluate('document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight')
         hud = pg.evaluate("(() => { const r = document.querySelector('#hud').getBoundingClientRect(); return [Math.round(r.height), innerHeight]; })()")
-        pg.evaluate(f'{A}.skipTo(119.9)'); frames_wait(pg)
+        pg.evaluate(f'{A}.skipTo(119.99)'); frames_wait(pg, 8)
         pg.screenshot(path=str(out / f'layout-{w}x{h}-end.png'))
         pg.evaluate("document.querySelector('#btn-select').scrollIntoView({block: 'nearest'})"); frames_wait(pg)
         fits = pg.evaluate("(() => { const b = document.querySelector('#btn-select').getBoundingClientRect(); return b.bottom <= innerHeight + 1 && b.top >= -1; })()")

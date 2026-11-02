@@ -117,6 +117,11 @@
       const width = f < 2 ? b.d : b.w;
       for (let k = f * 4; k < f * 4 + 4; k++) uv.setXY(k, uv.getX(k) * width / (WIN_W * 4) + shift, uv.getY(k) * b.h / (WIN_H * 4));
     }
+    // Two draw groups instead of six: the four walls together (material 0), then the roof (1).
+    // The floor (face 3) is never seen, so it is dropped.
+    const idx = g.index.array, face = f => Array.from(idx.slice(f * 6, f * 6 + 6));
+    g.setIndex([0, 1, 4, 5, 2].flatMap(face));
+    g.clearGroups(); g.addGroup(0, 24, 0); g.addGroup(24, 6, 1);
     return g;
   }
 
@@ -311,7 +316,8 @@
           wall.userData.day = glow; wall.userData.night = b.plain ? TEX.dark : TEX.lit;
           if (!b.crane) w.wallMats.push(wall);
           const roof = lambert(b.roof, b.crane ? {} : { map: TEX.roof });
-          mats[key] = { roof, faces: [wall, wall, roof, wall, wall, wall] }; // +x -x +y -y +z -z
+          // Cranes use the shared six-face box (+x -x +y -y +z -z); other buildings their own two-group box.
+          mats[key] = { roof, faces: b.crane ? [wall, wall, roof, wall, wall, wall] : [wall, roof] };
         }
         const hash = Math.abs(Math.round(b.x * 7 + b.y * 13));
         const mesh = new T.Mesh(b.crane ? unit.box : buildingGeometry(b, (hash % 4) / 4), mats[key].faces);
