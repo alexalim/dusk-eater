@@ -98,12 +98,14 @@ with sync_playwright() as p:
     stars = pg.evaluate("JSON.parse(localStorage.getItem('dusk-stars') || '{}')")
     nxt = pg.is_visible('#btn-next')
     rec('S3', 'end screen, goals listed, stars saved, next hidden w/o star', end_vis and goals == 3 and 'L1' in stars and nxt == (stars['L1'] >= 1), f'stars={stars} next={nxt}')
-    # S6 memory: restart 12 times
+    # S6 memory: restart 12 times. Each building owns its geometry, so pin the map seed (Date.now) to compare like with like.
+    pg.evaluate('window.__now = Date.now; Date.now = () => 4242')
     info = lambda: pg.evaluate(f'(() => {{ const m = {A}.R.debug.renderer.info.memory; return [m.geometries, m.textures]; }})()')
     [pg.evaluate(f'{A}.start({i % 2 * HARB})') or frames_wait(pg) for i in range(4)]; pg.evaluate(f'{A}.start({HARB})'); frames_wait(pg); m0 = info()
     for i in range(12):
         pg.evaluate(f'{A}.start({i % 2 * HARB})'); frames_wait(pg)
     pg.evaluate(f'{A}.start({HARB})'); frames_wait(pg); m1 = info()
+    pg.evaluate('Date.now = window.__now')
     rec('S6', 'no GPU memory growth over 12 restarts', m1[0] <= m0[0] + 2 and m1[1] <= m0[1], f'geo/tex before={m0} after={m1}')
     rec('S0', 'no page errors (iPhone 390x844)', not errs, '; '.join(errs)[:200])
     b.close()

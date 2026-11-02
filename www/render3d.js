@@ -12,25 +12,67 @@
     sphere: new T.SphereGeometry(1, 14, 10),
     blob: new T.SphereGeometry(1, 10, 8),
     cone: new T.ConeGeometry(1, 1, 12),
+    capsule: new T.CapsuleGeometry(1, 2, 4, 10), // radius 1, 4 tall
   };
-  // A part is a unit geometry scaled by [sx, sy, sz] * object radius, lifted by y * r.
-  // color 'inst' takes the object's own color.
-  const P = (geo, s, y, color) => ({ geo, s, y, color });
+  // A part is a unit geometry scaled by [sx, sy, sz] * object radius, lifted by y * r and
+  // shifted by o = [forward, side] * r in the object's own frame. color 'inst' takes the object's
+  // own color; glow parts ignore lighting (headlights).
+  const P = (geo, s, y, color, o, glow) => ({ geo, s, y, color, o, glow });
+  const HAIR = '#4a3426', SKIN = '#f6d2b0';
   const PARTS = {
-    person:    [P('cyl', [0.55, 2.0, 0.55], 1.0, 'inst'), P('sphere', [0.5, 0.5, 0.5], 2.4, '#f6d2b0')],
-    worker:    [P('cyl', [0.55, 2.0, 0.55], 1.0, 'inst'), P('sphere', [0.5, 0.5, 0.5], 2.4, '#f6d2b0')],
-    cat:       [P('box', [2.0, 1.0, 1.0], 0.5, 'inst'), P('sphere', [0.55, 0.55, 0.55], 1.2, 'inst')],
-    gull:      [P('blob', [0.8, 0.6, 0.6], 0.9, 'inst'), P('box', [0.5, 0.12, 2.6], 1.0, '#e6e6e0')],
-    trash:     [P('cyl', [0.8, 2.0, 0.8], 1.0, 'inst')],
-    crate:     [P('box', [1.8, 1.8, 1.8], 0.9, 'inst')],
+    person:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.58, 0.32, 0.58], 2.7, HAIR)],
+    worker:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.62, 0.36, 0.62], 2.72, '#f2c14e')],
+    cat:       [P('blob', [1.1, 0.6, 0.6], 0.6, 'inst'), P('sphere', [0.5, 0.48, 0.5], 1.05, 'inst', [1.0, 0]),
+                P('cone', [0.17, 0.4, 0.17], 1.55, 'inst', [1.05, 0.26]), P('cone', [0.17, 0.4, 0.17], 1.55, 'inst', [1.05, -0.26]),
+                P('cyl', [0.12, 1.0, 0.12], 1.0, 'inst', [-1.1, 0])],
+    gull:      [P('blob', [0.8, 0.6, 0.6], 0.9, 'inst'), P('box', [0.5, 0.12, 2.6], 1.0, '#e6e6e0'), P('cone', [0.12, 0.35, 0.12], 0.9, '#f2a33a', [0.85, 0])],
+    trash:     [P('cyl', [0.8, 1.8, 0.8], 0.9, 'inst'), P('cyl', [0.9, 0.22, 0.9], 1.9, '#4d6449')],
+    crate:     [P('box', [1.8, 1.8, 1.8], 0.9, 'inst'), P('box', [1.86, 0.3, 1.86], 0.9, '#8a6238')],
     buoy:      [P('cyl', [0.9, 1.0, 0.9], 0.5, 'inst'), P('cone', [0.55, 1.2, 0.55], 1.6, '#ffffff')],
-    bench:     [P('box', [2.2, 0.35, 0.8], 0.6, 'inst')],
-    container: [P('box', [2.6, 1.2, 1.2], 0.6, 'inst')],
-    tree:      [P('cyl', [0.25, 1.4, 0.25], 0.7, '#7a5233'), P('blob', [1.0, 1.0, 1.0], 2.0, 'inst')],
-    car:       [P('box', [2.0, 0.6, 1.1], 0.45, 'inst'), P('box', [1.1, 0.5, 0.95], 1.0, '#2b3550')],
-    boat:      [P('box', [2.0, 0.5, 0.9], 0.25, 'inst'), P('box', [0.7, 0.6, 0.6], 0.8, '#3d5a80')],
-    kiosk:     [P('box', [2.0, 1.4, 2.0], 0.7, 'inst'), P('box', [2.3, 0.2, 2.3], 1.5, '#f4f1ea')],
+    bench:     [P('box', [2.2, 0.25, 0.8], 0.6, 'inst'), P('box', [2.2, 0.6, 0.15], 1.0, 'inst', [0, -0.35])],
+    container: [P('box', [2.6, 1.2, 1.2], 0.6, 'inst'), P('box', [2.64, 0.08, 1.24], 1.2, '#e8e4dc')],
+    tree:      [P('cyl', [0.25, 1.4, 0.25], 0.7, '#7a5233'), P('blob', [1.0, 0.85, 1.0], 1.8, 'inst'), P('blob', [0.68, 0.6, 0.68], 2.5, '#5fb86a')],
+    car:       [P('box', [1.6, 0.32, 1.16], 0.18, '#26262e'), P('box', [2.0, 0.5, 1.1], 0.5, 'inst'), P('box', [1.1, 0.42, 0.96], 0.96, '#9fc3e6', [-0.1, 0]),
+                P('box', [0.95, 0.08, 0.9], 1.2, 'inst', [-0.1, 0]), P('box', [0.06, 0.16, 0.8], 0.55, '#fff3c4', [1.0, 0], true)],
+    boat:      [P('box', [2.0, 0.5, 0.9], 0.25, 'inst'), P('box', [0.7, 0.6, 0.6], 0.8, '#3d5a80'), P('cyl', [0.06, 1.8, 0.06], 1.3, '#dddddd', [0.5, 0])],
+    kiosk:     [P('box', [2.0, 1.4, 2.0], 0.7, 'inst'), P('box', [2.3, 0.2, 2.3], 1.5, '#f4f1ea'), P('box', [2.32, 0.3, 0.3], 1.3, '#d9534f', [0, 1.0])],
   };
+
+  // Canvas textures made once: wall windows by day, a lit-window pattern for night, a roof rim.
+  // Day and night share one 4×4 cell layout so they use the same UVs.
+  function makeTextures() {
+    const mk = draw => {
+      const c = document.createElement('canvas'); c.width = c.height = 256;
+      draw(c.getContext('2d'));
+      const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 4;
+      return t;
+    };
+    const cells = (g, wall, win) => {
+      g.fillStyle = wall; g.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { g.fillStyle = win(); g.fillRect(i * 64 + 14, j * 64 + 16, 36, 30); }
+    };
+    let seed = 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    return {
+      windows: mk(g => cells(g, '#ffffff', () => '#8796ad')),
+      plain: mk(g => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 256); }),
+      lit: mk(g => cells(g, '#121212', () => (rnd() < 0.55 ? '#ffffff' : '#262626'))),
+      roof: mk(g => { g.fillStyle = '#c8c8c8'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#ffffff'; g.fillRect(12, 12, 232, 232); }),
+    };
+  }
+  const WIN_W = 14, WIN_H = 12; // world units per window cell
+
+  // A unit box whose wall UVs count windows in world units, so every building gets the same window size.
+  function buildingGeometry(b, shift) {
+    const g = unit.box.clone(); g.userData.own = true;
+    const uv = g.attributes.uv;
+    for (let f = 0; f < 6; f++) {
+      if (f === 2 || f === 3) continue; // roof and floor keep 0..1
+      const width = f < 2 ? b.d : b.w;
+      for (let k = f * 4; k < f * 4 + 4; k++) uv.setXY(k, uv.getX(k) * width / (WIN_W * 4) + shift, uv.getY(k) * b.h / (WIN_H * 4));
+    }
+    return g;
+  }
 
   function create(canvas) {
     const renderer = new T.WebGLRenderer({ canvas, antialias: true });
@@ -84,6 +126,8 @@
     hints.renderOrder = 4;
     scene.add(hints);
 
+    const TEX = makeTextures();
+    const NIGHT_WINDOWS = col('#ffc46b');
     const dummy = new T.Object3D();
     const tmpCol = new T.Color();
     let world = null, group = null, vw = 1, vh = 1;
@@ -141,19 +185,82 @@
         }
       }
 
+      // Street dressing: lane dashes, crosswalks, curbs and lamps. Not marked as ground and never
+      // casting shadows, so the shadow rule (and the QA pixel check) only sees buildings.
+      const cells = WORLD / CELL, land = waterY - 40;
+      const dashes = [], stripes = [], curbs = [], lamps = [];
+      const nearCross = v => Math.abs(v - Math.round(v / CELL) * CELL) < ROAD / 2 + 10;
+      for (let k = 0; k <= cells; k++) {
+        const c = k * CELL;
+        for (let a = 15; a < WORLD; a += 30) {
+          if (nearCross(a)) continue;
+          if (a < waterY - 12) dashes.push([c, a, 1.6, 12]);
+          if (c < waterY - 12) dashes.push([a, c, 12, 1.6]);
+        }
+        for (let m = 0; m <= cells; m++) {
+          const r = m * CELL;
+          if (r > land && c > land) continue;
+          for (let i = -2; i <= 2; i++) {
+            const off = ROAD / 2 + 7;
+            if (r <= land) { stripes.push([c - off, r + i * 8, 10, 4.5]); stripes.push([c + off, r + i * 8, 10, 4.5]); }
+            if (c <= land) { stripes.push([c + i * 8, r - off, 4.5, 10]); stripes.push([c + i * 8, r + off, 4.5, 10]); }
+          }
+          if (r <= land && c <= land && (k + m) % 2 === 0) lamps.push([c + ROAD / 2 + 4, r + ROAD / 2 + 4]);
+        }
+      }
+      for (let gy = 0; gy < cells; gy++) for (let gx = 0; gx < cells; gx++) {
+        const x0 = gx * CELL + ROAD / 2, y0 = gy * CELL + ROAD / 2, inner = CELL - ROAD;
+        if (y0 + inner > land) continue;
+        curbs.push([x0 + inner / 2, y0 + 3, inner, 6], [x0 + inner / 2, y0 + inner - 3, inner, 6],
+                   [x0 + 3, y0 + inner / 2, 6, inner - 12], [x0 + inner - 3, y0 + inner / 2, 6, inner - 12]);
+      }
+      const slabs = (list, mat, y, h) => {
+        const im = new T.InstancedMesh(unit.box, mat, list.length);
+        list.forEach(([x, z, sx, sz], i) => {
+          dummy.position.set(x, y, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(sx, h, sz); dummy.updateMatrix();
+          im.setMatrixAt(i, dummy.matrix);
+        });
+        im.receiveShadow = true; group.add(im);
+        return im;
+      };
+      w.paintMat = lambert('#f4efe2');
+      w.curbMat = lambert('#d9d2c2');
+      slabs(dashes, w.paintMat, 0.55, 0.3);
+      slabs(stripes, w.paintMat, 0.55, 0.3);
+      slabs(curbs, w.curbMat, 0.45, 0.9);
+      const poleMat = lambert('#3d3b4a');
+      w.lampMat = new T.MeshBasicMaterial({ color: col('#d8d4c8') });
+      w.haloMat = new T.MeshBasicMaterial({ color: col('#ffb84d'), transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending });
+      const lampParts = [[unit.cyl, poleMat, 13, [1.2, 26, 1.2]], [unit.sphere, w.lampMat, 27, [3.2, 3.2, 3.2]], [unit.sphere, w.haloMat, 27, [12, 12, 12]]];
+      for (const [geo, mat, y, sc] of lampParts) {
+        const im = new T.InstancedMesh(geo, mat, lamps.length);
+        lamps.forEach(([x, z], i) => {
+          dummy.position.set(x, y, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(...sc); dummy.updateMatrix();
+          im.setMatrixAt(i, dummy.matrix);
+        });
+        if (mat === w.haloMat) im.renderOrder = 2;
+        group.add(im);
+      }
+
       // Buildings cast the only shadows in the scene, matching the game rule.
       // Walls get a lighter, self-lit tone so a camera-facing wall never reads as a ground shadow.
+      // Windows come from a texture; at night the emissive map swaps to lit windows (no shader change).
       const mats = {};
       w.wallMats = [];
+      const propMat = lambert('#a19d94');
       for (const b of w.buildings) {
-        if (!mats[b.roof]) {
-          const wallCol = col(b.roof).lerp(col('#ffffff'), 0.35);
-          const wall = lambert(wallCol, { emissive: wallCol.clone().multiplyScalar(0.35) });
-          w.wallMats.push(wall);
-          const roof = lambert(b.roof);
-          mats[b.roof] = { roof, faces: [wall, wall, roof, wall, wall, wall] }; // +x -x +y -y +z -z
+        const key = b.crane ? 'crane' : b.roof;
+        if (!mats[key]) {
+          const wallCol = col(b.roof).lerp(col('#ffffff'), 0.35), glow = wallCol.clone().multiplyScalar(0.35);
+          const wall = b.crane ? lambert(wallCol, { emissive: glow })
+            : lambert(wallCol, { map: TEX.windows, emissive: glow, emissiveMap: TEX.plain });
+          wall.userData.day = glow;
+          if (!b.crane) w.wallMats.push(wall);
+          const roof = lambert(b.roof, b.crane ? {} : { map: TEX.roof });
+          mats[key] = { roof, faces: [wall, wall, roof, wall, wall, wall] }; // +x -x +y -y +z -z
         }
-        const mesh = new T.Mesh(unit.box, mats[b.roof].faces);
+        const hash = Math.abs(Math.round(b.x * 7 + b.y * 13));
+        const mesh = new T.Mesh(b.crane ? unit.box : buildingGeometry(b, (hash % 4) / 4), mats[key].faces);
         mesh.castShadow = true; mesh.receiveShadow = true;
         group.add(mesh);
         b.mesh = mesh;
@@ -162,6 +269,14 @@
           boom.scale.set(6 / 18, 6 / b.h, 90 / 18);
           boom.position.set(0, 0.5 - 3 / b.h, 0.5 + 45 / 18);
           mesh.add(boom);
+        } else { // one or two rooftop units; they cast no shadow, so the rule stays buildings-only
+          for (let k = 0; k <= hash % 2; k++) {
+            const prop = new T.Mesh(unit.box, propMat), sz = 9 + (hash >> (k + 2)) % 8;
+            prop.scale.set(sz / b.w, 5 / b.h, sz / b.d);
+            prop.position.set((((hash >> (k * 3)) % 5) - 2) * 0.12, 0.5 + 2.5 / b.h, (((hash >> (k * 3 + 4)) % 5) - 2) * 0.12);
+            prop.receiveShadow = true;
+            mesh.add(prop);
+          }
         }
         placeBuilding(b, b.x + b.w / 2, b.y + b.d / 2, 1, 0);
       }
@@ -173,7 +288,8 @@
       w.instanced = [];
       for (const [type, list] of Object.entries(byType)) {
         for (const part of PARTS[type]) {
-          const mat = lambert(part.color === 'inst' ? '#ffffff' : part.color);
+          const c = part.color === 'inst' ? '#ffffff' : part.color;
+          const mat = part.glow ? new T.MeshBasicMaterial({ color: col(c) }) : lambert(c);
           const im = new T.InstancedMesh(unit[part.geo], mat, list.length);
           im.receiveShadow = true;
           list.forEach((o, i) => {
@@ -263,17 +379,23 @@
         sunLight.intensity = 0;
         hemi.color.set(0x7d86d8); hemi.groundColor.set(0x23203a); hemi.intensity = 0.55;
         world.roadMat.color.set('#3b3958');
+        world.paintMat.color.set('#6f6c92'); world.curbMat.color.set('#4b4868');
         for (const m of world.roofMats) m.emissive.set(0x1c1606);
+        for (const m of world.wallMats) { m.emissiveMap = TEX.lit; m.emissive.copy(NIGHT_WINDOWS); }
+        world.lampMat.color.set('#ffe2a0'); world.haloMat.opacity = 0.28;
       } else {
         // Sunlit ground lands at exactly its palette color (hemi + sun·sin(elev) = 1) instead of
         // washing out at noon or going dull at dawn; shade gets the hemisphere term only (~36%).
         // The cap keeps sun-facing walls from blowing out when the sun is very low.
         const HEMI = 0.36;
         sunLight.intensity = Math.min(1.8, (1 - HEMI) / Math.sin(sun.elev));
-        sunLight.color.set(0xfff4dd).lerp(col('#ffb070'), lowSun);
+        sunLight.color.set(0xfff4dd).lerp(col('#ff9a5a'), lowSun); // deeper orange toward dusk
         hemi.color.set(0xffffff); hemi.groundColor.set(0x8a7f70); hemi.intensity = HEMI;
         world.roadMat.color.set('#b9b4a8');
+        world.paintMat.color.set('#f4efe2'); world.curbMat.color.set('#d9d2c2');
         for (const m of world.roofMats) m.emissive.set(0x000000);
+        for (const m of world.wallMats) { m.emissiveMap = TEX.plain; m.emissive.copy(m.userData.day); }
+        world.lampMat.color.set('#d8d4c8'); world.haloMat.opacity = 0;
         const ce = Math.cos(sun.elev);
         sunLight.position.set(f.camX - sun.sx * ce * 3000, Math.sin(sun.elev) * 3000, f.camY - sun.sy * ce * 3000);
         sunLight.target.position.set(f.camX, 0, f.camY);
@@ -303,6 +425,7 @@
           const r = o.r * s;
           dummy.position.set(x, part.y * r - sink, y);
           dummy.rotation.set(0, -o.rot, 0);
+          if (part.o) { dummy.translateX(part.o[0] * r); dummy.translateZ(part.o[1] * r); }
           dummy.scale.set(part.s[0] * r || 1e-6, part.s[1] * r || 1e-6, part.s[2] * r || 1e-6);
           dummy.updateMatrix();
           im.setMatrixAt(i, dummy.matrix);
