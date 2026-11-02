@@ -14,6 +14,16 @@
     cone: new T.ConeGeometry(1, 1, 12),
     capsule: new T.CapsuleGeometry(1, 2, 4, 10), // radius 1, 4 tall
   };
+  // Low-poly versions for the hundreds of small instanced props: an InstancedMesh draws every
+  // instance, on screen or not, so these segment counts dominate the triangle budget.
+  const low = {
+    box: unit.box,
+    cyl: new T.CylinderGeometry(1, 1, 1, 7),
+    sphere: new T.SphereGeometry(1, 7, 5),
+    blob: new T.SphereGeometry(1, 8, 5),
+    cone: new T.ConeGeometry(1, 1, 6),
+    capsule: new T.CapsuleGeometry(1, 2, 2, 6),
+  };
   // A part is a unit geometry scaled by [sx, sy, sz] * object radius, lifted by y * r and
   // shifted by o = [forward, side] * r in the object's own frame. color 'inst' takes the object's
   // own color; glow parts ignore lighting (headlights).
@@ -144,7 +154,7 @@
       group.traverse(o => {
         if (o.isInstancedMesh) o.dispose();
         if (o.material) [].concat(o.material).forEach(m => m.dispose());
-        if (o.geometry && !Object.values(unit).includes(o.geometry) && o.geometry.userData.own) o.geometry.dispose();
+        if (o.geometry && o.geometry.userData.own) o.geometry.dispose();
       });
       scene.remove(group);
     }
@@ -297,7 +307,7 @@
         for (const part of PARTS[type]) {
           const c = part.color === 'inst' ? '#ffffff' : part.color;
           const mat = part.glow ? new T.MeshBasicMaterial({ color: col(c) }) : lambert(c);
-          const im = new T.InstancedMesh(unit[part.geo], mat, list.length);
+          const im = new T.InstancedMesh(low[part.geo], mat, list.length);
           im.receiveShadow = true;
           list.forEach((o, i) => {
             if (part.color === 'inst') im.setColorAt(i, tmpCol.set(o.color));
@@ -351,10 +361,24 @@
       b.mesh.position.set(cx, b.h * s / 2 - sink * b.h, cy);
     }
 
+    // Quality steps, lowered by the game when frames run slow: 0 full, 1 lower resolution,
+    // 2 lowest resolution and a smaller, hard-edged shadow map. Shader programs stay the same.
+    let quality = 0, lastDpr = 1;
+    const PIXEL_CAP = [2, 1.5, 1];
     function resize(w, h, dpr) {
-      vw = w; vh = h;
-      renderer.setPixelRatio(Math.min(dpr || 1, 2));
+      vw = w; vh = h; lastDpr = dpr || 1;
+      renderer.setPixelRatio(Math.min(lastDpr, PIXEL_CAP[quality]));
       renderer.setSize(w, h, false);
+    }
+    function setQuality(q) {
+      quality = Math.max(0, Math.min(2, q));
+      resize(vw, vh, lastDpr);
+      const size = quality === 2 ? 1024 : 2048;
+      if (sunLight.shadow.mapSize.x !== size) {
+        sunLight.shadow.mapSize.set(size, size);
+        if (sunLight.shadow.map) { sunLight.shadow.map.dispose(); sunLight.shadow.map = null; }
+      }
+      return quality;
     }
 
     function dayColor(trio, night, phase) {
@@ -370,23 +394,35 @@
       // Camera: orthographic, tilted 55°, `view` world units across the shorter screen side.
       // In first person the light/shadow box centers ahead of the player instead of under the camera.
       const aspect = vw / vh;
-      const fp = !!f.fp, eye = Math.max(10, player.r * 0.9);
-      const lookX = player.x + Math.cos(player.face) * 300, lookY = player.y + Math.sin(player.face) * 300;
-      const focusX = fp ? player.x + Math.cos(player.face) * 260 : f.camX, focusY = fp ? player.y + Math.sin(player.face) * 260 : f.camY;
       const halfW = aspect < 1 ? f.view / 2 : f.view / 2 * aspect;
       const halfH = halfW / aspect;
+      // f.fp (0..1) blends the top-down view into first person: a perspective camera swoops from a
+      // narrow-angle copy of the top-down shot down to the shadow's eye height, easing in and out.
+      const k = Math.max(0, Math.min(1, f.fp || 0)), e = k * k * (3 - 2 * k), fp = k > 0;
+      const eye = Math.max(10, player.r * 0.9);
+      const lookX = player.x + Math.cos(player.face) * 300, lookY = player.y + Math.sin(player.face) * 300;
+      const focusX = f.camX + (player.x + Math.cos(player.face) * 260 - f.camX) * e;
+      const focusY = f.camY + (player.y + Math.sin(player.face) * 260 - f.camY) * e;
       camera.left = -halfW; camera.right = halfW; camera.top = halfH; camera.bottom = -halfH;
       camera.updateProjectionMatrix();
       const D = 2500;
       camera.position.set(f.camX, D * Math.sin(TILT), f.camY + D * Math.cos(TILT));
       camera.lookAt(f.camX, 0, f.camY);
       if (fp) {
-        fpCamera.aspect = aspect; fpCamera.updateProjectionMatrix();
-        fpCamera.position.set(player.x - Math.cos(player.face) * player.r * 0.3, eye, player.y - Math.sin(player.face) * player.r * 0.3);
-        fpCamera.lookAt(lookX, eye * 0.45, lookY);
+        const fov0 = 20, fov1 = 72, d0 = halfH / Math.tan(fov0 * Math.PI / 360);
+        const lerp = (a, b) => a + (b - a) * e;
+        fpCamera.fov = lerp(fov0, fov1);
+        fpCamera.aspect = aspect; fpCamera.far = Math.max(2000, d0 * 1.6);
+        fpCamera.updateProjectionMatrix();
+        const ex = player.x - Math.cos(player.face) * player.r * 0.3, ey = player.y - Math.sin(player.face) * player.r * 0.3;
+        // Height drops late (e²) so the swoop flies over the rooftops before diving to eye level.
+        const h0 = d0 * Math.sin(TILT);
+        fpCamera.position.set(lerp(f.camX, ex), h0 + (eye - h0) * e * e, lerp(f.camY + d0 * Math.cos(TILT), ey));
+        fpCamera.lookAt(lerp(f.camX, lookX), lerp(0, eye * 0.45), lerp(f.camY, lookY));
         skyCol.copy(phase.night ? SKY.night : SKY.day.clone().lerp(SKY.dusk, Math.max(0, phase.dayT - 0.6) / 0.4));
-        scene.fog.color.copy(skyCol); scene.fog.near = 350; scene.fog.far = 1300;
-        renderer.setClearColor(skyCol);
+        const fe = e * e; // fog only closes in near the end of the swoop
+        scene.fog.color.copy(skyCol); scene.fog.near = FAR_FOG + (350 - FAR_FOG) * fe; scene.fog.far = FAR_FOG * 2 + (1300 - FAR_FOG * 2) * fe;
+        renderer.setClearColor(tmpCol.set(0x000000).lerp(skyCol, e));
       } else {
         scene.fog.near = FAR_FOG; scene.fog.far = FAR_FOG * 2;
         renderer.setClearColor(0x000000);
@@ -421,7 +457,7 @@
         const ce = Math.cos(sun.elev);
         sunLight.position.set(focusX - sun.sx * ce * 3000, Math.sin(sun.elev) * 3000, focusY - sun.sy * ce * 3000);
         sunLight.target.position.set(focusX, 0, focusY);
-        const S = fp ? 520 : f.view * 1.5 + 60, sc = sunLight.shadow.camera;
+        const S = f.view * 1.5 + 60 + (520 - f.view * 1.5 - 60) * e, sc = sunLight.shadow.camera;
         sc.left = -S; sc.right = S; sc.top = S; sc.bottom = -S;
         sc.updateProjectionMatrix();
       }
@@ -490,7 +526,7 @@
       rimMat.opacity = player.lit ? 0.85 : 0.55;
       litRing.position.copy(blob.position).setY(1.3);
       litRing.scale.setScalar(player.r);
-      eyes.forEach(({ e, p }) => { e.visible = p.visible = !fp; }); // the eyes would sit inside the first-person camera
+      eyes.forEach(o => { o.e.visible = o.p.visible = k < 0.6; }); // the eyes would sit inside the first-person camera
       eyes.forEach(({ e, p }, k) => {
         const side = k ? 1 : -1, a = player.face + side * 0.5;
         const ex = player.x + Math.cos(a) * player.r * 0.42, ey = player.y + Math.sin(a) * player.r * 0.42;
@@ -525,7 +561,7 @@
       eyeMat.color.setHex(skin.eye);
     }
 
-    return { build, resize, draw, setSkin, debug: { renderer, camera, scene, rimMat } };
+    return { build, resize, draw, setSkin, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera } };
   }
 
   root.DuskRender = { create };

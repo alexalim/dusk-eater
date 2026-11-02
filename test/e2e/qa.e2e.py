@@ -10,7 +10,7 @@ def rec(sid, name, ok, detail=''):
     res.append((sid, name, ok, detail)); print(f"{'PASS' if ok else 'FAIL'} {sid} {name} :: {detail}", flush=True)
 
 # Times every rAF callback so we can see the JS cost of one game frame.
-TIMER = '''window.__DUSK_TEST__ = {}; window.__ft = [];
+TIMER = '''window.__DUSK_TEST__ = { fixedQuality: true }; window.__ft = [];
 const _raf = window.requestAnimationFrame.bind(window);
 window.requestAnimationFrame = cb => _raf(ts => { const a = performance.now(); cb(ts); window.__ft.push(performance.now() - a); });'''
 
@@ -107,26 +107,46 @@ with sync_playwright() as p:
             cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': 195 + dx * i / 10, 'y': 600 + dy * i / 10}]}); pg.wait_for_timeout(16)
         pg.wait_for_timeout(ms)
         cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); frames_wait(pg, 10)
-    V = lambda: pg.evaluate(f'[{A}.view.zoom, {A}.view.fp]')
+    V = lambda: pg.evaluate(f'[{A}.view.zoom, {A}.view.fp, {A}.view.t]')
     pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
     x0 = pg.evaluate(f'{A}.s.player.x')
     pinch(100, 150); z1 = V()
     moved = abs(pg.evaluate(f'{A}.s.player.x') - x0)
+    # a pinch just past the closest zoom only previews the tilt and springs back on release
+    pinch(100, 200); pg.wait_for_timeout(400); early = V()
     progs0 = pg.evaluate(f'{A}.R.debug.renderer.info.programs.length')
-    pinch(80, 300); fp1 = V(); frames_wait(pg, 4)
+    pinch(80, 300); pg.wait_for_timeout(1000); fp1 = V(); frames_wait(pg, 4)
     progs1 = pg.evaluate(f'{A}.R.debug.renderer.info.programs.length')
     face0, p0 = pg.evaluate(f'[{A}.s.player.face, [{A}.s.player.x, {A}.s.player.y]]')
     drag(60, 0); face1, p1 = pg.evaluate(f'[{A}.s.player.face, [{A}.s.player.x, {A}.s.player.y]]')
     drag(0, -60); face2, p2 = pg.evaluate(f'[{A}.s.player.face, [{A}.s.player.x, {A}.s.player.y]]')
     import math
     step = (p2[0] - p1[0], p2[1] - p1[1]); along = step[0] * math.cos(face2) + step[1] * math.sin(face2)
-    pinch(300, 100); back = V()
-    rec('S14', 'pinch zooms, deeper pinch = first person (no recompile), turn + walk forward, pinch out returns',
-        z1[0] < 0.9 and not z1[1] and moved < 1 and fp1[1] and progs1 == progs0 and face1 - face0 > 0.3
-        and math.dist(p0, p1) < 15 and along > 40 and not back[1],
-        f'zoom={z1[0]:.2f} pinch_moved={moved:.1f} fp={fp1[1]} programs {progs0}->{progs1} turn={face1 - face0:.2f} '
-        f'turn_drift={math.dist(p0, p1):.1f} forward={along:.0f} back_fp={back[1]}')
+    pinch(300, 100); pg.wait_for_timeout(1200); back = V()
+    # the swoop itself, frame by frame: eases in over ~0.9 s instead of jumping
+    swoop = pg.evaluate(f"""new Promise(r => {{ const v = {A}.view, out = [], t0 = performance.now(); v.target = 1;
+        const f = () => {{ out.push([v.t, performance.now() - t0]); v.t >= 1 ? r(out) : requestAnimationFrame(f); }}; requestAnimationFrame(f); }})""")
+    pg.evaluate(f'{A}.view.target = 0; {A}.view.t = 0')
+    mid = [t for t, _ in swoop if 0.05 < t < 0.95]
+    swoop_ms = swoop[-1][1]
+    swoop = [t for t, _ in swoop]
+    rec('S14', 'pinch zooms; small overpinch springs back; deep overpinch swoops into first person (no recompile); turn + walk; pinch out swoops back',
+        z1[0] < 0.9 and not z1[1] and moved < 1 and not early[1] and early[2] < 0.05 and len(mid) >= 2 and swoop_ms > 600 and all(b >= a for a, b in zip(swoop, swoop[1:])) and fp1[1] and fp1[2] == 1
+        and progs1 == progs0 and face1 - face0 > 0.3 and math.dist(p0, p1) < 15 and along > 40 and not back[1] and back[2] == 0,
+        f'zoom={z1[0]:.2f} pinch_moved={moved:.1f} early={early} swoop {len(mid)} mid-frames over {swoop_ms:.0f}ms programs {progs0}->{progs1} '
+        f'turn={face1 - face0:.2f} turn_drift={math.dist(p0, p1):.1f} forward={along:.0f} back={back}')
     pg.evaluate(f'{A}.view.zoom = 1; {A}.start(0)'); frames_wait(pg)
+    # S15 adaptive quality: slow frames step resolution down (2 -> 1.5 -> 1 px ratio), never below the floor
+    pr = lambda: pg.evaluate(f'[{A}.R.quality, {A}.R.debug.renderer.getPixelRatio()]')
+    pg.evaluate('window.__DUSK_TEST__.fixedQuality = false')
+    q0 = pr(); pg.evaluate(f'{A}.skipTo(5)')
+    steps = []
+    for _ in range(3):
+        pg.evaluate(f'for (let i = 0; i < 70; i++) {A}.watchFrames(1 / 30)'); steps.append(pr())
+    pg.evaluate(f'{A}.R.setQuality(0)'); restored = pr()
+    pg.evaluate('window.__DUSK_TEST__.fixedQuality = true')
+    rec('S15', 'slow frames lower quality step by step, stopping at the floor', q0 == [0, 2] and steps == [[1, 1.5], [2, 1], [2, 1]] and restored == [0, 2],
+        f'start={q0} steps={steps}')
     # S3 round end: stars + goal list + next button rule
     pg.evaluate(f'{A}.skipTo(119.9)'); frames_wait(pg)
     end_vis = pg.is_visible('#end'); goals = len(pg.query_selector_all('#end-goals > div'))

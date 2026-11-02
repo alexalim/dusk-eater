@@ -157,7 +157,8 @@
 <div id="fps" class="hidden"></div>
 <div id="pause" class="overlay hidden"><p class="big">일시정지</p>
   <div class="btns"><div class="btn" id="btn-resume">계속</div><div class="btn ghost" id="btn-quit">그만두기</div></div>
-  <p>그만두면 이번 판 기록은 남지 않고, 부스터 보석은 돌려받아요.</p></div>
+  <p>그만두면 이번 판 기록은 남지 않고, 부스터 보석은 돌려받아요.</p>
+  <div class="chip" id="btn-fps">FPS 표시</div></div>
 <div id="end" class="overlay hidden">
   <h2 id="end-title">밤이 끝났어요</h2>
   <div class="stars" id="end-stars"></div>
@@ -377,13 +378,15 @@
 
   // ---------- input: relative drag, two-finger pinch zoom, plus keys for desktop ----------
   const input = { active: false, ax: 0, ay: 0, dx: 0, dy: 0, keys: new Set() };
-  // view.zoom multiplies the automatic camera distance; pinching in past ZOOM_MIN enters first person
-  // (experimental), pinching out of first person returns to the top-down view.
-  const ZOOM_MIN = 0.5, ZOOM_MAX = 2;
-  const view = { zoom: 1, fp: false };
+  // view.zoom multiplies the automatic camera distance. Pinching in past ZOOM_MIN stretches into a
+  // preview tilt; going FP_PULL times further commits, and view.t swoops 0 -> 1 into first person
+  // (experimental). Pinching out of first person swoops back. view.fp switches the controls.
+  const ZOOM_MIN = 0.5, ZOOM_MAX = 2, FP_PULL = 1.8, PREVIEW = 0.25, SWOOP_S = 0.9;
+  const view = { zoom: 1, fp: false, t: 0, target: 0 };
   const touches = new Map();
   let pinch = null;
   const spread = () => { const [a, b] = [...touches.values()]; return Math.hypot(a.x - b.x, a.y - b.y) || 1; };
+  const setFp = on => { view.fp = on; view.target = on ? 1 : 0; view.zoom = ZOOM_MIN; pinch = { d0: spread(), zoom0: ZOOM_MIN, fp0: on }; };
   canvas.addEventListener('pointerdown', e => {
     canvas.setPointerCapture(e.pointerId);
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -395,10 +398,12 @@
     if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pinch && touches.size === 2) {
       const ratio = spread() / pinch.d0; // > 1 fingers apart = zoom in
-      if (pinch.fp0) { if (ratio < 0.75) { view.fp = false; view.zoom = ZOOM_MIN; pinch = { d0: spread(), zoom0: ZOOM_MIN, fp0: false }; } return; }
+      if (pinch.fp0) { if (ratio < 0.7) setFp(false); return; }
       const z = pinch.zoom0 / ratio;
-      if (z < ZOOM_MIN * 0.8) { view.fp = true; view.zoom = ZOOM_MIN; pinch = { d0: spread(), zoom0: ZOOM_MIN, fp0: true }; return; }
       view.zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+      const pull = ZOOM_MIN / z; // > 1 once pinching past the closest zoom
+      if (pull >= FP_PULL) setFp(true);
+      else view.target = pull > 1 ? PREVIEW * (pull - 1) / (FP_PULL - 1) : 0;
       return;
     }
     if (!input.active) return;
@@ -411,7 +416,11 @@
   });
   const endDrag = () => { input.active = false; input.dx = input.dy = 0; };
   // Lifting a finger ends the pinch; movement waits for a fresh touch so the zoom gesture doesn't steer.
-  const lift = e => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null; endDrag(); };
+  const lift = e => {
+    touches.delete(e.pointerId);
+    if (touches.size < 2) { pinch = null; if (!view.fp) view.target = 0; } // an uncommitted preview springs back
+    endDrag();
+  };
   canvas.addEventListener('pointerup', lift);
   canvas.addEventListener('pointercancel', lift);
   window.addEventListener('keydown', e => input.keys.add(e.key));
@@ -540,7 +549,7 @@
       const c = centerOf(b);
       if (isShaded(c, b)) hints.push({ x: c.x, y: c.y, r: Math.hypot(b.w, b.d) / 2 });
     }
-    R.draw({ t, phase, sun, player, view: cam.view, camX: cam.x, camY: cam.y, swallowPos, hints, fp: view.fp && state !== 'title' });
+    R.draw({ t, phase, sun, player, view: cam.view, camX: cam.x, camY: cam.y, swallowPos, hints, fp: state === 'title' ? 0 : view.t });
     $('vignette').classList.toggle('hidden', !phase.night);
     if (state === 'play') renderHud();
   }
@@ -778,11 +787,29 @@
     const t = now / 1000;
     const dt = Math.min(0.05, t - last || 0);
     last = t;
-    if (showFps && (fpsN++, t - fpsT >= 0.5)) { $('fps').textContent = Math.round(fpsN / (t - fpsT)) + ' fps'; fpsN = 0; fpsT = t; }
-    if (state === 'play') update(dt);
+    if (!$('fps').classList.contains('hidden') && (fpsN++, t - fpsT >= 0.5)) { $('fps').textContent = Math.round(fpsN / (t - fpsT)) + ' fps' + (R ? ' · 화질 ' + (3 - R.quality) : ''); fpsN = 0; fpsT = t; }
+    if (state === 'play') { update(dt); watchFrames(dt); }
+    // Commits swoop over SWOOP_S; the pinch preview follows the fingers quickly.
+    const rate = view.target === 0 || view.target === 1 ? dt / SWOOP_S : dt * 8;
+    view.t += Math.max(-rate, Math.min(rate, view.target - view.t));
     render(t);
     requestAnimationFrame(frame);
   }
+
+  // Adaptive quality: if two seconds of play average under 45 fps, step resolution/shadows down (never back up).
+  let slowT = 0, slowN = 0;
+  function watchFrames(dt) {
+    // The first moments of a run include one-off GPU uploads; tests can pin quality for stable pixels.
+    if (!R || R.quality >= 2 || elapsed < 1.5 || (window.__DUSK_TEST__ && window.__DUSK_TEST__.fixedQuality)) return;
+    slowT += dt; slowN++;
+    if (slowT < 2) return;
+    if (slowN / slowT < 45) R.setQuality(R.quality + 1);
+    slowT = 0; slowN = 0;
+  }
+  $('btn-fps').addEventListener('pointerup', () => {
+    const on = $('fps').classList.toggle('hidden') === false;
+    $('btn-fps').textContent = on ? 'FPS 숨기기' : 'FPS 표시';
+  });
 
   // Title screen shows the first stage idling behind the overlay.
   setupStage(0);
@@ -792,7 +819,7 @@
 
   // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
   if (window.__DUSK_TEST__) {
-    window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; }, view, R, Store, Shop, ready,
+    window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; }, view, watchFrames, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
       get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase }; } };
