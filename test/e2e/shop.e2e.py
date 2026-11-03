@@ -122,5 +122,19 @@ with sync_playwright() as p:
     rec('H10', 'shop blocks never overlap at 402x874 (no squeezed message)', gap[0] >= 8 and gap[1] <= 0, f'min gap={gap[0]}px msg overflow={gap[1]}px')
     b.close()
 
+    # H11 a TestFlight build opens the Christmas event in November (outside its dates), marked as a preview;
+    # the same date in a store build shows no event tab (S17 in qa.e2e.py covers the store dates)
+    b = p.chromium.launch(args=GL)
+    tabs = lambda pg: pg.evaluate("[...document.querySelectorAll('#map .tabs .chip')].map(e => e.dataset.l)")
+    pg4, _ = open_page(b, init="window.__DUSK_TEST__.today = '2026-11-03'; window.__DUSK_TEST__.testBuild = true;")
+    pg4.tap('#btn-title'); frames_wait(pg4); tf = tabs(pg4)
+    pg4.tap('.tabs .chip[data-l=xmas]'); frames_wait(pg4); note = pg4.inner_text('.event-note')
+    nodes = len(pg4.query_selector_all('.levels .node')); pg4.context.close()  # one WebGL page at a time under SwiftShader
+    pg5, _ = open_page(b, init="window.__DUSK_TEST__.today = '2026-11-03';")
+    pg5.tap('#btn-title'); frames_wait(pg5); store = tabs(pg5)
+    rec('H11', 'TestFlight build previews the event in November; store build does not', tf == ['main', 'xmas'] and '테스트 미리보기' in note
+        and nodes == 10 and store == [], f'testflight={tf} store={store} note={note!r}')
+    b.close()
+
 print(f'{sum(res)}/{len(res)} passed')
 sys.exit(0 if all(res) else 1)

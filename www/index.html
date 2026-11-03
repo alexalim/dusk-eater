@@ -248,6 +248,9 @@
     listKey = key; list = key === 'main' ? STAGES : EVENT_LEVELS[key]; listIds = list.map(s => s.id);
   }
   // Events open by device date; tests can pin a date via __DUSK_TEST__.today ('YYYY-MM-DD').
+  // TestFlight builds open every event early so testers can play them before the dates.
+  let testBuild = !!(window.__DUSK_TEST__ && window.__DUSK_TEST__.testBuild);
+  const liveEvents = () => (testBuild ? EVENTS : activeEvents(today()));
   const today = () => (window.__DUSK_TEST__ && window.__DUSK_TEST__.today ? new Date(window.__DUSK_TEST__.today + 'T12:00:00') : new Date());
   // Korean object particle: 을 after a final consonant, 를 after a vowel.
   const withObject = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return w + (c >= 0 && c < 11172 && c % 28 ? '을' : '를'); };
@@ -766,13 +769,13 @@
 
   function openSelect() {
     state = 'menu';
-    const live = activeEvents(today());
+    const live = liveEvents();
     if (listKey !== 'main' && !live.some(ev => ev.id === listKey)) { useList('main'); selected = lastUnlocked(); page = Math.floor(selected / pageSize()); }
     const ev = EVENTS.find(e => e.id === listKey);
     const tabs = live.length ? `<div class="tabs"><span class="chip${ev ? '' : ' on'}" data-l="main">레벨</span>` +
       live.map(e => `<span class="chip${ev === e ? ' on' : ''}" data-l="${e.id}">${e.icon} 이벤트</span>`).join('') + '</div>' : '';
     const reward = ev && Shop.SKINS.find(k => k.id === ev.reward.skin);
-    const progress = ev ? `<div class="event-note">${ev.title} · 별 ${eventStars(ev)}/${list.length * 3} — ` +
+    const progress = ev ? `<div class="event-note">${ev.title}${testBuild && !activeEvents(today()).includes(ev) ? ' (테스트 미리보기)' : ''} · 별 ${eventStars(ev)}/${list.length * 3} — ` +
       (Store.wallet.owned.includes(reward.id) ? `${reward.name} 획득!` : `별 ${ev.reward.stars}개를 모으면 ${reward.name}`) + '</div>' : '';
     const size = pageSize(), from = page * size, pages = Math.ceil(list.length / size);
     const cells = list.slice(from, from + size).map((s, k) => {
@@ -967,6 +970,7 @@
     bestScore = (await Store.kv.get('dusk-best')) || {};
     meta = Object.assign(meta, await Store.kv.get('dusk-sync-meta'));
     await Store.init();
+    if (await Store.isTestBuild()) testBuild = true;
     lastWallet = JSON.stringify(Store.wallet);
     $('shop-demo').classList.toggle('hidden', !Store.demo);
     Account.init(accountHooks); // signs back in and syncs in the background; the game never waits for it

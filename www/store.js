@@ -117,6 +117,12 @@
     },
     // Wallet changes that are not purchases (equip, boosts, star rewards).
     update: w => commit(w),
+    // TestFlight and Xcode installs report a non-production App Store environment.
+    async isTestBuild() {
+      if (!IAP || !IAP.getAppTransaction) return false;
+      try { const { appTransaction } = await IAP.getAppTransaction(); return !!appTransaction && appTransaction.environment !== 'Production'; }
+      catch { return false; }
+    },
   };
   root.DuskStore = api;
 })(this);
