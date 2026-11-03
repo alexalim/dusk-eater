@@ -168,7 +168,7 @@ with sync_playwright() as p:
         f'start={t0[:1]} after_drag={t1[0]} ate_while_dragging={ate} after_wait={t1b[0]} sun {sun0}->{sun1}->{sun2} after_swallow={t2[0]} level2={lv2[0]} skipped={skipped[0]}')
     # S17 Christmas event: no tab before Dec 1; a tab and 10 levels from Dec 1; 15 event stars grant the santa skin once;
     # the shop shows it locked until then; the event closes after Jan 6
-    T = lambda: pg.evaluate("[...document.querySelectorAll('.tabs .chip')].map(e => e.dataset.l)")
+    T = lambda: pg.evaluate("[...document.querySelectorAll('#map .tabs .chip')].map(e => e.dataset.l)")  # the ranking screen has tabs too
     pg.evaluate("window.__DUSK_TEST__.today = '2026-11-30'"); pg.evaluate(f'{A}.freeze()')
     pg.evaluate("document.querySelector('#btn-title').dispatchEvent(new PointerEvent('pointerup'))"); frames_wait(pg, 3)
     nov = T()

@@ -86,6 +86,20 @@
   .levels .node.locked { background: #4a4560; color: rgba(244,239,230,.55); }
   .node.locked svg { width: 18px; height: 18px; }
   .tabs { display: flex; gap: 8px; }
+  .panel { width: min(100%, 380px); box-sizing: border-box; padding: 16px; border-radius: 16px; background: var(--card);
+    display: flex; flex-direction: column; gap: 10px; text-align: left; }
+  .panel small { color: var(--muted); font-size: 13px; line-height: 1.45; word-break: keep-all; }
+  .login { display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; border-radius: 12px;
+    font: 700 16px system-ui, sans-serif; border: 0; cursor: pointer; }
+  .login.apple { background: #000; color: #fff; } .login.google { background: #fff; color: #1f1f1f; }
+  .login.kakao { background: #fee500; color: rgba(0,0,0,.85); }
+  .code { font: 800 28px ui-monospace, monospace; letter-spacing: 4px; color: var(--star); }
+  .field { display: flex; gap: 8px; }
+  .field input { flex: 1; min-width: 0; height: 40px; border-radius: 10px; border: 0; padding: 0 12px; font: 600 16px system-ui, sans-serif; }
+  .danger { color: #ff8a8a !important; border-color: rgba(255,138,138,.5) !important; }
+  .rank { margin: 0; padding: 12px 16px; list-style: none; min-height: 120px; }
+  .rank li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(244,239,230,.08); }
+  .rank li.me { color: var(--star); font-weight: 800; }
   .tabs .chip.on { background: var(--star); color: #2a1a05; }
   .event-note { font-size: 13px; font-weight: 700; color: var(--star); text-align: left; word-break: keep-all; }
   .node.xmas { background: #e05a5a; color: #fff6e8; } .node.xmas .stars, .node.xmas .stars .off { color: #fff6e8; }
@@ -163,6 +177,7 @@
   <div class="btns">
     <div class="btn" id="btn-title">시작</div>
     <div class="btn ghost" id="btn-shop-title">상점</div>
+    <div class="btn ghost" id="btn-account">계정 · 친구</div>
   </div>
 </div>
 <div id="select" class="overlay hidden">
@@ -189,6 +204,12 @@
     <div class="btn ghost" id="btn-select">레벨 선택</div>
   </div>
 </div>
+<div id="account" class="overlay hidden"><h2>계정</h2><div class="panel" id="account-body"></div>
+  <p id="account-msg"></p><div class="btns"><div class="btn ghost" id="btn-account-back">돌아가기</div></div></div>
+<div id="ranking" class="overlay hidden"><h2 id="rank-title">랭킹</h2>
+  <div class="tabs"><span class="chip on" data-r="friends">친구</span><span class="chip" data-r="all">전체</span></div>
+  <ol class="panel rank" id="rank-list"></ol>
+  <div class="btns"><div class="btn ghost" id="btn-rank-back">돌아가기</div></div></div>
 <div id="shop" class="overlay hidden">
   <div class="topbar"><h2>상점</h2><span class="gem gem-count"></span></div>
   <p class="note hidden" id="shop-demo">체험 모드: 실제 결제는 일어나지 않아요.</p>
@@ -209,6 +230,10 @@
 <script src="render3d.js"></script>
 <script src="shop.js"></script>
 <script src="store.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="config.js"></script>
+<script src="sync.js"></script>
+<script src="account.js"></script>
 <script>
 (() => {
   'use strict';
@@ -714,7 +739,7 @@
 
   // ---------- screens ----------
   function show(id) {
-    for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop']) $(o).classList.toggle('hidden', o !== id);
+    for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking']) $(o).classList.toggle('hidden', o !== id);
     $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
     if (id !== null) $('tutorial').classList.add('hidden');
   }
@@ -786,7 +811,8 @@
       return `<div class="boost${on ? ' on' : ''}${affordable ? '' : ' off'}" data-b="${b.id}">
         <span class="row"><b>${b.name}</b><span class="gem">${GEM}${b.cost}</span></span><small>${b.desc}</small></div>`;
     }).join('');
-    $('sheet').innerHTML = `<div class="row"><span class="name">${s.name}</span><span class="stars">${starText(bestStars[s.id] || 0)}</span></div>
+    const rank = open && Account.user ? '<span class="chip" id="btn-rank">🏆 랭킹</span>' : '';
+    $('sheet').innerHTML = `<div class="row"><span class="name">${s.name}</span>${rank}<span class="stars">${starText(bestStars[s.id] || 0)}</span></div>
       <div class="desc">${open ? s.desc : '이전 레벨에서 별 1개를 모으면 열려요.'}</div>` +
       (open ? `<ul>${s.goals.map(g => `<li>${goalLabel(g)}</li>`).join('')}</ul>
         <div class="boosts">${boosts}</div><div class="btn" id="btn-go">출발</div>` : '');
@@ -798,6 +824,7 @@
       renderSheet();
     }));
     $('btn-go').addEventListener('pointerup', () => start(selected, [...chosen]));
+    if ($('btn-rank')) $('btn-rank').addEventListener('pointerup', () => openRanking(list[selected], 'friends'));
   }
 
   function start(i, boosts = []) {
@@ -819,7 +846,7 @@
     const before = bestStars[stage.id] || 0;
     bestStars[stage.id] = Math.max(before, n);
     bestScore[stage.id] = Math.max(bestScore[stage.id] || 0, score);
-    save('dusk-stars', bestStars); save('dusk-best', bestScore);
+    save('dusk-stars', bestStars); save('dusk-best', bestScore); touched();
     let w = Shop.finishRun(Shop.awardStars(Store.wallet, before, n));
     // Event reward: enough stars across the event's levels grants its skin (once).
     const ev = EVENTS.find(e => e.id === listKey);
@@ -904,7 +931,27 @@
     if (shopReturn === 'select') openSelect(); else { state = 'title'; show('title'); }
   });
 
+  // ---------- cloud save ----------
+  // updatedAt moves only on real changes (a finished run, a wallet that differs), never on loading or on
+  // applying a merged save, so an old phone that is merely opened cannot win the "newest save" rule.
+  const Account = window.DuskAccount;
+  let meta = { updatedAt: 0, syncedAt: null }, applying = false, lastWallet = null;
+  const touched = () => { meta.updatedAt = Date.now(); save('dusk-sync-meta', meta); if (Account.user) Account.sync(); };
+  const accountHooks = {
+    getSave: () => ({ stars: bestStars, best: bestScore, wallet: Store.wallet, updatedAt: meta.updatedAt, syncedAt: meta.syncedAt }),
+    async applySave(m, now) {
+      applying = true;
+      bestStars = m.stars; bestScore = m.best; save('dusk-stars', bestStars); save('dusk-best', bestScore);
+      await Store.update(m.wallet);
+      lastWallet = JSON.stringify(Store.wallet); applying = false;
+      meta = { updatedAt: m.updatedAt, syncedAt: now }; save('dusk-sync-meta', meta);
+      if (state === 'menu' && !$('select').classList.contains('hidden')) openSelect();
+    },
+  };
+
   Store.onChange(w => {
+    const j = JSON.stringify(w);
+    if (lastWallet !== null && j !== lastWallet && !applying) { lastWallet = j; touched(); } else lastWallet = j;
     renderGems();
     if (R) R.setSkin(skinById(w.equipped));
     if (!$('shop').classList.contains('hidden')) renderShop();
@@ -914,8 +961,11 @@
   const ready = (async () => {
     bestStars = (await Store.kv.get('dusk-stars')) || {};
     bestScore = (await Store.kv.get('dusk-best')) || {};
+    meta = Object.assign(meta, await Store.kv.get('dusk-sync-meta'));
     await Store.init();
+    lastWallet = JSON.stringify(Store.wallet);
     $('shop-demo').classList.toggle('hidden', !Store.demo);
+    Account.init(accountHooks); // signs back in and syncs in the background; the game never waits for it
   })();
   const whenReady = f => () => ready.then(f);
 
@@ -941,6 +991,78 @@
     Store.update(Shop.refundPending(Store.wallet));
     openSelectAt(stageIndex);
   });
+
+  // ---------- account screen ----------
+  let accountReturn = 'title', confirmDelete = false;
+  const msg = t => { $('account-msg').textContent = t || ''; };
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function renderAccount() {
+    const b = $('account-body');
+    if (!Account.canSignIn) {
+      b.innerHTML = '<small>로그인은 앱에서 할 수 있어요. 로그인하면 진행 상황을 저장하고 친구와 점수를 겨룰 수 있어요.</small>';
+      return;
+    }
+    if (!Account.user) {
+      b.innerHTML = `<small>로그인하면 진행 상황이 저장돼서 폰을 바꿔도 이어서 할 수 있고, 친구와 점수를 겨룰 수 있어요.
+        로그인하지 않아도 게임은 그대로 할 수 있어요.</small>
+        <button class="login apple" data-p="apple"> Apple로 계속하기</button>
+        <button class="login google" data-p="google">Google로 계속하기</button>
+        <button class="login kakao" data-p="kakao">카카오로 계속하기</button>`;
+      b.querySelectorAll('.login').forEach(el => el.addEventListener('pointerup', async () => {
+        msg('로그인 창을 여는 중…');
+        msg((await Account.signIn(el.dataset.p)) ? '' : '로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      }));
+      return;
+    }
+    const p = Account.profile || { nickname: '', friendCode: '' };
+    const status = Account.syncing ? '저장하는 중…' : Account.lastError ? '저장하지 못했어요. 네트워크를 확인해 주세요.'
+      : meta.syncedAt ? '진행 상황이 계정에 저장되어 있어요.' : '';
+    b.innerHTML = `<label><small>닉네임</small></label>
+      <div class="field"><input id="nick" maxlength="12" value="${esc(p.nickname)}"><span class="chip" id="btn-nick">저장</span></div>
+      <small>내 친구 코드</small><div class="code" id="my-code">${esc(p.friendCode)}</div>
+      <small>친구에게 내 코드를 알려 주거나, 친구 코드를 입력하세요.</small>
+      <div class="field"><input id="friend-code" maxlength="6" placeholder="친구 코드 6자리" autocapitalize="characters"><span class="chip" id="btn-friend">추가</span></div>
+      <small id="sync-status">${status}</small>
+      <div class="btns"><div class="btn ghost" id="btn-sync">지금 저장하기</div><div class="btn ghost" id="btn-signout">로그아웃</div>
+      <div class="btn ghost danger" id="btn-delete">${confirmDelete ? '정말 삭제하기' : '계정 삭제'}</div></div>
+      ${confirmDelete ? '<small>계정을 삭제하면 서버의 저장, 점수, 친구 목록이 모두 지워지고 되돌릴 수 없어요. 이 기기의 진행은 그대로 남아요.</small>' : ''}`;
+    $('btn-nick').addEventListener('pointerup', async () => msg((await Account.setNickname($('nick').value)) ? '닉네임을 바꿨어요.' : '닉네임을 바꾸지 못했어요.'));
+    $('btn-friend').addEventListener('pointerup', async () => {
+      const name = await Account.addFriend($('friend-code').value);
+      msg(name ? `${name} 님과 친구가 됐어요.` : '그 코드를 찾지 못했어요. 6자리를 다시 확인해 주세요.');
+    });
+    $('btn-sync').addEventListener('pointerup', () => Account.sync());
+    $('btn-signout').addEventListener('pointerup', async () => { await Account.signOut(); msg('로그아웃했어요. 이 기기의 진행은 그대로예요.'); });
+    $('btn-delete').addEventListener('pointerup', async () => {
+      if (!confirmDelete) { confirmDelete = true; renderAccount(); return; }
+      confirmDelete = false;
+      msg((await Account.deleteAccount()) ? '계정을 삭제했어요.' : '계정을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    });
+  }
+  function openAccount(from) { accountReturn = from; confirmDelete = false; msg(''); renderAccount(); show('account'); }
+  Account.onChange(() => {
+    if (!$('account').classList.contains('hidden')) renderAccount();
+    if (!$('select').classList.contains('hidden')) renderSheet();
+  });
+  $('btn-account').addEventListener('pointerup', whenReady(() => openAccount('title')));
+  $('btn-account-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
+
+  // ---------- ranking ----------
+  let rankStage = null;
+  async function openRanking(s, scope) {
+    rankStage = s;
+    $('rank-title').textContent = `🏆 ${s.name}`;
+    document.querySelectorAll('#ranking .chip').forEach(c => c.classList.toggle('on', c.dataset.r === scope));
+    $('rank-list').innerHTML = '<li><small>불러오는 중…</small></li>';
+    show('ranking');
+    const rows = await Account.ranking(s.id, scope);
+    $('rank-list').innerHTML = rows.length ? rows.map((r, k) =>
+      `<li class="${r.is_me ? 'me' : ''}"><span>${k + 1}. ${esc(r.nickname)}</span><span>${Number(r.score).toLocaleString()}</span></li>`).join('')
+      : `<li><small>${scope === 'all' ? '아직 이 레벨의 기록이 없어요.' : '아직 기록이 없어요. 계정 화면에서 친구 코드로 친구를 추가해 보세요.'}</small></li>`;
+  }
+  document.querySelectorAll('#ranking .chip').forEach(c => c.addEventListener('pointerup', () => openRanking(rankStage, c.dataset.r)));
+  $('btn-rank-back').addEventListener('pointerup', () => openSelect());
 
   // ---------- loop ----------
   // Open the page with #fps to show a frame-rate readout (for checking performance on a phone).
