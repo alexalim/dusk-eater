@@ -603,7 +603,6 @@
 
   function startSwallow(o, ox, oy) {
     o.state = 1; o.ft = 0; o.fx = ox; o.fy = oy;
-    o.spin = Math.atan2(oy - player.y, ox - player.x);
   }
 
   function stepTutorial(dt) {
@@ -717,12 +716,13 @@
   }
 
   function swallowPos(o) {
-    // Spiral from where it was eaten into the player's center, shrinking as it goes.
+    // Spiral from where it was eaten into the player's mouth, shrinking as it goes.
+    const mx = player.x + Math.cos(player.face) * player.r * 0.5, my = player.y + Math.sin(player.face) * player.r * 0.5;
     const t = o.ft, ease = t * t;
-    const dist0 = Math.hypot(o.fx - player.x, o.fy - player.y);
-    const ang = o.spin + ease * Math.PI * 2.2;
+    const dist0 = Math.hypot(o.fx - mx, o.fy - my);
+    const ang = Math.atan2(o.fy - my, o.fx - mx) + ease * Math.PI * 1.2;
     const dist = dist0 * (1 - ease);
-    return { x: player.x + Math.cos(ang) * dist, y: player.y + Math.sin(ang) * dist, s: 1 - ease * 0.9 };
+    return { x: mx + Math.cos(ang) * dist, y: my + Math.sin(ang) * dist, s: 1 - ease * 0.9 };
   }
 
   function renderHud() {

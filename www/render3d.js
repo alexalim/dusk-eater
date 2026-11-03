@@ -235,6 +235,7 @@
     litRing.renderOrder = 6;
     // Shading is baked into vertex colors (lit top, lavender sides) so the body needs no lights.
     const DOME_H = 0.62;
+    const MOUTH_D = 0.5; // mouth center, as a fraction of r from the body center toward the facing direction
     const domeGeo = new T.SphereGeometry(1, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2);
     const domeCols = [], side = col(0xb9a3ea), top = col(0xffffff);
     for (let i = 0; i < domeGeo.attributes.position.count; i++) {
@@ -244,7 +245,9 @@
     domeGeo.setAttribute('color', new T.Float32BufferAttribute(domeCols, 3));
     const bodyMat = new T.MeshBasicMaterial({ color: bodyColor, vertexColors: true });
     const body = new T.Mesh(domeGeo, bodyMat);
-    const mouth = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x8a1640 }));
+    // Mouth: a crimson lip with a darker throat inside, so an open mouth reads as a hole.
+    const mouth = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0xc23a5e }));
+    const throat = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x2a0a22 }));
     const eyeMat = new T.MeshBasicMaterial({ color: 0x241640 });
     const pupilMat = new T.MeshBasicMaterial({ color: 0xffffff });
     const eyes = [0, 1].map(() => {
@@ -252,7 +255,7 @@
       scene.add(e, p);
       return { e, p };
     });
-    scene.add(body, mouth);
+    scene.add(body, mouth, throat);
     scene.add(blob, litRing);
 
     // Edible hint rings, instanced; count is set per frame.
@@ -543,7 +546,7 @@
         fpCamera.fov = lerp(fov0, fov1);
         fpCamera.aspect = aspect; fpCamera.far = Math.max(2000, d0 * 1.6);
         fpCamera.updateProjectionMatrix();
-        const ex = player.x - Math.cos(player.face) * player.r * 0.3, ey = player.y - Math.sin(player.face) * player.r * 0.3;
+        const ex = player.x + Math.cos(player.face) * player.r * 0.1, ey = player.y + Math.sin(player.face) * player.r * 0.1;
         // Height drops late (e²) so the swoop flies over the rooftops before diving to eye level.
         const h0 = d0 * Math.sin(TILT);
         fpCamera.position.set(lerp(f.camX, ex), h0 + (eye - h0) * e * e, lerp(f.camY + d0 * Math.cos(TILT), ey));
@@ -658,9 +661,11 @@
       litRing.position.copy(blob.position).setY(1.3);
       litRing.scale.setScalar(player.r);
       // In first person the camera sits inside the body, so the body and face hide.
-      const showBody = k < 0.6;
-      body.visible = mouth.visible = showBody;
-      eyes.forEach(o => { o.e.visible = o.p.visible = showBody; });
+      // In first person the camera floats just above the dome, so the body and mouth stay in view at the
+      // bottom of the screen; only the eyes (right under the camera) hide.
+      body.visible = mouth.visible = throat.visible = true;
+      const showEyes = k < 0.6;
+      eyes.forEach(o => { o.e.visible = o.p.visible = showEyes; });
       // Squash a little with the wobble and while gulping; glow toward the skin's rim color as it grows.
       const gulp = player.gulp || 0, breathe = 1 + Math.sin(t * 3) * 0.03;
       body.position.set(player.x, 1.4, player.y);
@@ -670,14 +675,21 @@
       const fx = Math.cos(player.face), fy = Math.sin(player.face), h = player.r * DOME_H * breathe;
       // Face parts sit on the dome's surface (height = h·√(1-d²) at distance d·r from the center).
       const surf = d => h * Math.sqrt(1 - d * d);
-      mouth.position.set(player.x + fx * player.r * 0.6, surf(0.6), player.y + fy * player.r * 0.6);
+      // The mouth sits on the top-front of the dome so it shows from above whichever way the player faces,
+      // and opens wide while something is being swallowed.
+      const MD = MOUTH_D, my = surf(MD);
+      mouth.position.set(player.x + fx * player.r * MD, my, player.y + fy * player.r * MD);
       mouth.rotation.set(0, -player.face, 0);
-      mouth.scale.set(player.r * 0.12, player.r * (0.05 + gulp * 0.22), player.r * (0.2 + gulp * 0.1));
+      mouth.scale.set(player.r * (0.14 + gulp * 0.16), player.r * (0.07 + gulp * 0.25), player.r * (0.26 + gulp * 0.24));
+      // The throat is a flat dark oval on top of the lip, growing with the gulp so the lip becomes a ring.
+      throat.position.set(mouth.position.x, my + mouth.scale.y * 0.75, mouth.position.z);
+      throat.rotation.copy(mouth.rotation);
+      throat.scale.set(mouth.scale.x * (0.3 + gulp * 0.45), mouth.scale.y * 0.3, mouth.scale.z * (0.35 + gulp * 0.45));
       eyes.forEach(({ e, p }, k) => {
-        const a = player.face + (k ? 1 : -1) * 0.6;
-        const ex = player.x + Math.cos(a) * player.r * 0.3, ey = player.y + Math.sin(a) * player.r * 0.3;
-        e.position.set(ex, surf(0.3), ey); e.scale.set(player.r * 0.15, player.r * 0.12, player.r * 0.15);
-        p.position.set(ex + fx * player.r * 0.05, surf(0.3) + player.r * 0.1, ey + fy * player.r * 0.05 + player.r * 0.04);
+        const a = player.face + (k ? 1 : -1) * 0.75;
+        const ex = player.x + Math.cos(a) * player.r * 0.22, ey = player.y + Math.sin(a) * player.r * 0.22;
+        e.position.set(ex, surf(0.22), ey); e.scale.set(player.r * 0.15, player.r * 0.12, player.r * 0.15);
+        p.position.set(ex + fx * player.r * 0.05, surf(0.22) + player.r * 0.1, ey + fy * player.r * 0.05 + player.r * 0.04);
         p.scale.setScalar(player.r * 0.05);
       });
 
