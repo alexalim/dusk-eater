@@ -29,6 +29,9 @@
   // own color; glow parts ignore lighting (headlights).
   const P = (geo, s, y, color, o, glow) => ({ geo, s, y, color, o, glow });
   const HAIR = '#4a3426', SKIN = '#f6d2b0';
+  // A person: body in the instance color, head, hair or hat, plus any extra parts.
+  const human = (hat = HAIR, extra = []) => [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN),
+    P('sphere', [0.58, 0.32, 0.58], 2.7, hat)].concat(extra);
   const PARTS = {
     person:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.58, 0.32, 0.58], 2.7, HAIR)],
     worker:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.62, 0.36, 0.62], 2.72, '#f2c14e')],
@@ -71,6 +74,55 @@
     sled:      [P('box', [1.8, 0.2, 0.9], 0.35, 'inst'), P('box', [1.9, 0.08, 0.1], 0.08, '#555555', [0, 0.38]), P('box', [1.9, 0.08, 0.1], 0.08, '#555555', [0, -0.38])],
     pine:      [P('cyl', [0.2, 0.9, 0.2], 0.45, '#7a5233'), P('cone', [1.0, 1.8, 1.0], 1.7, 'inst'), P('cone', [0.72, 1.3, 0.72], 2.6, 'inst'),
                 P('cone', [0.4, 0.55, 0.4], 3.3, '#f7f9fc')],
+    // oasis, hanok, campus
+    parasol:   [P('cyl', [0.05, 1.8, 0.05], 0.9, '#dddddd'), P('cone', [1.1, 0.4, 1.1], 1.9, 'inst'), P('cyl', [0.5, 0.06, 0.5], 0.75, '#f4f1ea')],
+    planter:   [P('box', [1.4, 0.8, 1.4], 0.4, 'inst'), P('blob', [0.8, 0.5, 0.8], 1.0, '#4f9b4f'), P('sphere', [0.25, 0.25, 0.25], 1.3, '#ff7aa8', [0.35, 0.2]),
+                P('sphere', [0.25, 0.25, 0.25], 1.3, '#ffd25c', [-0.3, -0.25])],
+    fountain:  [P('cyl', [1.0, 0.3, 1.0], 0.15, 'inst'), P('cyl', [0.88, 0.05, 0.88], 0.3, '#7fd1e8'), P('cyl', [0.12, 0.8, 0.12], 0.6, 'inst'),
+                P('sphere', [0.3, 0.45, 0.3], 1.15, '#e9f7ff')],
+    hanbok:    human('#2a2420', [P('cone', [0.75, 0.9, 0.75], 0.45, 'inst')]),
+    jangdok:   [P('blob', [0.85, 0.9, 0.85], 0.85, 'inst'), P('cyl', [0.5, 0.15, 0.5], 1.75, '#3a2618')],
+    persimmon: [P('cyl', [0.22, 1.4, 0.22], 0.7, '#6b4228'), P('blob', [1.0, 0.8, 1.0], 1.8, 'inst'),
+                P('sphere', [0.14, 0.14, 0.14], 2.2, '#ff8a2a', [0.6, 0.3]), P('sphere', [0.14, 0.14, 0.14], 2.0, '#ff8a2a', [-0.4, -0.5]),
+                P('sphere', [0.14, 0.14, 0.14], 2.4, '#ff8a2a', [0.1, 0.65])],
+    pagoda:    [P('box', [1.0, 0.4, 1.0], 0.2, 'inst'), P('box', [0.8, 0.5, 0.8], 0.65, 'inst'), P('box', [1.1, 0.12, 1.1], 0.95, 'inst'),
+                P('box', [0.6, 0.45, 0.6], 1.25, 'inst'), P('box', [0.85, 0.12, 0.85], 1.5, 'inst'), P('cone', [0.2, 0.5, 0.2], 1.85, 'inst')],
+    student:   human(HAIR, [P('box', [0.5, 0.65, 0.3], 1.3, '#5a3d2b', [-0.55, 0])]),
+    bicycle:   [P('box', [1.6, 0.6, 0.1], 0.4, '#26262e'), P('box', [1.2, 0.12, 0.12], 0.75, 'inst'), P('box', [0.3, 0.1, 0.25], 0.95, '#2a2a2a', [-0.3, 0])],
+    statue:    [P('box', [1.0, 0.6, 1.0], 0.3, '#c9c2b8'), P('capsule', [0.35, 0.4, 0.35], 1.4, 'inst'), P('sphere', [0.32, 0.32, 0.32], 2.4, 'inst')],
+    // market, crossing, stadium, construction
+    grandma:   human('#c9c2d6', [P('box', [0.45, 0.35, 0.3], 0.8, '#d6608a', [0, 0.7])]),
+    fruit:     [P('box', [1.4, 0.6, 1.0], 0.3, '#a0703c'), P('sphere', [0.3, 0.3, 0.3], 0.75, '#e5533d', [0.35, 0.2]),
+                P('sphere', [0.3, 0.3, 0.3], 0.75, '#f2c14e', [-0.3, -0.2]), P('sphere', [0.3, 0.3, 0.3], 0.75, '#9bc53d', [0, 0.25])],
+    stall:     [P('box', [1.6, 0.7, 1.0], 0.35, '#a0703c'), P('box', [1.8, 0.1, 1.3], 1.4, 'inst'), P('cyl', [0.05, 1.0, 0.05], 0.9, '#dddddd', [0.8, 0.55]),
+                P('cyl', [0.05, 1.0, 0.05], 0.9, '#dddddd', [-0.8, 0.55]), P('sphere', [0.25, 0.25, 0.25], 0.85, '#ff8a2a', [0.3, 0])],
+    scooter:   [P('box', [1.4, 0.35, 0.4], 0.35, 'inst'), P('box', [0.1, 0.6, 0.5], 0.8, '#2a2a2a', [0.6, 0]), P('capsule', [0.3, 0.25, 0.3], 1.0, '#3b3f52', [-0.2, 0]),
+                P('sphere', [0.3, 0.3, 0.3], 1.45, '#f2c14e', [-0.2, 0])],
+    commuter:  human(),
+    umbrella:  human(HAIR, [P('cyl', [0.04, 1.4, 0.04], 2.6, '#333333'), P('cone', [1.1, 0.45, 1.1], 3.4, 'inst')]),
+    fan:       human('#f4f1ea', [P('box', [0.12, 0.6, 0.6], 2.2, '#f4f1ea', [0, 0.65])]),
+    ball:      [P('sphere', [1.0, 1.0, 1.0], 1.0, 'inst'), P('box', [1.02, 0.15, 0.4], 1.0, '#222222')],
+    foodtruck: [P('box', [2.0, 0.3, 1.0], 0.15, '#26262e'), P('box', [2.0, 1.1, 1.0], 0.85, 'inst'), P('box', [0.9, 0.35, 0.05], 0.95, '#f4f1ea', [0, 0.53]),
+                P('box', [1.1, 0.1, 0.4], 1.25, '#e05a4f', [0, 0.7]), P('box', [0.06, 0.16, 0.7], 0.55, '#fff3c4', [1.0, 0], true)],
+    cone:      [P('box', [1.2, 0.15, 1.2], 0.08, '#222222'), P('cone', [0.6, 1.8, 0.6], 1.0, 'inst'), P('cyl', [0.42, 0.3, 0.42], 1.0, '#f4f1ea')],
+    beam:      [P('box', [2.2, 0.25, 0.25], 0.15, 'inst'), P('box', [2.2, 0.25, 0.25], 0.45, 'inst', [0, 0.25]), P('box', [2.2, 0.25, 0.25], 0.45, 'inst', [0, -0.25])],
+    pipe:      [P('box', [1.8, 0.8, 0.8], 0.45, 'inst'), P('box', [1.82, 0.5, 0.5], 0.45, '#5a5f69')],
+    excavator: [P('box', [1.4, 0.4, 1.1], 0.25, '#26262e'), P('box', [1.1, 0.8, 0.9], 0.8, 'inst'), P('box', [0.5, 0.6, 0.6], 1.4, '#9fc3e6', [-0.2, 0]),
+                P('box', [1.2, 0.2, 0.2], 1.2, 'inst', [0.95, 0]), P('box', [0.35, 0.35, 0.5], 0.7, '#555555', [1.5, 0])],
+    // beach, desert
+    sunbather: [P('box', [1.8, 0.2, 0.8], 0.15, '#f4f1ea'), P('capsule', [0.4, 0.25, 0.4], 0.45, 'inst'), P('sphere', [0.38, 0.38, 0.38], 0.5, SKIN, [0.75, 0])],
+    sandcastle:[P('box', [1.2, 0.6, 1.2], 0.3, 'inst'), P('box', [0.8, 0.5, 0.8], 0.85, 'inst'), P('cyl', [0.18, 0.5, 0.18], 1.0, 'inst', [0.5, 0.5]),
+                P('cyl', [0.18, 0.5, 0.18], 1.0, 'inst', [-0.5, -0.5]), P('box', [0.04, 0.4, 0.2], 1.35, '#e5533d')],
+    towel:     [P('box', [2.0, 0.05, 1.0], 0.03, 'inst'), P('box', [2.02, 0.06, 0.2], 0.04, '#f4f1ea')],
+    tube:      [P('cyl', [1.0, 0.35, 1.0], 0.2, 'inst'), P('cyl', [0.5, 0.37, 0.5], 0.2, '#5ec4d6')],
+    surfer:    [P('box', [2.2, 0.08, 0.6], 0.1, '#ffd25c'), P('capsule', [0.45, 0.35, 0.45], 0.8, 'inst'), P('sphere', [0.42, 0.42, 0.42], 1.6, SKIN)],
+    traveler:  human('#f4f1ea', [P('box', [0.55, 0.7, 0.35], 1.3, '#7d5a3a', [-0.55, 0])]),
+    pot:       [P('blob', [0.8, 0.9, 0.8], 0.8, 'inst'), P('cyl', [0.35, 0.35, 0.35], 1.7, 'inst')],
+    camel:     [P('box', [1.6, 0.6, 0.6], 1.3, 'inst'), P('sphere', [0.45, 0.4, 0.45], 1.75, 'inst', [-0.2, 0]), P('box', [1.2, 1.0, 0.4], 0.5, 'inst'),
+                P('box', [0.25, 0.8, 0.25], 1.8, 'inst', [0.85, 0]), P('box', [0.45, 0.25, 0.3], 2.2, 'inst', [1.0, 0])],
+    palm:      [P('cyl', [0.2, 2.6, 0.2], 1.3, '#8a6a46'), P('box', [1.6, 0.08, 0.4], 2.6, 'inst'), P('box', [0.4, 0.08, 1.6], 2.6, 'inst'),
+                P('sphere', [0.3, 0.3, 0.3], 2.5, '#6b4a2a')],
+    tent:      [P('cone', [1.1, 1.3, 1.1], 0.65, 'inst'), P('box', [0.5, 0.6, 0.06], 0.3, '#3a2a20', [0, 0.9])],
     // Christmas event
     gift:      [P('box', [1.4, 1.2, 1.4], 0.6, 'inst'), P('box', [1.46, 1.26, 0.26], 0.6, '#ffd25c'), P('box', [0.26, 1.26, 1.46], 0.6, '#ffd25c'),
                 P('sphere', [0.35, 0.25, 0.35], 1.3, '#ffd25c')],
@@ -299,6 +351,13 @@
       slabs(dashes, w.paintMat, 0.55, 0.3);
       slabs(stripes, w.paintMat, 0.55, 0.3);
       slabs(curbs, w.curbMat, 0.45, 0.9);
+      // Lawns on open lots (inside the curbs) for maps that have them; drawn above the ground, not part of it.
+      w.lawnMat = null;
+      if (stage.lawn && w.lots.length) {
+        w.lawnMat = lambert(stage.lawn);
+        slabs(w.lots.filter(([, y0, inner]) => y0 + inner <= land).map(([x0, y0, inner]) => [x0 + inner / 2, y0 + inner / 2, inner - 12, inner - 12]),
+          w.lawnMat, 0.35, 0.5);
+      }
       const poleMat = lambert('#3d3b4a');
       w.lampMat = new T.MeshBasicMaterial({ color: col('#d8d4c8') });
       w.haloMat = new T.MeshBasicMaterial({ color: col('#ffb84d'), transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending });
@@ -494,6 +553,7 @@
         hemi.color.set(0x7d86d8); hemi.groundColor.set(0x23203a); hemi.intensity = 0.55;
         world.roadMat.color.set('#3b3958');
         world.paintMat.color.set('#6f6c92'); world.curbMat.color.set('#4b4868');
+        if (world.lawnMat) world.lawnMat.color.set('#2c4a40');
         for (const m of world.roofMats) m.emissive.set(0x1c1606);
         for (const m of world.wallMats) { m.emissiveMap = m.userData.night; m.emissive.copy(NIGHT_WINDOWS); }
         world.lampMat.color.set('#ffe2a0'); world.haloMat.opacity = 0.28;
@@ -507,6 +567,7 @@
         hemi.color.set(0xffffff); hemi.groundColor.set(0x8a7f70); hemi.intensity = HEMI;
         world.roadMat.color.set('#b9b4a8');
         world.paintMat.color.set('#f4efe2'); world.curbMat.color.set('#d9d2c2');
+        if (world.lawnMat) world.lawnMat.color.set(world.stage.lawn);
         for (const m of world.roofMats) m.emissive.set(0x000000);
         for (const m of world.wallMats) { m.emissiveMap = TEX.plain; m.emissive.copy(m.userData.day); }
         world.lampMat.color.set('#d8d4c8'); world.haloMat.opacity = 0;

@@ -27,8 +27,8 @@ def page(p, w=390, h=844, storage=None):
     return b, pg, errs
 
 A = 'window.__DUSK_TEST__.api'
-# First level of each region (index into STAGES): town 0, city 25, snow 50, harbor 75, park 100, farm 125
-CITY, SNOW, HARB, PARK, FARM = 25, 50, 75, 100, 125
+# First level of some regions (index into STAGES; regions are 10 levels): town 0
+CITY, SNOW, CROSS, HARB, PARK, DESERT, FARM = 10, 50, 70, 90, 110, 130, 140
 def frames_wait(pg, n=3):
     pg.evaluate(f'new Promise(r => {{ let k = {n}; const f = () => --k <= 0 ? r() : requestAnimationFrame(f); requestAnimationFrame(f); }})')
 with sync_playwright() as p:
@@ -228,7 +228,7 @@ with sync_playwright() as p:
         ft = sorted(pg.evaluate('window.__ft'))
         pg.evaluate(f'(() => {{ const r = {A}.R.debug.renderer; r.render = r.__render; }})()')
         return calls, tris, statistics.median(ft), ft[int(len(ft) * .95)]
-    for si in (0, HARB, CITY, PARK, SNOW, FARM):
+    for si in (0, HARB, CITY, CROSS, PARK, SNOW, FARM):
         e = stats(f'{A}.start({si}); {A}.skipTo(10)')
         l = stats(f'{A}.s.player.r = 110; {A}.skipTo(90)')
         rec('S7', f'stage{si} draw calls / triangles / JS ms (median,p95)', e[0] < 300 and l[0] < 300 and l[3] < 8,
@@ -256,7 +256,7 @@ with sync_playwright() as p:
 
     # S9 rendered shadow vs rule polygons, pixel by pixel
     b, pg, errs = page(p)
-    for si, sec in [(0, 12), (0, 55), (0, 95), (HARB, 30), (HARB, 95), (CITY, 50), (SNOW, 30), (SNOW, 70), (FARM, 50)]:
+    for si, sec in [(0, 12), (0, 55), (0, 95), (HARB, 30), (HARB, 95), (CITY, 50), (SNOW, 30), (SNOW, 70), (DESERT, 30), (FARM, 50)]:
         pg.evaluate(f'{A}.start({si}); {A}.skipTo({sec})'); frames_wait(pg, 2); pg.evaluate(f'{A}.freeze()'); frames_wait(pg, 2)
         pts = pg.evaluate('''(() => {
           const A = window.__DUSK_TEST__.api, C = window.DuskCore, s = A.s, T = window.THREE;

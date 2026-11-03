@@ -275,6 +275,42 @@
     snowman:   { r: 7,  color: '#f7f9fc' },
     sled:      { r: 6,  color: '#c0392b' },
     pine:      { r: 12, color: '#2f6b4a' },
+    // oasis, hanok, campus
+    parasol:   { r: 10, color: '#ff5d73', colors: ['#ff5d73', '#5bc0eb', '#ffd25c', '#9bc53d'] },
+    planter:   { r: 6,  color: '#b5653b' },
+    fountain:  { r: 22, color: '#cfd8e0' },
+    hanbok:    { r: 5,  color: '#e85d75', colors: ['#e85d75', '#5b8def', '#f2c14e', '#9bc53d', '#c46fd8'] },
+    jangdok:   { r: 5,  color: '#5a3a2a' },
+    persimmon: { r: 12, color: '#3f7d3f' },
+    pagoda:    { r: 12, color: '#b8b2a6' },
+    student:   { r: 5,  color: '#2f3e66', colors: ['#2f3e66', '#c0392b', '#3f9b4f', '#f2c14e'] },
+    bicycle:   { r: 6,  color: '#e5533d', colors: ['#e5533d', '#2f6fd6', '#2a2a2a'] },
+    statue:    { r: 14, color: '#9aa5a8' },
+    // market, crossing, stadium, construction
+    grandma:   { r: 5,  color: '#8e5fbf', colors: ['#8e5fbf', '#d6608a', '#6a8fd6'] },
+    fruit:     { r: 5,  color: '#e8a25a' },
+    stall:     { r: 10, color: '#e05a4f', colors: ['#e05a4f', '#3f8fd6', '#f2c14e', '#4fb06a'] },
+    scooter:   { r: 10, color: '#e5533d', colors: ['#e5533d', '#f4f1ea', '#4fb0c6'] },
+    commuter:  { r: 5,  color: '#3b3f52', colors: ['#3b3f52', '#f4f1ea', '#5b8def', '#6b5b4b', '#c46fd8'] },
+    umbrella:  { r: 6,  color: '#2a2a35', colors: ['#2a2a35', '#5bc0eb', '#ff5d73', '#ffd25c'] },
+    fan:       { r: 5,  color: '#e05a4f', colors: ['#e05a4f', '#2f6fd6'] },
+    ball:      { r: 3,  color: '#f7f7f2' },
+    foodtruck: { r: 18, color: '#ffd25c', colors: ['#ffd25c', '#ff8fb1', '#7fd1e8'] },
+    cone:      { r: 3,  color: '#f28c28' },
+    beam:      { r: 8,  color: '#c0392b' },
+    pipe:      { r: 6,  color: '#8a8f99' },
+    excavator: { r: 18, color: '#f2b33a' },
+    // beach, desert
+    sunbather: { r: 5,  color: '#ff5d73', colors: ['#ff5d73', '#5bc0eb', '#ffd25c'] },
+    sandcastle:{ r: 7,  color: '#e8c98a' },
+    towel:     { r: 6,  color: '#ff5d73', colors: ['#ff5d73', '#5bc0eb', '#9bc53d'] },
+    tube:      { r: 4,  color: '#ff5d73', colors: ['#ff5d73', '#ffd25c'] },
+    surfer:    { r: 6,  color: '#2f6fd6' },
+    traveler:  { r: 5,  color: '#e8d8b8', colors: ['#e8d8b8', '#c9955a', '#7d5a3a'] },
+    pot:       { r: 5,  color: '#b5653b' },
+    camel:     { r: 10, color: '#c9955a' },
+    palm:      { r: 12, color: '#3f8f4f' },
+    tent:      { r: 14, color: '#f4f1ea', colors: ['#f4f1ea', '#e05a4f'] },
     // Christmas event
     gift:      { r: 4,  color: '#d62c3a', colors: ['#d62c3a', '#2f9e5a', '#3a6fd6', '#f2c14e', '#f4f6fa'] },
     caroler:   { r: 5,  color: '#c0392b', colors: ['#c0392b', '#2f7d4a', '#7a4fbf'] },
@@ -292,6 +328,7 @@
   const CONTAINER_COLORS = ['#4f86c6', '#d9534f', '#5cb85c', '#f0ad4e', '#8e6fc1'];
 
   let stage, stageIndex, waterY, buildings, objects, guards, lighthouse, player, state, elapsed;
+  let lots = []; // open lots [x0, y0, size]: parks, plazas, fields (the renderer lays lawns on them)
   let score, stats, shadows, sun, phase, rnd;
   let bannerUntil = 0; // elapsed second until which the mission-complete banner shows
 
@@ -344,15 +381,15 @@
     buildings = []; objects = []; guards = [];
     waterY = stage.waterFrom ? WORLD * stage.waterFrom : WORLD;
     const cells = WORLD / CELL;
-    const parks = [];
+    const parks = lots = [];
     for (let gy = 0; gy < cells; gy++) {
       for (let gx = 0; gx < cells; gx++) {
         const x0 = gx * CELL + ROAD / 2, y0 = gy * CELL + ROAD / 2, inner = CELL - ROAD;
         if (y0 + inner > waterY - 40) continue; // keep the quay clear
         if (rnd() < stage.parkChance) { parks.push([x0, y0, inner]); continue; }
         const split = rnd() < stage.splitChance;
-        const lots = split ? 2 : 1;
-        for (let i = 0; i < lots; i++) {
+        const count = split ? 2 : 1;
+        for (let i = 0; i < count; i++) {
           const w = split ? R(55, inner / 2 - 12) : R(80, inner - 30);
           const d = split ? R(70, inner - 30) : R(80, inner - 30);
           const bx = split ? x0 + 8 + i * inner / 2 + rnd() * (inner / 2 - w - 16) : x0 + 10 + rnd() * (inner - w - 20);
@@ -458,7 +495,7 @@
     const r0 = Math.max(14, ...used.map(b => b.startR || 0));
     player = { x: spawn.x, y: spawn.y, r: r0, vx: 0, vy: 0, lit: false, face: 0 };
     cam.view = targetView(); cam.x = player.x; cam.y = player.y;
-    if (R) R.build({ stage, WORLD, CELL, ROAD, waterY, buildings, objects, guards, lighthouse });
+    if (R) R.build({ stage, WORLD, CELL, ROAD, waterY, buildings, objects, guards, lighthouse, lots });
   }
 
   // ---------- input: relative drag, two-finger pinch zoom, plus keys for desktop ----------

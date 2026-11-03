@@ -42,11 +42,17 @@ test('difficulty never drops from one level to the next within a theme', () => {
   }
 });
 
-test('the ladder is six regions of 25 levels, one map each, in REGIONS order; only snow lowers the sun', () => {
+test('the ladder is 15 regions of 10 levels, one map each, in REGIONS order; snow lowers the sun, beach and desert raise it', () => {
   const ladder = Object.keys(THEMES).filter(k => !THEMES[k].event);
   assert.deepEqual(REGIONS.map(r => r.theme).sort(), ladder.sort());
   REGIONS.forEach((r, k) => STAGES.slice(k * REGION_SIZE, (k + 1) * REGION_SIZE).forEach(s => assert.equal(s.theme, r.theme, s.id)));
-  for (const s of STAGES) assert.equal(s.sunMax !== undefined, s.theme === 'snow', s.id);
+  const DEFAULT = 65 * Math.PI / 180;
+  assert.equal(REGIONS.length * REGION_SIZE, STAGES.length);
+  for (const s of STAGES) {
+    if (s.theme === 'snow') assert.ok(s.sunMax < DEFAULT, s.id);
+    else if (s.theme === 'beach' || s.theme === 'desert') assert.ok(s.sunMax > DEFAULT, s.id);
+    else assert.equal(s.sunMax, undefined, s.id);
+  }
 });
 
 test('each region starts its eat goal low again, and the harbor asks to dodge the lighthouse only from its 11th level', () => {
