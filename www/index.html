@@ -9,15 +9,15 @@
   /* Single dark look on purpose: the game is a dusk world, so no light theme. */
   :root {
     color-scheme: dark;
-    --bg: #1b1830;
-    --panel: rgba(20, 18, 38, 0.86);
+    --bg: #120a2a;
+    --panel: rgba(18, 10, 42, 0.88);
     --card: rgba(255, 255, 255, 0.07);
     --text: #f4efe6;
     --muted: rgba(244, 239, 230, 0.62);
-    --accent: #ffb35c;
+    --accent: #b78cff;
     --star: #ffd25c;
     --danger: #ff6b6b;
-    --node: #ffb35c;
+    --node: #c9a8ff;
   }
   html, body {
     margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
@@ -63,12 +63,13 @@
   /* Tall content scrolls instead of squeezing blocks into each other; Korean wraps between words. */
   .overlay > * { flex-shrink: 0; }
   .overlay p { word-break: keep-all; }
+  .overlay .logo { width: 132px; height: 132px; filter: drop-shadow(0 0 24px rgba(201, 77, 255, .45)); }
   .overlay h1 { margin: 0; font-size: 38px; letter-spacing: 1px; color: var(--accent); }
   .overlay h2 { margin: 0; font-size: 26px; color: var(--accent); }
   .overlay p { margin: 0; max-width: 320px; line-height: 1.55; font-size: 15px; color: var(--muted); }
   .overlay .big { font-size: 20px; font-weight: 800; color: var(--text); }
   .btn { padding: 14px 34px; border-radius: 999px; background: var(--accent);
-    color: #2a1a05; font-weight: 800; font-size: 18px; cursor: pointer; }
+    color: #1a0f2e; font-weight: 800; font-size: 18px; cursor: pointer; }
   .btn.ghost { background: transparent; color: var(--text); border: 2px solid rgba(244,239,230,.35); }
   .btns { display: flex; flex-direction: column; gap: 10px; align-items: stretch; margin-top: 6px; }
   /* Level picker: one page of numbered levels, paged with ‹ ›, plus a detail sheet for the chosen level. */
@@ -165,15 +166,16 @@
   <div id="sunbar"><div id="sun"></div></div>
   <div id="stats"><span id="size">크기 0</span><span class="right"><span id="score">0</span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></span></div>
   <div id="goals"></div>
-  <div id="warn">빛 속에선 작아져요!</div>
-  <div id="banner">미션 완료! 밤이 일찍 찾아와요</div>
+  <div id="warn">앗, 햇빛이에요! 몸이 줄어들어요</div>
+  <div id="banner">미션 완료! 밤이 일찍 와요 🌙</div>
 </div>
 <div id="tutorial" class="hidden"><span class="step" id="tut-step"></span><span id="tut-text"></span><br><span class="skip" id="tut-skip">설명 건너뛰기</span></div>
 <div id="title" class="overlay">
+  <img class="logo" src="logo.svg" alt="">
   <h1>Dusk Eater</h1>
-  <p>당신은 그림자입니다.<br>그림자 속에 있는 것만 삼킬 수 있어요.</p>
-  <p>해가 움직이면 그림자도 움직입니다.<br>해가 지면 온 동네가 당신 차지예요.</p>
-  <p>화면 아무 곳이나 끌어서 이동</p>
+  <p>어둠을 냠냠 먹고 쑥쑥 자라는 아이예요.<br>그늘에 있는 건 뭐든 꿀꺽할 수 있어요.</p>
+  <p>해가 움직이면 그늘도 따라 움직여요.<br>해가 지면 온 동네가 다 내 거예요!</p>
+  <p>화면을 끌어서 움직여요</p>
   <div class="btns">
     <div class="btn" id="btn-title">시작</div>
     <div class="btn ghost" id="btn-shop-title">상점</div>
@@ -189,7 +191,7 @@
 <div id="fps" class="hidden"></div>
 <div id="pause" class="overlay hidden"><p class="big">일시정지</p>
   <div class="btns"><div class="btn" id="btn-resume">계속</div><div class="btn ghost" id="btn-quit">그만두기</div></div>
-  <p>그만두면 이번 판 기록은 남지 않고, 부스터 보석은 돌려받아요.</p>
+  <p>그만두면 이번 판 기록은 안 남아요. 부스터에 쓴 보석은 돌려드려요.</p>
   <div class="chip" id="btn-fps">FPS 표시</div></div>
 <div id="end" class="overlay hidden">
   <h2 id="end-title">밤이 끝났어요</h2>
@@ -213,11 +215,11 @@
 <div id="shop" class="overlay hidden">
   <div class="topbar"><h2>상점</h2><span class="gem gem-count"></span></div>
   <p class="note hidden" id="shop-demo">체험 모드: 실제 결제는 일어나지 않아요.</p>
-  <h3>그림자 스킨</h3>
+  <h3>스킨</h3>
   <div class="grid" id="shop-skins"></div>
   <h3>보석</h3>
   <div class="grid" id="shop-gems"></div>
-  <p>보석은 스테이지 출발 전에 부스터로 쓸 수 있어요. 별을 처음 얻을 때마다 보석 10개를 드려요.</p>
+  <p>보석으로 출발 전에 부스터를 살 수 있어요. 별을 새로 딸 때마다 보석 10개를 드려요.</p>
   <p id="shop-msg"></p>
   <div class="btns">
     <div class="btn ghost" id="btn-restore">구매 복원</div>
@@ -360,13 +362,13 @@
   // Level 1 teaches by doing: each step waits for its condition (or a few seconds) before the next.
   // The clock stays frozen until the first swallow, so nobody learns under time pressure.
   const TUTORIAL = [
-    { text: '화면을 손가락으로 끌면 그림자가 움직여요.', done: tt => tt.moved > 120 },
-    { text: '햇빛에 나가면 몸이 작아져요. 건물 그림자 안에 머무르세요.', done: tt => tt.t > 4 },
-    { text: '주황 고리가 보이는 건 삼킬 수 있어요. 다가가 보세요!', done: () => stats.total >= 1 },
-    { text: '삼킬수록 커지고, 커지면 더 큰 것도 삼킬 수 있어요.', done: tt => tt.t > 4, clock: true },
-    { text: '해가 지나가면 그림자도 따라 움직여요. 맨 위 막대가 하루예요.', done: tt => tt.t > 5, clock: true },
-    { text: '위의 미션 3개를 모두 끝내면 밤이 일찍 찾아와요.', done: tt => tt.t > 5, clock: true },
-    { text: '두 손가락을 벌리면 확대, 오므리면 축소예요.', done: tt => tt.t > 5, clock: true },
+    { text: '화면을 손가락으로 끌면 움직여요. 한번 움직여 볼까요?', done: tt => tt.moved > 120 },
+    { text: '햇빛에 나가면 몸이 줄어요. 건물 그늘에 쏙 숨어 있어요.', done: tt => tt.t > 4 },
+    { text: '주황 고리가 있는 건 먹을 수 있어요. 가까이 가 볼까요?', done: () => stats.total >= 1 },
+    { text: '먹을수록 커지고, 커지면 더 큰 것도 먹을 수 있어요!', done: tt => tt.t > 4, clock: true },
+    { text: '해가 움직이면 그늘도 따라 움직여요. 맨 위 막대가 하루예요.', done: tt => tt.t > 5, clock: true },
+    { text: '위의 미션 3개를 다 하면 밤이 일찍 와요.', done: tt => tt.t > 5, clock: true },
+    { text: '두 손가락을 벌리면 크게, 오므리면 작게 보여요.', done: tt => tt.t > 5, clock: true },
   ];
   let tut = null; // { i, t, moved, lx, ly } while the level-1 tutorial runs
   let runDuration = C.DURATION; // seconds of day + night this run (the time boost stretches it)
@@ -518,7 +520,7 @@
     shadows = buildings.map(b => C.shadowPolygon(b, sun));
     const spawn = pickSpawn();
     const r0 = Math.max(14, ...used.map(b => b.startR || 0));
-    player = { x: spawn.x, y: spawn.y, r: r0, vx: 0, vy: 0, lit: false, face: 0 };
+    player = { x: spawn.x, y: spawn.y, r: r0, r0, vx: 0, vy: 0, lit: false, face: 0, gulp: 0 };
     cam.view = targetView(); cam.x = player.x; cam.y = player.y;
     if (R) R.build({ stage, WORLD, CELL, ROAD, waterY, buildings, objects, guards, lighthouse, lots });
   }
@@ -659,9 +661,11 @@
     for (const g of guards) if (g.state === 0) tryEat(g, g.x, g.y, g);
     for (const b of buildings) if (b.state === 0) { const c = centerOf(b); tryEat(b, c.x, c.y, b); }
 
-    // Swallow animation: spiral in and shrink, then grow the player.
+    // Swallow animation: spiral in and shrink, then grow the player. The mouth stays open while anything is on its way in.
+    player.gulp = Math.max(0, (player.gulp || 0) - dt / 0.25);
     for (const list of [objects, guards, buildings]) for (const o of list) {
       if (o.state !== 1) continue;
+      player.gulp = 1;
       o.ft += dt / 0.32;
       if (o.ft >= 1) {
         o.state = 2;
@@ -813,7 +817,7 @@
     }).join('');
     const rank = open && Account.user ? '<span class="chip" id="btn-rank">🏆 랭킹</span>' : '';
     $('sheet').innerHTML = `<div class="row"><span class="name">${s.name}</span>${rank}<span class="stars">${starText(bestStars[s.id] || 0)}</span></div>
-      <div class="desc">${open ? s.desc : '이전 레벨에서 별 1개를 모으면 열려요.'}</div>` +
+      <div class="desc">${open ? s.desc : '앞 레벨에서 별 1개를 따면 열려요.'}</div>` +
       (open ? `<ul>${s.goals.map(g => `<li>${goalLabel(g)}</li>`).join('')}</ul>
         <div class="boosts">${boosts}</div><div class="btn" id="btn-go">출발</div>` : '');
     if (!open) return;
@@ -856,11 +860,11 @@
     const earned = Math.max(0, n - before) * Shop.GEMS_PER_STAR;
     const notes = [];
     if (earned) notes.push(`새 별 보상: 보석 ${earned}개`);
-    if (gotReward) notes.push(`🎁 ${withObject(Shop.SKINS.find(k => k.id === ev.reward.skin).name)} 받았어요! 상점에서 장착하세요.`);
+    if (gotReward) notes.push(`🎁 ${withObject(Shop.SKINS.find(k => k.id === ev.reward.skin).name)} 받았어요! 상점에서 입어 보세요.`);
     $('end-gems').textContent = notes.join(' · ');
     $('end-gems').classList.toggle('hidden', !notes.length);
 
-    $('end-title').textContent = n === 3 ? '완벽한 밤이었어요' : '밤이 끝났어요';
+    $('end-title').textContent = n === 3 ? '완벽한 밤이었어요! ✨' : '밤이 끝났어요';
     $('end-stars').innerHTML = starText(n);
     $('result').textContent = `${stats.total}개 삼킴 · ${score.toLocaleString()}점`;
     $('end-goals').innerHTML = stage.goals.map((g, k) =>
@@ -911,7 +915,7 @@
     const r = await Store.buy(product);
     busy = false;
     $('shop-msg').textContent = r.ok ? '구매가 완료됐어요.' : r.cancelled ? ''
-      : r.pending ? '승인을 기다리고 있어요. 승인되면 자동으로 들어와요.' : '결제를 완료하지 못했어요. 잠시 후 다시 시도해 주세요.';
+      : r.pending ? '승인을 기다리는 중이에요. 승인되면 알아서 들어와요.' : '결제를 완료하지 못했어요. 잠시 후 다시 시도해 주세요.';
     return !!r.ok;
   }
 
@@ -1000,12 +1004,12 @@
   function renderAccount() {
     const b = $('account-body');
     if (!Account.canSignIn) {
-      b.innerHTML = '<small>로그인은 앱에서 할 수 있어요. 로그인하면 진행 상황을 저장하고 친구와 점수를 겨룰 수 있어요.</small>';
+      b.innerHTML = '<small>로그인은 앱에서 할 수 있어요. 로그인하면 기록이 저장되고 친구랑 점수를 겨룰 수 있어요.</small>';
       return;
     }
     if (!Account.user) {
-      b.innerHTML = `<small>로그인하면 진행 상황이 저장돼서 폰을 바꿔도 이어서 할 수 있고, 친구와 점수를 겨룰 수 있어요.
-        로그인하지 않아도 게임은 그대로 할 수 있어요.</small>
+      b.innerHTML = `<small>로그인하면 폰을 바꿔도 이어서 할 수 있고, 친구랑 점수도 겨룰 수 있어요.
+        로그인하지 않아도 게임은 다 할 수 있어요.</small>
         <button class="login apple" data-p="apple"> Apple로 계속하기</button>
         <button class="login google" data-p="google">Google로 계속하기</button>
         <button class="login kakao" data-p="kakao">카카오로 계속하기</button>`;
@@ -1017,23 +1021,23 @@
     }
     const p = Account.profile || { nickname: '', friendCode: '' };
     const status = Account.syncing ? '저장하는 중…' : Account.lastError ? '저장하지 못했어요. 네트워크를 확인해 주세요.'
-      : meta.syncedAt ? '진행 상황이 계정에 저장되어 있어요.' : '';
+      : meta.syncedAt ? '기록이 계정에 잘 저장돼 있어요.' : '';
     b.innerHTML = `<label><small>닉네임</small></label>
       <div class="field"><input id="nick" maxlength="12" value="${esc(p.nickname)}"><span class="chip" id="btn-nick">저장</span></div>
       <small>내 친구 코드</small><div class="code" id="my-code">${esc(p.friendCode)}</div>
-      <small>친구에게 내 코드를 알려 주거나, 친구 코드를 입력하세요.</small>
+      <small>내 코드를 친구에게 알려 주거나, 친구 코드를 넣어 보세요.</small>
       <div class="field"><input id="friend-code" maxlength="6" placeholder="친구 코드 6자리" autocapitalize="characters"><span class="chip" id="btn-friend">추가</span></div>
       <small id="sync-status">${status}</small>
       <div class="btns"><div class="btn ghost" id="btn-sync">지금 저장하기</div><div class="btn ghost" id="btn-signout">로그아웃</div>
       <div class="btn ghost danger" id="btn-delete">${confirmDelete ? '정말 삭제하기' : '계정 삭제'}</div></div>
-      ${confirmDelete ? '<small>계정을 삭제하면 서버의 저장, 점수, 친구 목록이 모두 지워지고 되돌릴 수 없어요. 이 기기의 진행은 그대로 남아요.</small>' : ''}`;
+      ${confirmDelete ? '<small>계정을 지우면 저장된 기록, 점수, 친구 목록이 모두 사라지고 되돌릴 수 없어요. 이 폰의 기록은 그대로 남아요.</small>' : ''}`;
     $('btn-nick').addEventListener('pointerup', async () => msg((await Account.setNickname($('nick').value)) ? '닉네임을 바꿨어요.' : '닉네임을 바꾸지 못했어요.'));
     $('btn-friend').addEventListener('pointerup', async () => {
       const name = await Account.addFriend($('friend-code').value);
-      msg(name ? `${name} 님과 친구가 됐어요.` : '그 코드를 찾지 못했어요. 6자리를 다시 확인해 주세요.');
+      msg(name ? `${name} 님과 친구가 됐어요! 🎉` : '그 코드를 찾지 못했어요. 6자리를 다시 확인해 주세요.');
     });
     $('btn-sync').addEventListener('pointerup', () => Account.sync());
-    $('btn-signout').addEventListener('pointerup', async () => { await Account.signOut(); msg('로그아웃했어요. 이 기기의 진행은 그대로예요.'); });
+    $('btn-signout').addEventListener('pointerup', async () => { await Account.signOut(); msg('로그아웃했어요. 이 폰의 기록은 그대로예요.'); });
     $('btn-delete').addEventListener('pointerup', async () => {
       if (!confirmDelete) { confirmDelete = true; renderAccount(); return; }
       confirmDelete = false;
@@ -1059,7 +1063,7 @@
     const rows = await Account.ranking(s.id, scope);
     $('rank-list').innerHTML = rows.length ? rows.map((r, k) =>
       `<li class="${r.is_me ? 'me' : ''}"><span>${k + 1}. ${esc(r.nickname)}</span><span>${Number(r.score).toLocaleString()}</span></li>`).join('')
-      : `<li><small>${scope === 'all' ? '아직 이 레벨의 기록이 없어요.' : '아직 기록이 없어요. 계정 화면에서 친구 코드로 친구를 추가해 보세요.'}</small></li>`;
+      : `<li><small>${scope === 'all' ? '아직 이 레벨의 기록이 없어요.' : '아직 기록이 없어요. 계정 화면에서 친구 코드로 친구를 불러 보세요.'}</small></li>`;
   }
   document.querySelectorAll('#ranking .chip').forEach(c => c.addEventListener('pointerup', () => openRanking(rankStage, c.dataset.r)));
   $('btn-rank-back').addEventListener('pointerup', () => openSelect());

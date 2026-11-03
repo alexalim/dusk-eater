@@ -6,7 +6,7 @@
     town: {
       theme: 'town',
       name: '조용한 마을',
-      desc: '낮은 지붕과 공원이 있는 동네. 그림자 연습하기 좋은 곳이에요.',
+      desc: '낮은 지붕과 공원이 있는 동네예요. 처음 연습하기 딱 좋아요.',
       ground: ['#f1d4a2', '#ece6cf', '#e8a066'], groundNight: '#2e2c4a',
       roofs: ['#c9b8a6', '#b7a7c9', '#a9c3b6', '#d1a99a', '#bfbfc9'],
       parkChance: 0.18, splitChance: 0.45, height: [25, 140],
@@ -19,7 +19,7 @@
     harbor: {
       theme: 'harbor',
       name: '안개 항구',
-      desc: '긴 크레인 그림자가 다리가 되고, 등대 불빛은 밤에도 꺼지지 않아요.',
+      desc: '크레인의 긴 그림자가 다리가 돼요. 등대 불빛은 밤에도 안 꺼지니 조심!',
       ground: ['#d9d3c0', '#e3e0d2', '#d99a6a'], groundNight: '#262b45',
       water: ['#7fb3c8', '#8cc0d1', '#6f86a8'], waterNight: '#1d2a48',
       roofs: ['#8fa3b0', '#a8b5a0', '#b59c8a', '#9a9fb8'],
@@ -33,7 +33,7 @@
     city: {
       theme: 'city',
       name: '도심 빌딩숲',
-      desc: '하늘을 찌르는 빌딩이 길고 좁은 그림자 다리를 놓아요. 그늘에서 그늘로 건너뛰세요.',
+      desc: '높은 빌딩이 길쭉한 그늘 다리를 만들어 줘요. 그늘에서 그늘로 건너가요.',
       ground: ['#d6d0c4', '#dedad0', '#cf9a72'], groundNight: '#26243f',
       roofs: ['#8fa3b8', '#a3b4c6', '#7d8ea3', '#b0a8c0', '#9aa7a0'],
       parkChance: 0.05, splitChance: 0.6, height: [120, 320],
@@ -45,7 +45,7 @@
     park: {
       theme: 'park',
       name: '놀이공원',
-      desc: '낮은 매점과 놀이기구 탑이 그늘을 만들어요. 풍선과 솜사탕이 가득한 광장을 노려요.',
+      desc: '매점과 놀이기구가 그늘을 만들어요. 풍선이랑 솜사탕이 가득한 광장이 목표예요.',
       ground: ['#f3dcb0', '#f4e6c8', '#efab78'], groundNight: '#2c2648',
       roofs: ['#ff9ec4', '#ffd25c', '#7fd1e8', '#b5e48c', '#c9a0ff'],
       parkChance: 0.3, splitChance: 0.7, height: [30, 80],
@@ -58,7 +58,7 @@
     snow: {
       theme: 'snow',
       name: '눈 덮인 산마을',
-      desc: '겨울 해는 낮게 떠서 하루 종일 그림자가 길어요. 대신 눈밭은 눈이 부시게 밝아요.',
+      desc: '겨울 해는 낮아서 하루 종일 그늘이 길어요. 그 대신 눈밭은 눈부시게 밝아요.',
       ground: ['#eef3f8', '#f6f8fb', '#f1d9cf'], groundNight: '#2a3150',
       roofs: ['#f4f6fa', '#e9eef5', '#d9e2ec', '#c8763e'],
       parkChance: 0.22, splitChance: 0.4, height: [22, 70],
@@ -71,7 +71,7 @@
     farm: {
       theme: 'farm',
       name: '시골 농장',
-      desc: '넓은 밭에 그늘은 헛간과 사일로뿐이에요. 그림자가 귀한 곳이라 길을 잘 골라야 해요.',
+      desc: '넓은 밭에 그늘은 헛간이랑 사일로뿐이에요. 그늘이 귀하니 길을 잘 골라요.',
       ground: ['#cfe3a0', '#dbe8b0', '#e7b878'], groundNight: '#24304a',
       roofs: ['#b5452f', '#c25a3c', '#8a5a3a', '#a33b2b'],
       parkChance: 0.6, splitChance: 0.3, height: [30, 70], plainWalls: true,
@@ -84,7 +84,7 @@
     oasis: {
       theme: 'oasis',
       name: '어반 오아시스',
-      desc: '빌딩 숲 한가운데 잔디 정원이에요. 오후가 되면 빌딩 그림자가 정원으로 들어와요.',
+      desc: '빌딩 숲 한가운데 잔디 정원이에요. 오후엔 빌딩 그늘이 정원까지 들어와요.',
       ground: ['#d9d4c8', '#e2ddd2', '#d7a27a'], groundNight: '#262640', lawn: '#7fbf6a',
       roofs: ['#9fb0c4', '#b4c2cf', '#8d9db0', '#c2b8a8'],
       parkChance: 0.35, splitChance: 0.5, height: [90, 200],
@@ -96,7 +96,7 @@
     hanok: {
       theme: 'hanok',
       name: '한옥 마을',
-      desc: '낮은 기와집 골목이에요. 그늘이 짧으니 처마 밑을 따라 조심조심 움직여요.',
+      desc: '낮은 기와집 골목이에요. 그늘이 짧아서 처마 밑으로 살금살금 다녀요.',
       ground: ['#e6d6b8', '#ece2cc', '#e2ad7c'], groundNight: '#2a2740', lawn: '#9cc27a',
       roofs: ['#3d3f48', '#4a4c55', '#353741'], plainWalls: true,
       parkChance: 0.25, splitChance: 0.75, height: [24, 48],
@@ -108,7 +108,7 @@
     campus: {
       theme: 'campus',
       name: '대학 캠퍼스',
-      desc: '큰 강의동 사이로 잔디밭이 펼쳐져 있어요. 수업 끝난 학생들이 쏟아져 나와요.',
+      desc: '큰 강의동 사이에 잔디밭이 넓어요. 수업이 끝나면 학생들이 우르르 나와요.',
       ground: ['#ddd6c6', '#e5dfd1', '#dba57c'], groundNight: '#272742', lawn: '#86c070',
       roofs: ['#b98a6a', '#a77a5e', '#c9a383', '#8f9aa8'],
       parkChance: 0.35, splitChance: 0.3, height: [45, 110],
@@ -120,7 +120,7 @@
     market: {
       theme: 'market',
       name: '전통시장',
-      desc: '다닥다닥 붙은 가게와 노점 사이 좁은 그늘을 누벼요. 스쿠터를 조심하세요.',
+      desc: '다닥다닥 붙은 가게 사이 좁은 그늘을 누벼요. 스쿠터 조심!',
       ground: ['#d8cfc0', '#e0d8ca', '#d6a07a'], groundNight: '#2a2642',
       roofs: ['#e05a4f', '#3f8fd6', '#f2c14e', '#4fb06a', '#c46fd8'], plainWalls: true,
       parkChance: 0.08, splitChance: 0.95, height: [20, 45],
@@ -132,7 +132,7 @@
     crossing: {
       theme: 'crossing',
       name: '스크램블 교차로',
-      desc: '사방에서 사람이 건너는 큰 교차로예요. 비 오는 날엔 우산도 함께 삼켜요.',
+      desc: '사방으로 사람들이 건너는 큰 교차로예요. 비 오는 날엔 우산도 냠냠.',
       ground: ['#cfcac2', '#d8d4cc', '#cd9d7c'], groundNight: '#23223c',
       roofs: ['#7d8ea3', '#94a3b5', '#6f7d90', '#a3a0b8'],
       parkChance: 0.04, splitChance: 0.55, height: [100, 220],
@@ -144,7 +144,7 @@
     stadium: {
       theme: 'stadium',
       name: '경기장 앞 광장',
-      desc: '커다란 경기장이 넓은 그늘을 드리워요. 경기를 마친 팬들이 광장을 가득 메워요.',
+      desc: '커다란 경기장이 넓은 그늘을 만들어요. 경기가 끝나면 팬들이 광장을 꽉 채워요.',
       ground: ['#d3cfc4', '#dcd8ce', '#d29f7a'], groundNight: '#24233e', lawn: '#6fb35e',
       roofs: ['#c8ccd4', '#b7bcc6', '#e05a4f'],
       parkChance: 0.3, splitChance: 0.05, height: [40, 70],
@@ -156,7 +156,7 @@
     construction: {
       theme: 'construction',
       name: '공사장',
-      desc: '높은 타워크레인이 길고 가는 그늘 다리를 놓아요. 짓다 만 건물 사이를 오가요.',
+      desc: '타워크레인이 길고 가는 그늘 다리를 만들어요. 짓고 있는 건물 사이를 오가요.',
       ground: ['#cbbfa8', '#d5cbb6', '#cf9e74'], groundNight: '#272538',
       roofs: ['#a8a8a8', '#9a9a9a', '#b5b0a5'], plainWalls: true,
       parkChance: 0.3, splitChance: 0.5, height: [30, 120],
@@ -169,7 +169,7 @@
     beach: {
       theme: 'beach',
       name: '해변 리조트',
-      desc: '한여름 해가 높이 떠서 그림자가 아주 짧아요. 파라솔 그늘 사이를 건너다니세요.',
+      desc: '한여름 해가 높아서 그늘이 아주 짧아요. 파라솔 그늘을 콩콩 건너가요.',
       ground: ['#f2dfb0', '#f6e8c4', '#efb98a'], groundNight: '#2a2a48',
       water: ['#5ec4d6', '#6fd0df', '#5a8fb8'], waterNight: '#1b2c4c',
       roofs: ['#f4f1ea', '#e8f1f5', '#ffd25c', '#7fd1e8'],
@@ -184,7 +184,7 @@
     desert: {
       theme: 'desert',
       name: '사막 오아시스',
-      desc: '머리 위 해가 그림자를 거의 지워 버려요. 흙벽 집과 야자수 그늘이 생명줄이에요.',
+      desc: '해가 머리 위에 있어서 그늘이 거의 없어요. 흙집과 야자수 그늘이 소중해요.',
       ground: ['#ecd3a0', '#f2ddb2', '#eaa874'], groundNight: '#2c2742',
       roofs: ['#d9a86c', '#c9955a', '#e3bb84'], plainWalls: true,
       parkChance: 0.35, splitChance: 0.6, height: [26, 70],
@@ -198,7 +198,7 @@
     xmas: {
       theme: 'xmas', event: true,
       name: '크리스마스 마을',
-      desc: '눈 내린 광장에 커다란 트리와 선물이 가득해요. 겨울 해라 그림자가 길어요.',
+      desc: '눈 내린 광장에 큰 트리랑 선물이 가득해요. 겨울 해라 그늘이 길어요.',
       ground: ['#eef3f8', '#f6f8fb', '#f6d9cf'], groundNight: '#1f2a4a',
       roofs: ['#c0392b', '#2f7d4a', '#f4f6fa', '#d9e2ec'],
       parkChance: 0.25, splitChance: 0.45, height: [25, 90],

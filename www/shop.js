@@ -11,7 +11,8 @@
   // Rims must stay clearly apart from the red "you are in light" warning (0xff6b6b).
   // `price` is only a fallback label for the browser demo; the app shows the App Store price.
   const SKINS = [
-    { id: 'night', name: '밤 그림자', body: 0x16122a, rim: 0xb9a8ff, eye: 0xffffff },
+    // `pupil` is the eye highlight; it defaults to dark for skins with light eyes.
+    { id: 'night', name: '밤 그림자', body: 0xfff7f8, rim: 0xb78cff, eye: 0x241640, pupil: 0xffffff },
     { id: 'mint', name: '박하 그림자', body: 0x0f2226, rim: 0x7ff0d2, eye: 0xffffff, product: PREFIX + 'skin.mint', price: '₩1,500' },
     { id: 'starry', name: '별밤 그림자', body: 0x101833, rim: 0x9fd0ff, eye: 0xfff3c4, product: PREFIX + 'skin.starry', price: '₩1,500' },
     { id: 'gold', name: '황금 그림자', body: 0x221a0c, rim: 0xffe08a, eye: 0xffffff, product: PREFIX + 'skin.gold', price: '₩2,200' },
@@ -29,7 +30,7 @@
   // One-run boosters bought with gems before a stage.
   const BOOSTS = [
     { id: 'time', name: '황혼 연장', desc: '하루 +20초', cost: 40, extraTime: 20 },
-    { id: 'size', name: '큰 그림자', desc: '더 크게 시작', cost: 30, startR: 20 },
+    { id: 'size', name: '통통하게 출발', desc: '처음부터 더 크게', cost: 30, startR: 20 },
   ];
 
   const allProducts = () => SKINS.filter(s => s.product).map(s => s.product).concat(GEM_PACKS.map(p => p.product));

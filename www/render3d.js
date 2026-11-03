@@ -217,28 +217,42 @@
     sunLight.shadow.camera.far = 7000;
     scene.add(sunLight, sunLight.target);
 
-    // Player: a flat wobbling disc on the ground with two eyes popping up.
+    // Player: a soft dome standing on its wobbling ground shadow, with eyes and a mouth that opens to eat.
+    // The footprint stays the r-disc the game collides with; the dome only adds height.
     const BLOB_N = 40;
     const blobGeo = new T.CircleGeometry(1, BLOB_N);
     blobGeo.rotateX(-Math.PI / 2);
     const blobBase = Float32Array.from(blobGeo.attributes.position.array);
-    const blobMat = new T.MeshBasicMaterial({ color: 0x16122a, transparent: true, opacity: 0.92, depthWrite: false });
+    const blobMat = new T.MeshBasicMaterial({ color: 0x0b0620, transparent: true, opacity: 0.55, depthWrite: false });
     const blob = new T.Mesh(blobGeo, blobMat);
     blob.renderOrder = 5;
     const ringGeo = new T.RingGeometry(1.0, 1.12, BLOB_N); ringGeo.rotateX(-Math.PI / 2);
     // Rim: the skin's color in the dark so the blob stays visible at night, always red while lit.
     const LIT_RIM = 0xff6b6b;
-    let rimColor = 0xb9a8ff;
-    const rimMat = new T.MeshBasicMaterial({ color: 0xb9a8ff, transparent: true, opacity: 0.85, depthWrite: false });
+    let rimColor = 0xb78cff, bodyColor = col(0xfff7f8), glowColor = col(0xb78cff);
+    const rimMat = new T.MeshBasicMaterial({ color: rimColor, transparent: true, opacity: 0.85, depthWrite: false });
     const litRing = new T.Mesh(ringGeo, rimMat);
     litRing.renderOrder = 6;
-    const eyeMat = new T.MeshBasicMaterial({ color: 0xffffff });
-    const pupilMat = new T.MeshBasicMaterial({ color: 0x16122a });
+    // Shading is baked into vertex colors (lit top, lavender sides) so the body needs no lights.
+    const DOME_H = 0.62;
+    const domeGeo = new T.SphereGeometry(1, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+    const domeCols = [], side = col(0xb9a3ea), top = col(0xffffff);
+    for (let i = 0; i < domeGeo.attributes.position.count; i++) {
+      const c = side.clone().lerp(top, Math.pow(domeGeo.attributes.position.getY(i), 0.7));
+      domeCols.push(c.r, c.g, c.b);
+    }
+    domeGeo.setAttribute('color', new T.Float32BufferAttribute(domeCols, 3));
+    const bodyMat = new T.MeshBasicMaterial({ color: bodyColor, vertexColors: true });
+    const body = new T.Mesh(domeGeo, bodyMat);
+    const mouth = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x8a1640 }));
+    const eyeMat = new T.MeshBasicMaterial({ color: 0x241640 });
+    const pupilMat = new T.MeshBasicMaterial({ color: 0xffffff });
     const eyes = [0, 1].map(() => {
       const e = new T.Mesh(unit.sphere, eyeMat), p = new T.Mesh(unit.sphere, pupilMat);
       scene.add(e, p);
       return { e, p };
     });
+    scene.add(body, mouth);
     scene.add(blob, litRing);
 
     // Edible hint rings, instanced; count is set per frame.
@@ -638,18 +652,33 @@
       pos.needsUpdate = true;
       blob.position.set(player.x, 1.2, player.y);
       blob.scale.setScalar(player.r);
-      blobMat.opacity = player.lit ? 0.6 + Math.sin(t * 30) * 0.2 : 0.92;
+      blobMat.opacity = player.lit ? 0.35 + Math.sin(t * 30) * 0.2 : 0.55;
       rimMat.color.set(player.lit ? LIT_RIM : rimColor);
       rimMat.opacity = player.lit ? 0.85 : 0.55;
       litRing.position.copy(blob.position).setY(1.3);
       litRing.scale.setScalar(player.r);
-      eyes.forEach(o => { o.e.visible = o.p.visible = k < 0.6; }); // the eyes would sit inside the first-person camera
+      // In first person the camera sits inside the body, so the body and face hide.
+      const showBody = k < 0.6;
+      body.visible = mouth.visible = showBody;
+      eyes.forEach(o => { o.e.visible = o.p.visible = showBody; });
+      // Squash a little with the wobble and while gulping; glow toward the skin's rim color as it grows.
+      const gulp = player.gulp || 0, breathe = 1 + Math.sin(t * 3) * 0.03;
+      body.position.set(player.x, 1.4, player.y);
+      body.scale.set(player.r * (1 + gulp * 0.06), player.r * DOME_H * breathe * (1 - gulp * 0.08), player.r * (1 + gulp * 0.06));
+      const grown = Math.min(1, Math.max(0, (player.r / (player.r0 || player.r) - 1) / 4));
+      bodyMat.color.copy(bodyColor).lerp(glowColor, grown * 0.6);
+      const fx = Math.cos(player.face), fy = Math.sin(player.face), h = player.r * DOME_H * breathe;
+      // Face parts sit on the dome's surface (height = h·√(1-d²) at distance d·r from the center).
+      const surf = d => h * Math.sqrt(1 - d * d);
+      mouth.position.set(player.x + fx * player.r * 0.6, surf(0.6), player.y + fy * player.r * 0.6);
+      mouth.rotation.set(0, -player.face, 0);
+      mouth.scale.set(player.r * 0.12, player.r * (0.05 + gulp * 0.22), player.r * (0.2 + gulp * 0.1));
       eyes.forEach(({ e, p }, k) => {
-        const side = k ? 1 : -1, a = player.face + side * 0.5;
-        const ex = player.x + Math.cos(a) * player.r * 0.42, ey = player.y + Math.sin(a) * player.r * 0.42;
-        e.position.set(ex, player.r * 0.2, ey); e.scale.setScalar(player.r * 0.16);
-        p.position.set(ex + Math.cos(player.face) * player.r * 0.06, player.r * 0.24, ey + Math.sin(player.face) * player.r * 0.06 + player.r * 0.08);
-        p.scale.setScalar(player.r * 0.08);
+        const a = player.face + (k ? 1 : -1) * 0.6;
+        const ex = player.x + Math.cos(a) * player.r * 0.3, ey = player.y + Math.sin(a) * player.r * 0.3;
+        e.position.set(ex, surf(0.3), ey); e.scale.set(player.r * 0.15, player.r * 0.12, player.r * 0.15);
+        p.position.set(ex + fx * player.r * 0.05, surf(0.3) + player.r * 0.1, ey + fy * player.r * 0.05 + player.r * 0.04);
+        p.scale.setScalar(player.r * 0.05);
       });
 
       // Hints: pulse rings under things the player could eat right now.
@@ -671,11 +700,13 @@
     }
 
     // `debug` is read by the QA scripts (pixel checks, memory counters); the game never uses it.
-    // Cosmetic skin: body, unlit rim and eye colors. The lit warning stays red regardless.
+    // Cosmetic skin: body, unlit rim (also the growth glow) and eye colors. The lit warning stays red regardless.
     function setSkin(skin) {
-      blobMat.color.setHex(skin.body);
+      bodyColor.setHex(skin.body);
+      glowColor.setHex(skin.rim);
       rimColor = skin.rim;
       eyeMat.color.setHex(skin.eye);
+      pupilMat.color.setHex(skin.pupil !== undefined ? skin.pupil : 0x16122a);
     }
 
     return { build, resize, draw, setSkin, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera } };
