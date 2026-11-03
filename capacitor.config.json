@@ -4,7 +4,7 @@
   "webDir": "www",
   "ios": {
     "contentInset": "never",
-    "backgroundColor": "#1b1830"
+    "backgroundColor": "#120a2a"
   },
   "plugins": {
     "NativePurchases": {

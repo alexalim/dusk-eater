@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="110 130 800 800">
+  <defs>
+    <radialGradient id="bg" cx="0.62" cy="0.62" r="0.85"><stop offset="0" stop-color="#7a3dff"/><stop offset=".45" stop-color="#3a0e6a"/><stop offset="1" stop-color="#0b0620"/></radialGradient>
+    <radialGradient id="body" cx="0.38" cy="0.3" r="0.8"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#fff7f8"/><stop offset="1" stop-color="#d9c2ff"/></radialGradient>
+    <radialGradient id="mouth" cx="0.45" cy="0.4" r="0.7"><stop offset="0" stop-color="#d8436a"/><stop offset=".7" stop-color="#8a1640"/><stop offset="1" stop-color="#3a0e2a"/></radialGradient>
+    <radialGradient id="orb" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#7a3dff"/><stop offset=".55" stop-color="#2a0b55"/><stop offset="1" stop-color="#0b0620"/></radialGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5"><stop offset=".55" stop-color="#c94dff" stop-opacity=".7"/><stop offset="1" stop-color="#c94dff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <!-- body -->
+  <path d="M500 150 C 760 150 880 330 880 560 C 880 760 790 900 560 900 L 300 900 C 170 900 120 830 130 740 C 140 660 170 620 160 540 C 150 320 270 150 500 150 Z" fill="url(#body)"/>
+  <!-- mouth -->
+  <ellipse cx="560" cy="560" rx="235" ry="215" fill="url(#mouth)"/>
+  <path d="M380 690 C 470 620 640 630 740 700 C 680 760 470 770 380 690 Z" fill="#e8607f" opacity=".85"/>
+  <!-- orb of darkness -->
+  <circle cx="640" cy="650" r="250" fill="url(#halo)"/>
+  <circle cx="640" cy="650" r="190" fill="url(#orb)"/>
+  <g fill="none" stroke="#c94dff" stroke-linecap="round" opacity=".9">
+    <path d="M520 610 C 560 520 720 520 750 620 C 770 700 680 760 620 720 C 570 690 600 630 650 650" stroke-width="16"/>
+    <path d="M500 700 C 540 790 700 820 770 740" stroke-width="10" opacity=".7"/>
+  </g>
+  <circle cx="575" cy="560" r="18" fill="#7debff"/><circle cx="720" cy="700" r="9" fill="#ead9ff"/>
+  <!-- arm hugging the orb -->
+  <path d="M300 780 C 380 700 560 720 600 800 C 630 860 560 900 480 890 C 400 880 300 870 300 780 Z" fill="url(#body)" stroke="#cdb3f5" stroke-width="6"/>
+  <!-- eyes -->
+  <ellipse cx="300" cy="360" rx="44" ry="58" fill="#1a0f2e"/><ellipse cx="455" cy="320" rx="44" ry="58" fill="#1a0f2e"/>
+  <circle cx="314" cy="338" r="16" fill="#fff"/><circle cx="469" cy="298" r="16" fill="#fff"/>
+  <ellipse cx="250" cy="450" rx="38" ry="20" fill="#ff9fc0" opacity=".45"/>
+</svg>
