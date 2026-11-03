@@ -36,8 +36,8 @@ with sync_playwright() as p:
     skins = pg.query_selector_all('#shop-skins .item'); packs = pg.query_selector_all('#shop-gems .item')
     prices = [e.inner_text() for e in pg.query_selector_all('#shop-gems .pr')]
     santa = pg.inner_text('.item[data-skin=santa] .pr')
-    rec('H1', 'shop lists 6 skins (santa locked to its event) + 3 gem packs, demo notice shown', pg.is_visible('#shop') and pg.is_visible('#shop-demo')
-        and len(skins) == 6 and '이벤트' in santa and len(packs) == 3 and all('₩' in x for x in prices), str(prices))
+    rec('H1', 'shop lists 5 skins (santa locked to its event) + 3 gem packs, demo notice shown', pg.is_visible('#shop') and pg.is_visible('#shop-demo')
+        and len(skins) == 5 and '이벤트' in santa and len(packs) == 3 and all('₩' in x for x in prices), str(prices))
 
     # H2 buying a gem pack credits gems and saves them
     packs[0].tap(); frames_wait(pg, 5)

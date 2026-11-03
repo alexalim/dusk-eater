@@ -16,7 +16,6 @@
     { id: 'mint', name: '박하 그림자', body: 0x0f2226, rim: 0x7ff0d2, eye: 0xffffff, product: PREFIX + 'skin.mint', price: '₩1,500' },
     { id: 'starry', name: '별밤 그림자', body: 0x101833, rim: 0x9fd0ff, eye: 0xfff3c4, product: PREFIX + 'skin.starry', price: '₩1,500' },
     { id: 'gold', name: '황금 그림자', body: 0x221a0c, rim: 0xffe08a, eye: 0xffffff, product: PREFIX + 'skin.gold', price: '₩2,200' },
-    { id: 'ghost', name: '유령 그림자', body: 0x2a2d3a, rim: 0xf4f6ff, eye: 0xb9f6ff, product: PREFIX + 'skin.ghost', price: '₩2,200' },
     // Earned, not bought: `reward` names the event whose stars unlock it.
     { id: 'santa', name: '산타 그림자', body: 0x3a0d14, rim: 0x7fe08a, eye: 0xffffff, reward: 'xmas' },
   ];
