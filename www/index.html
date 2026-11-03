@@ -523,7 +523,7 @@
     shadows = buildings.map(b => C.shadowPolygon(b, sun));
     const spawn = pickSpawn();
     const r0 = Math.max(14, ...used.map(b => b.startR || 0));
-    player = { x: spawn.x, y: spawn.y, r: r0, r0, vx: 0, vy: 0, lit: false, face: 0, gulp: 0 };
+    player = { x: spawn.x, y: spawn.y, r: r0, r0, vx: 0, vy: 0, lit: false, face: 0, look: Math.PI / 2, gulp: 0, bulge: 0 };
     cam.view = targetView(); cam.x = player.x; cam.y = player.y;
     if (R) R.build({ stage, WORLD, CELL, ROAD, waterY, buildings, objects, guards, lighthouse, lots });
   }
@@ -634,11 +634,20 @@
     const ml = Math.hypot(mx, my);
     if (ml > 1) { mx /= ml; my /= ml; }
     const speed = 150 + player.r * 1.6;
-    player.vx += (mx * speed - player.vx) * Math.min(1, dt * 10);
-    player.vy += (my * speed - player.vy) * Math.min(1, dt * 10);
+    // Velocity moves toward the target at a fixed rate: a quick start (ACCEL_S to full speed) and a short
+    // glide when the finger lifts (GLIDE_S to a stop). A grown body is heavier, so both stretch with size.
+    const heavy = 1 + Math.min(1, (player.r / player.r0 - 1) / 6) * 0.8;
+    const rate = speed / ((ml > 0.1 ? ACCEL_S : GLIDE_S) * heavy);
+    const dvx = mx * speed - player.vx, dvy = my * speed - player.vy, dv = Math.hypot(dvx, dvy);
+    if (dv > 0) { const k = Math.min(dv, rate * dt) / dv; player.vx += dvx * k; player.vy += dvy * k; }
     player.x = Math.max(0, Math.min(WORLD, player.x + player.vx * dt));
     player.y = Math.max(0, Math.min(WORLD, player.y + player.vy * dt));
     if (ml > 0.1 && !view.fp) player.face = Math.atan2(my, mx);
+    // The face turns toward where it is going but never fully away from the camera (screen-down),
+    // so the eyes and mouth stay in sight from above. In first person it simply looks ahead.
+    const FRONT = Math.PI / 2, turn = a => Math.atan2(Math.sin(a), Math.cos(a));
+    const want = view.fp ? player.face : FRONT + Math.max(-1.2, Math.min(1.2, turn(player.face - FRONT)));
+    player.look += turn(want - player.look) * Math.min(1, dt * 10);
 
     for (const g of guards) {
       if (g.state !== 0) continue;
@@ -664,20 +673,22 @@
     for (const b of buildings) if (b.state === 0) { const c = centerOf(b); tryEat(b, c.x, c.y, b); }
 
     // Swallow animation: spiral in and shrink, then grow the player. The mouth stays open while anything is on its way in.
-    player.gulp = Math.max(0, (player.gulp || 0) - dt / 0.25);
+    // The mouth stays open while anything is on its way in and snaps shut the moment the last one
+    // goes down ("gulp"); the body then bulges once.
+    let inFlight = false, gulped = false;
+    player.bulge = Math.max(0, player.bulge - dt / 0.35);
     for (const list of [objects, guards, buildings]) for (const o of list) {
       if (o.state !== 1) continue;
-      player.gulp = 1;
-      o.ft += dt / 0.32;
-      if (o.ft >= 1) {
-        o.state = 2;
-        player.r = C.grow(player.r, o.r);
-        score += Math.round(o.r * o.r / 2);
-        stats.score = score;
-        stats.eaten[o.type] = (stats.eaten[o.type] || 0) + 1;
-        stats.total++;
-      }
+      o.ft += dt / SWALLOW_S;
+      if (o.ft < 1) { inFlight = true; continue; }
+      o.state = 2; player.bulge = 1; gulped = true;
+      player.r = C.grow(player.r, o.r);
+      score += Math.round(o.r * o.r / 2);
+      stats.score = score;
+      stats.eaten[o.type] = (stats.eaten[o.type] || 0) + 1;
+      stats.total++;
     }
+    player.gulp = inFlight ? Math.min(1, player.gulp + dt / 0.08) : gulped ? 0 : Math.max(0, player.gulp - dt / 0.2);
 
     // All three missions done: night falls at once, a short finale where everything is shade.
     if (!phase.night && C.evaluateStars(stage.goals, stats).every(Boolean)) {
@@ -715,14 +726,16 @@
     if (state === 'play') renderHud();
   }
 
+  // Eaten things are sucked into the mouth (front of the body, MOUTH_H·r up): slow at first, then a rush,
+  // curling a little, lifting to the mouth and shrinking to nothing right as they reach it.
+  const SWALLOW_S = 0.42, MOUTH_H = 0.5;
+  const ACCEL_S = 0.12, GLIDE_S = 0.3; // seconds to full speed / to a stop, before the size factor
   function swallowPos(o) {
-    // Spiral from where it was eaten into the player's mouth, shrinking as it goes.
-    const mx = player.x + Math.cos(player.face) * player.r * 0.5, my = player.y + Math.sin(player.face) * player.r * 0.5;
-    const t = o.ft, ease = t * t;
-    const dist0 = Math.hypot(o.fx - mx, o.fy - my);
-    const ang = Math.atan2(o.fy - my, o.fx - mx) + ease * Math.PI * 1.2;
-    const dist = dist0 * (1 - ease);
-    return { x: mx + Math.cos(ang) * dist, y: my + Math.sin(ang) * dist, s: 1 - ease * 0.9 };
+    const mx = player.x + Math.cos(player.look) * player.r * 0.95, my = player.y + Math.sin(player.look) * player.r * 0.95;
+    const t = o.ft, pull = t * t * t;
+    const dx = o.fx - mx, dy = o.fy - my, curl = Math.sin(t * Math.PI) * 0.6;
+    const k = 1 - pull, c = Math.cos(curl), sn = Math.sin(curl);
+    return { x: mx + (dx * c - dy * sn) * k, y: my + (dx * sn + dy * c) * k, s: Math.pow(1 - t, 1.4), lift: player.r * MOUTH_H * pull };
   }
 
   function renderHud() {

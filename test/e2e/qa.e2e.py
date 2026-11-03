@@ -53,9 +53,11 @@ with sync_playwright() as p:
     frames_wait(pg)
     x1 = pg.evaluate(f'{A}.s.player.x')
     cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
-    frames_wait(pg, 14)
+    # release: a short glide (GLIDE_S 0.3 s at start size), then a full stop
+    frames_wait(pg, 4); v_glide = pg.evaluate(f'Math.hypot({A}.s.player.vx, {A}.s.player.vy)')
+    pg.wait_for_timeout(700); frames_wait(pg, 4)
     v_after = pg.evaluate(f'Math.hypot({A}.s.player.vx, {A}.s.player.vy)')
-    rec('S2', 'touch drag moves right, release stops', x1 - x0 > 30 and v_after < 5, f'dx={x1-x0:.0f} v_after={v_after:.1f}')
+    rec('S2', 'touch drag moves right, release glides then stops', x1 - x0 > 30 and v_glide > 5 and v_after == 0, f'dx={x1-x0:.0f} v_glide={v_glide:.1f} v_after={v_after:.1f}')
     # S10 spawn state for several rounds of each stage
     lit = []
     for si in (0, HARB):
