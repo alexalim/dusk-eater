@@ -1,7 +1,7 @@
 // Layer: Unit — the 150-level table from www/stages.js (ids, goal labels, reachable goals, difficulty curve), no DOM.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { STAGES, THEMES, goalLabel, EVENT_LEVELS, activeEvents } = require('../www/stages.js');
+const { STAGES, THEMES, goalLabel, EVENT_LEVELS, activeEvents, REGIONS, REGION_SIZE } = require('../www/stages.js');
 
 const spawned = (s, what) => (s.small.find(([t]) => t === what) || [0, 0])[1];
 const scoreGoal = s => s.goals[0].n;
@@ -42,11 +42,21 @@ test('difficulty never drops from one level to the next within a theme', () => {
   }
 });
 
-test('every map appears, in blocks of five after the ten town levels; only snow lowers the sun', () => {
+test('the ladder is six regions of 25 levels, one map each, in REGIONS order; only snow lowers the sun', () => {
   const ladder = Object.keys(THEMES).filter(k => !THEMES[k].event);
-  assert.deepEqual([...new Set(STAGES.map(s => s.theme))].sort(), ladder.sort());
-  for (let i = 10; i < STAGES.length; i += 5) assert.equal(new Set(STAGES.slice(i, i + 5).map(s => s.theme)).size, 1, `L${i + 1}`);
+  assert.deepEqual(REGIONS.map(r => r.theme).sort(), ladder.sort());
+  REGIONS.forEach((r, k) => STAGES.slice(k * REGION_SIZE, (k + 1) * REGION_SIZE).forEach(s => assert.equal(s.theme, r.theme, s.id)));
   for (const s of STAGES) assert.equal(s.sunMax !== undefined, s.theme === 'snow', s.id);
+});
+
+test('each region starts its eat goal low again, and the harbor asks to dodge the lighthouse only from its 11th level', () => {
+  for (let k = 0; k < REGIONS.length; k++) {
+    const first = STAGES[k * REGION_SIZE], g = first.goals[1];
+    assert.equal(g.n, THEMES[first.theme].eat.find(e => e[0] === g.what)[1], `${first.id} starts its eat goal at the low end`);
+    assert.equal(first.goals[0].n, REGIONS[k].score[0], `${first.id} first-star score is the region's opening score`);
+  }
+  const harbor = STAGES.filter(s => s.theme === 'harbor');
+  harbor.forEach((s, i) => assert.equal(s.goals.some(g => g.kind === 'noBeam'), i >= 10 && s.n % 2 === 0, s.id));
 });
 
 test('Christmas event: 10 levels with their own ids, varied targets, rising difficulty; open Dec 1 - Jan 6 only', () => {

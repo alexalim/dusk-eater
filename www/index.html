@@ -74,13 +74,13 @@
   /* Level picker: one page of numbered levels, paged with ‹ ›, plus a detail sheet for the chosen level. */
   #select { gap: 12px; }
   #map { width: min(100%, 380px); display: flex; flex-direction: column; gap: 10px; flex: none; }
-  .levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-  .node { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; height: 54px;
+  .levels { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .node { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; height: 40px;
     border-radius: 14px; border: 0; padding: 0; font: inherit; cursor: pointer; color: #2a1a05; background: var(--node); }
   .node.harbor { background: #8fc3e0; }
   .node.city { background: #a9b8d6; } .node.park { background: #ff9ec4; } .node.snow { background: #e3eef9; } .node.farm { background: #b6d98a; }
-  .node .num { font-size: 17px; font-weight: 900; line-height: 1; }
-  .node .stars { font-size: 10px; letter-spacing: 0; color: #2a1a05; }
+  .node .num { font-size: 15px; font-weight: 900; line-height: 1; }
+  .node .stars { font-size: 8px; letter-spacing: 0; color: #2a1a05; }
   .node .stars .off { color: rgba(42,26,5,.25); }
   .node.sel { box-shadow: 0 0 0 3px var(--star), 0 0 16px rgba(255,210,92,.55); }
   .levels .node.locked { background: #4a4560; color: rgba(244,239,230,.55); }
@@ -90,6 +90,8 @@
   .event-note { font-size: 13px; font-weight: 700; color: var(--star); text-align: left; word-break: keep-all; }
   .node.xmas { background: #e05a5a; color: #fff6e8; } .node.xmas .stars, .node.xmas .stars .off { color: #fff6e8; }
   .pager { display: flex; justify-content: space-between; align-items: center; font-weight: 800; }
+  .region { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .region small { font-size: 12px; color: var(--muted); font-weight: 700; }
   .pager .chip.off { opacity: .35; }
   .sheet { width: min(100%, 380px); display: flex; flex-direction: column; gap: 8px; text-align: left;
     padding: 16px; border-radius: 16px; background: var(--card); }
@@ -211,7 +213,7 @@
 (() => {
   'use strict';
   const C = window.DuskCore;
-  const { STAGES, goalLabel, EVENTS, EVENT_LEVELS, activeEvents } = window.DuskStages;
+  const { STAGES, goalLabel, EVENTS, EVENT_LEVELS, activeEvents, REGIONS, REGION_SIZE } = window.DuskStages;
   const STAGE_IDS = STAGES.map(s => s.id);
   // The level list being played and picked from: the 150-level ladder ('main') or an event's levels.
   let listKey = 'main', list = STAGES, listIds = STAGE_IDS;
@@ -686,7 +688,8 @@
 
   // ---------- stage map ----------
   const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>';
-  const PAGE = 15;
+  // One page per region on the ladder; an event's levels fit on one page.
+  const pageSize = () => (listKey === 'main' ? REGION_SIZE : list.length);
   let selected = 0, page = 0;
 
   function lastUnlocked() {
@@ -698,23 +701,27 @@
   function openSelect() {
     state = 'menu';
     const live = activeEvents(today());
-    if (listKey !== 'main' && !live.some(ev => ev.id === listKey)) { useList('main'); selected = lastUnlocked(); page = Math.floor(selected / PAGE); }
+    if (listKey !== 'main' && !live.some(ev => ev.id === listKey)) { useList('main'); selected = lastUnlocked(); page = Math.floor(selected / pageSize()); }
     const ev = EVENTS.find(e => e.id === listKey);
     const tabs = live.length ? `<div class="tabs"><span class="chip${ev ? '' : ' on'}" data-l="main">레벨</span>` +
       live.map(e => `<span class="chip${ev === e ? ' on' : ''}" data-l="${e.id}">${e.icon} 이벤트</span>`).join('') + '</div>' : '';
     const reward = ev && Shop.SKINS.find(k => k.id === ev.reward.skin);
     const progress = ev ? `<div class="event-note">${ev.title} · 별 ${eventStars(ev)}/${list.length * 3} — ` +
       (Store.wallet.owned.includes(reward.id) ? `${reward.name} 획득!` : `별 ${ev.reward.stars}개를 모으면 ${reward.name}`) + '</div>' : '';
-    const from = page * PAGE, pages = Math.ceil(list.length / PAGE);
-    const cells = list.slice(from, from + PAGE).map((s, k) => {
+    const size = pageSize(), from = page * size, pages = Math.ceil(list.length / size);
+    const cells = list.slice(from, from + size).map((s, k) => {
       const i = from + k, open = C.isUnlocked(listIds, i, bestStars);
       return `<button class="node ${s.theme}${open ? '' : ' locked'}${i === selected ? ' sel' : ''}" data-i="${i}" aria-label="${s.name}">
         ${open ? `<span class="num">${s.n}</span><span class="stars">${starText(bestStars[s.id] || 0)}</span>` : LOCK}</button>`;
     }).join('');
-    $('map').innerHTML = `${tabs}${progress}<div class="levels">${cells}</div>
-      <div class="pager"><span class="chip${page ? '' : ' off'}" data-p="-1">‹</span>
-      <span>${from + 1}–${Math.min(from + PAGE, list.length)} / ${list.length}</span>
-      <span class="chip${page < pages - 1 ? '' : ' off'}" data-p="1">›</span></div>`;
+    // Ladder pages are regions: name, icon, stars collected there; a locked region says how it opens.
+    const region = ev ? null : REGIONS[page];
+    const got = list.slice(from, from + size).reduce((a, s) => a + (bestStars[s.id] || 0), 0);
+    const title = region ? `<span class="region"><b>${region.icon} ${page + 1}. ${list[from].name.replace(/^\d+\. /, '')}</b>` +
+      `<small>${C.isUnlocked(listIds, from, bestStars) ? `★ ${got}/${size * 3}` : `${from}레벨을 깨면 열려요`}</small></span>` : `<span>${ev.icon} ${ev.title}</span>`;
+    const pager = pages > 1 ? `<div class="pager"><span class="chip${page ? '' : ' off'}" data-p="-1">‹</span>${title}` +
+      `<span class="chip${page < pages - 1 ? '' : ' off'}" data-p="1">›</span></div>` : '';
+    $('map').innerHTML = `${tabs}${progress}${pager}<div class="levels">${cells}</div>`;
     $('map').querySelectorAll('.node').forEach(n =>
       n.addEventListener('pointerup', () => { selected = +n.dataset.i; openSelect(); }));
     $('map').querySelectorAll('.tabs .chip').forEach(el => el.addEventListener('pointerup', () => {
@@ -728,7 +735,7 @@
     show('select');
   }
   // Open the map on the page that holds the selected level.
-  function openSelectAt(i) { selected = i; page = Math.floor(i / PAGE); openSelect(); }
+  function openSelectAt(i) { selected = i; page = Math.floor(i / pageSize()); openSelect(); }
 
   // Boosts picked on the sheet for the next departure only; paid when the run starts.
   const chosen = new Set();

@@ -27,8 +27,8 @@ def page(p, w=390, h=844, storage=None):
     return b, pg, errs
 
 A = 'window.__DUSK_TEST__.api'
-HARB = 13  # level 14, a harbor level (index into STAGES)
-CITY, PARK, SNOW, FARM = 15, 20, 25, 30  # first level of each newer map
+# First level of each region (index into STAGES): town 0, city 25, snow 50, harbor 75, park 100, farm 125
+CITY, SNOW, HARB, PARK, FARM = 25, 50, 75, 100, 125
 def frames_wait(pg, n=3):
     pg.evaluate(f'new Promise(r => {{ let k = {n}; const f = () => --k <= 0 ? r() : requestAnimationFrame(f); requestAnimationFrame(f); }})')
 with sync_playwright() as p:

@@ -14,7 +14,7 @@
       parkItems: [['tree', 9], ['bench', 3], ['kiosk', 0.5, 'center']], carsPerRoad: 6,
       waterFrom: null, cranes: 0, lighthouse: null,
       // [type, count at level 1, count at level 150]; kept well under what spawns
-      eat: [['person', 12, 80], ['cat', 4, 22], ['tree', 4, 30], ['car', 2, 16]],
+      eat: [['person', 12, 80], ['cat', 4, 22], ['tree', 4, 30], ['car', 2, 8]],
     },
     harbor: {
       theme: 'harbor',
@@ -109,13 +109,20 @@
   const activeEvents = date => EVENTS.filter(ev => eventActive(ev, date));
 
   const COUNT = 150;
-  // First-star score at level 1 and level 150 for each map (tuned with the bot; see docs).
-  const SCORE = { xmas: [700, 16000], town: [1000, 22000], harbor: [700, 10000], city: [900, 40000], park: [400, 7000], snow: [700, 16000], farm: [500, 7000] };
-  const HARBOR_FROM = 11; // the first ten levels stay in town
-
-  // Levels 11+ run in blocks of five, cycling through every map.
-  const CYCLE = ['harbor', 'city', 'park', 'snow', 'farm', 'town'];
-  const themeOf = n => (n < HARBOR_FROM ? 'town' : CYCLE[Math.floor((n - HARBOR_FROM) / 5) % CYCLE.length]);
+  // The ladder is six regions of 25 levels, easiest map first. `score` is the first-star target at
+  // the region's first and last level (tuned with the novice/full bots).
+  const REGION_SIZE = 25;
+  const REGIONS = [
+    { theme: 'town', icon: '🏘', score: [1000, 2400] },
+    { theme: 'city', icon: '🏙', score: [3000, 12000] },
+    { theme: 'snow', icon: '❄️', score: [1500, 4000] },
+    { theme: 'harbor', icon: '⚓', score: [1100, 3000] },
+    { theme: 'park', icon: '🎡', score: [800, 2000] },
+    { theme: 'farm', icon: '🌾', score: [700, 1600] },
+  ];
+  const EVENT_SCORE = { xmas: [700, 16000] }; // events borrow a ladder level's difficulty instead
+  const regionOf = n => Math.floor((n - 1) / REGION_SIZE);
+  const themeOf = n => REGIONS[regionOf(n)].theme;
   const lerp = (a, b, t) => a + (b - a) * t;
 
   // `pick` rotates the eat target; event levels pass their own order so targets vary.
@@ -124,15 +131,18 @@
     const d = Math.pow((n - 1) / (COUNT - 1), 1.3); // 0 at level 1, 1 at level 150; flat early, steeper late
     const ramp = Math.min(1, (n - 1) / 60); // light damage reaches full strength by level 61
     const guards = n < 4 ? 0 : Math.min(5, 1 + Math.floor((n - 4) / 25));
-    const [s0, s1] = SCORE[t.theme];
-    const score = Math.round(lerp(s0, s1, d) / 100) * 100;
+    const local = (n - 1) % REGION_SIZE; // 0..24 inside the region
+    const region = REGIONS.find(r => r.theme === t.theme);
+    const [s0, s1] = region ? region.score : EVENT_SCORE[t.theme];
+    const score = Math.round(lerp(s0, s1, region ? local / (REGION_SIZE - 1) : d) / 100) * 100;
     const [what, lo, hi] = t.eat[(pick - 1) % t.eat.length];
     const goals = [
       { kind: 'score', n: score },
-      { kind: 'eat', what, n: Math.round(lerp(lo, hi, d)) },
+      // Ladder: each region restarts the count low and climbs halfway to `hi` by its last level.
+      { kind: 'eat', what, n: Math.round(lerp(lo, hi, region ? 0.5 * local / (REGION_SIZE - 1) : d)) },
     ];
     // Third star: a bigger score early on; later a guard to swallow or, in the harbor, staying out of the lighthouse.
-    if (t.theme === 'harbor' && n >= 60 && n % 2 === 0) goals.push({ kind: 'noBeam' });
+    if (t.theme === 'harbor' && local >= 10 && n % 2 === 0) goals.push({ kind: 'noBeam' });
     else if (guards && n >= 8 && n % 3 === 0) goals.push({ kind: 'eat', what: 'guard', n: Math.min(guards, 1 + Math.floor(d * 3)) });
     else goals.push({ kind: 'score', n: Math.round(score * 1.8 / 100) * 100 });
     return Object.assign({}, t, {
@@ -168,7 +178,7 @@
     return g.kind;
   }
 
-  const api = { THEMES, STAGES, NAMES, goalLabel, themeOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
+  const api = { THEMES, STAGES, NAMES, goalLabel, themeOf, REGIONS, REGION_SIZE, regionOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DuskStages = api;
 })(this);
