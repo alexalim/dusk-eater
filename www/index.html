@@ -32,15 +32,33 @@
     padding: calc(env(safe-area-inset-top) + 10px) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
     display: flex; flex-direction: column; gap: 6px;
   }
-  #sunbar { position: relative; height: 8px; border-radius: 4px;
-    background: linear-gradient(90deg, #f3c27a, #fff1b8 50%, #f08a4b 85%, #2b2a55 85%); }
-  #sun { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px;
-    border-radius: 50%; background: #fff3c4; box-shadow: 0 0 10px #ffd27a; }
-  #stats { display: flex; justify-content: space-between; font-weight: 700; font-size: 15px;
-    text-shadow: 0 1px 3px rgba(0,0,0,.6); font-variant-numeric: tabular-nums; }
-  #goals { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; font-weight: 700; }
-  #goals span { padding: 3px 8px; border-radius: 999px; background: rgba(20,18,38,.6); }
-  #goals span.done { color: #2a1a05; background: var(--star); }
+  /* Casual HUD: chunky rounded bars with a white outline, a glossy top and a drop shadow. */
+  #sunbar { position: relative; height: 14px; border-radius: 999px; border: 2px solid rgba(255,255,255,.9);
+    background: linear-gradient(90deg, #f3c27a, #fff1b8 50%, #f08a4b 85%, #3a2a7a 85%);
+    box-shadow: 0 3px 0 rgba(0,0,0,.35), inset 0 4px 0 rgba(255,255,255,.35); margin: 0 6px; }
+  #sun { position: absolute; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; box-sizing: border-box;
+    border-radius: 50%; border: 3px solid #fff; background: radial-gradient(circle at 40% 35%, #fffbe0, #ffc94d 70%);
+    box-shadow: 0 0 12px #ffd27a, 0 2px 0 rgba(0,0,0,.3); transition: background .4s; }
+  #sun.moon { background: radial-gradient(circle at 40% 35%, #ffffff, #d9ccff 70%); box-shadow: 0 0 14px #b78cff, 0 2px 0 rgba(0,0,0,.3); }
+  #stats { display: flex; justify-content: space-between; align-items: center; font-weight: 900;
+    font-variant-numeric: tabular-nums; }
+  .pill { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 3px 12px; border-radius: 999px;
+    background: rgba(18,10,42,.72); border: 2px solid rgba(255,255,255,.22); box-shadow: 0 3px 0 rgba(0,0,0,.3); }
+  #size { font-size: 14px; }
+  #score { font-size: 20px; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
+  #score::before { content: '★'; color: var(--star); font-size: 16px; margin-right: 4px; }
+  #score.pop { animation: pop .28s ease-out; }
+  @keyframes pop { 40% { transform: scale(1.22); } 100% { transform: scale(1); } }
+  .gain { position: absolute; right: 8px; top: 100%; color: var(--star); font: 900 16px system-ui, sans-serif;
+    text-shadow: 0 2px 0 rgba(0,0,0,.4); pointer-events: none; animation: gain .8s ease-out forwards; }
+  @keyframes gain { from { opacity: 1; transform: translateY(0) scale(1.1); } to { opacity: 0; transform: translateY(-34px) scale(.9); } }
+  /* Each mission chip fills like a progress bar (--p) and turns gold with a check when done. */
+  #goals { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; font-weight: 800; }
+  #goals span { padding: 4px 10px; border-radius: 999px; border: 2px solid rgba(255,255,255,.22);
+    background: linear-gradient(90deg, rgba(183,140,255,.85) var(--p, 0%), rgba(18,10,42,.72) var(--p, 0%));
+    box-shadow: 0 2px 0 rgba(0,0,0,.3); transition: background .2s; }
+  #goals span.done { color: #2a1a05; background: var(--star); border-color: #fff; }
+  #goals span.done::before { content: '✓ '; }
   #warn { text-align: center; color: var(--danger); font-weight: 800; font-size: 15px; opacity: 0;
     transition: opacity .15s; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
   #stats .right { display: flex; align-items: center; gap: 10px; }
@@ -164,7 +182,7 @@
 </div>
 <div id="hud">
   <div id="sunbar"><div id="sun"></div></div>
-  <div id="stats"><span id="size">크기 0</span><span class="right"><span id="score">0</span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></span></div>
+  <div id="stats"><span id="size" class="pill">크기 0</span><span class="right"><span class="pill" id="score-pill"><span id="score">0</span></span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></span></div>
   <div id="goals"></div>
   <div id="warn">앗, 햇빛이에요! 몸이 줄어들어요</div>
   <div id="banner">미션 완료! 밤이 일찍 와요 🌙</div>
@@ -738,10 +756,26 @@
     return { x: mx + (dx * c - dy * sn) * k, y: my + (dx * sn + dy * c) * k, s: Math.pow(1 - t, 1.4), lift: player.r * MOUTH_H * pull };
   }
 
+  // Score: the number pops and a "+N" floats up whenever it grows.
+  let shownScore = 0;
+  function showScore() {
+    const el = $('score'), gained = score - shownScore;
+    el.textContent = score.toLocaleString();
+    if (gained > 0 && state === 'play') {
+      el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); // restart the animation
+      const g = document.createElement('span');
+      g.className = 'gain'; g.textContent = '+' + gained.toLocaleString();
+      g.addEventListener('animationend', () => g.remove());
+      $('score-pill').appendChild(g);
+    }
+    shownScore = score;
+  }
+
   function renderHud() {
+    $('sun').classList.toggle('moon', phase.night);
     $('sun').style.left = (Math.min(elapsed / runDuration, 1) * 100) + '%';
     $('size').textContent = '크기 ' + (player.r / 4).toFixed(1) + 'm';
-    $('score').textContent = score.toLocaleString();
+    if ($('score').textContent !== score.toLocaleString()) showScore();
     $('warn').style.opacity = player.lit ? 1 : 0;
     $('banner').style.opacity = elapsed < bannerUntil ? 1 : 0;
     $('tutorial').classList.toggle('hidden', !tut);
@@ -752,7 +786,8 @@
     const chips = stage.goals.map(g => {
       const p = C.goalProgress(g, stats);
       const count = g.kind === 'eat' ? ` ${Math.min(p.cur, p.n)}/${p.n}` : '';
-      return `<span class="${p.done ? 'done' : ''}">${goalLabel(g)}${count}</span>`;
+      const pct = Math.round(Math.min(1, p.cur / p.n) * 100);
+      return `<span class="${p.done ? 'done' : ''}" style="--p:${pct}%">${goalLabel(g)}${count}</span>`;
     }).join('');
     if ($('goals').innerHTML !== chips) $('goals').innerHTML = chips;
   }
