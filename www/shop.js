@@ -23,6 +23,13 @@
     // Earned, not bought: `reward` names the event whose stars unlock it.
     { id: 'santa', name: '산타 그림자', body: 0x3a0d14, rim: 0x7fe08a, eye: 0xffffff, reward: 'xmas',
       desc: '크리스마스 이벤트 선물이에요. 빨간 몸에 초록 테두리로 겨울 기분을 내요.' },
+    // Hidden: shown as ??? until its collection-book set is filled (`reward` is the set, dex.js SETS).
+    { id: 'dawn', name: '새벽 그림자', body: 0x1d1430, rim: 0xf6a8ff, eye: 0xffffff, reward: 'dex', hidden: true,
+      desc: '도감 첫 다섯 지도를 모두 채운 친구만 만나요. 새벽빛 분홍 테두리가 살랑거려요.' },
+    { id: 'forest', name: '숲 그림자', body: 0x0e1f14, rim: 0xb8f06b, eye: 0xfff3c4, reward: 'dex', hidden: true,
+      desc: '도감 가운데 다섯 지도를 채우면 나타나요. 연둣빛 테두리가 풀숲처럼 싱그러워요.' },
+    { id: 'sky', name: '하늘 그림자', body: 0xeaf4ff, rim: 0x4f86ff, eye: 0x10203a, pupil: 0xffffff, reward: 'dex', hidden: true,
+      desc: '도감 마지막 다섯 지도까지 다 채운 수집왕의 상이에요. 맑은 하늘색 몸이 시원해요.' },
   ];
 
   const GEM_PACKS = [

@@ -166,6 +166,7 @@
   .swatch { position: relative; width: 52px; height: 52px; border-radius: 50%; border: 3px solid; box-sizing: border-box; }
   .swatch i { position: absolute; top: 15px; width: 9px; height: 9px; border-radius: 50%; }
   .swatch i:first-child { left: 11px; } .swatch i:last-child { right: 11px; }
+  .swatch.secret { filter: brightness(0); opacity: .55; }
   #shop-msg { min-height: 1.4em; }
   /* Skin detail: tapping a skin opens this box; buying or equipping happens only from its button. */
   #skin-box { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px;
@@ -186,6 +187,13 @@
   #dex h3 { margin: 6px 0 0; width: min(100%, 380px); display: flex; justify-content: space-between; align-items: baseline;
     text-align: left; font-size: 15px; color: var(--muted); }
   #dex h3 small { font-size: 13px; font-weight: 800; }
+  .dexset { width: min(100%, 380px); box-sizing: border-box; display: flex; align-items: center; gap: 12px; margin-top: 10px;
+    padding: 8px 12px; border-radius: 14px; background: var(--card); border: 2px dashed rgba(244,239,230,.25); text-align: left; }
+  .dexset.got { border: 2px solid var(--star); }
+  .dexset .swatch { flex: none; width: 44px; height: 44px; }
+  .dexset .swatch i { top: 12px; width: 8px; height: 8px; }
+  .dexset .swatch i:first-child { left: 9px; } .dexset .swatch i:last-child { right: 9px; }
+  .dexset span { display: flex; flex-direction: column; } .dexset small { color: var(--muted); font-weight: 800; }
   #dex .event-note { width: min(100%, 380px); margin-top: -8px; }
   .dexgrid { width: min(100%, 380px); display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .card { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px 6px; border-radius: 14px;
@@ -859,10 +867,18 @@
     const w = Dex.discover(Store.wallet, id);
     if (w === Store.wallet) return;
     Store.update(w);
-    const e = Dex.ENTRIES.find(x => x.id === id), t = $('dex-new');
-    t.innerHTML = `${ico('book')} 도감에 새로 등록! ${dexIco(e)} ${e.name}`;
+    const got = grantDexSkins(), e = Dex.ENTRIES.find(x => x.id === id), t = $('dex-new');
+    t.innerHTML = got.length ? `${ico('gift')} 도감 완성! 히든 스킨 ${skinById(got[0]).name} 획득!`
+      : `${ico('book')} 도감에 새로 등록! ${dexIco(e)} ${e.name}`;
     t.classList.add('show');
-    clearTimeout(dexToastTimer); dexToastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+    clearTimeout(dexToastTimer); dexToastTimer = setTimeout(() => t.classList.remove('show'), got.length ? 3600 : 2400);
+  }
+
+  // A filled set unlocks its hidden skin. Also run when screens open: a cloud merge can fill a set too.
+  function grantDexSkins() {
+    const due = Dex.dueSkins(Store.wallet);
+    if (due.length) Store.update(due.reduce(Shop.grantReward, Store.wallet));
+    return due;
   }
 
   function renderDexBadge() {
@@ -875,16 +891,8 @@
     const found = Dex.ENTRIES.filter(e => w.dex.includes(e.id)).length;
     $('dex-sum').textContent = `${found} / ${Dex.ENTRIES.length} 찾았어요. 처음 삼킨 친구를 누르면 보석 ${Dex.REWARD}개를 드려요.`;
     $('dex-list').innerHTML = Dex.THEME_ORDER.map(theme => {
-      const t = THEMES[theme], list = Dex.ENTRIES.filter(e => e.theme === theme);
-      const ev = EVENTS.find(x => x.theme === theme);
-      const n = list.filter(e => w.dex.includes(e.id)).length;
-      const cards = list.map(e => {
-        const seen = w.dex.includes(e.id), fresh = seen && !w.dexClaimed.includes(e.id);
-        return `<button class="card${seen ? '' : ' hide'}${fresh ? ' new' : ''}" data-dex="${e.id}">
-          <img class="ic" src="${e.img}" alt=""><span class="nm">${seen ? e.name : '???'}</span>${fresh ? `<span class="rw gem">${GEM}${Dex.REWARD} 받기</span>` : ''}</button>`;
-      }).join('');
-      return `<h3><span>${mapIco(theme)} ${t.name}</span><small>${n}/${list.length}</small></h3>` +
-        (ev ? `<p class="event-note">${ev.title} 때만 만날 수 있어요</p>` : '') + `<div class="dexgrid">${cards}</div>`;
+      const set = Dex.SETS.find(x => x.themes[0] === theme);
+      return (set ? dexSetBar(set, w) : '') + dexChapter(theme, w);
     }).join('');
     $('dex-list').querySelectorAll('.card').forEach(el => el.addEventListener('pointerup', () => {
       const id = el.dataset.dex, e = Dex.ENTRIES.find(x => x.id === id);
@@ -895,7 +903,27 @@
     }));
   }
 
-  function openDex() { $('dex-msg').textContent = ''; renderDex(); show('dex'); }
+  function dexChapter(theme, w) {
+    const t = THEMES[theme], list = Dex.ENTRIES.filter(e => e.theme === theme);
+    const ev = EVENTS.find(x => x.theme === theme);
+    const n = list.filter(e => w.dex.includes(e.id)).length;
+    const cards = list.map(e => {
+      const seen = w.dex.includes(e.id), fresh = seen && !w.dexClaimed.includes(e.id);
+      return `<button class="card${seen ? '' : ' hide'}${fresh ? ' new' : ''}" data-dex="${e.id}">
+        <img class="ic" src="${e.img}" alt=""><span class="nm">${seen ? e.name : '???'}</span>${fresh ? `<span class="rw gem">${GEM}${Dex.REWARD} 받기</span>` : ''}</button>`;
+    }).join('');
+    return `<h3><span>${mapIco(theme)} ${t.name}</span><small>${n}/${list.length}</small></h3>` +
+      (ev ? `<p class="event-note">${ev.title} 때만 만날 수 있어요</p>` : '') + `<div class="dexgrid">${cards}</div>`;
+  }
+
+  // Hidden-skin set header: a silhouette until the set is filled, then the skin itself.
+  function dexSetBar(set, w) {
+    const s = skinById(set.skin), got = w.owned.includes(s.id), n = Dex.setFound(w, set);
+    return `<div class="dexset${got ? ' got' : ''}" data-set="${s.id}">${swatch(s, !got)}<span><b>${got ? s.name : '히든 스킨 ???'}</b>
+      <small>${set.from}~${set.to}번 지도 ${got ? '모두 채웠어요!' : `${n}/${set.entries.length} 채우면 받아요`}</small></span></div>`;
+  }
+
+  function openDex() { $('dex-msg').textContent = ''; grantDexSkins(); renderDex(); show('dex'); }
 
   function show(id) {
     for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex']) $(o).classList.toggle('hidden', o !== id);
@@ -1038,6 +1066,8 @@
   const GEM = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h8l3 4-7 8-7-8z" fill="#7fd8ff"/><path d="M1 6h14M8 14 5 6l3-4 3 4z" fill="none" stroke="#e6f8ff" stroke-width=".8"/></svg>';
   const hex = n => '#' + n.toString(16).padStart(6, '0');
   const skinById = id => Shop.SKINS.find(s => s.id === id) || Shop.SKINS[0];
+  // `secret`: a hidden skin not earned yet shows only its outline.
+  const swatch = (s, secret) => `<span class="swatch${secret ? ' secret' : ''}" style="background:${hex(s.body)};border-color:${hex(s.rim)}"><i style="background:${hex(s.eye)}"></i><i style="background:${hex(s.eye)}"></i></span>`;
   let shopReturn = 'title', busy = false;
 
   function renderGems() {
@@ -1048,11 +1078,11 @@
     const w = Store.wallet;
     $('shop-skins').innerHTML = Shop.SKINS.map(s => {
       const own = (!s.product && !s.reward) || w.owned.includes(s.id), on = w.equipped === s.id, price = s.product && Store.price(s.product);
-      const ev = s.reward && EVENTS.find(e => e.id === s.reward);
-      const label = on ? '장착 중' : own ? '장착하기' : ev ? `${mapIco(ev.theme)} 이벤트 별 ${ev.reward.stars}개` : price || '준비 중';
+      const ev = s.reward && EVENTS.find(e => e.id === s.reward), set = Dex.setFor(s.id), secret = s.hidden && !own;
+      const label = on ? '장착 중' : own ? '장착하기' : ev ? `${mapIco(ev.theme)} 이벤트 별 ${ev.reward.stars}개`
+        : set ? `${ico('book')} 도감 ${set.from}~${set.to}` : price || '준비 중';
       return `<button class="item${on ? ' on' : ''}" data-skin="${s.id}">
-        <span class="swatch" style="background:${hex(s.body)};border-color:${hex(s.rim)}"><i style="background:${hex(s.eye)}"></i><i style="background:${hex(s.eye)}"></i></span>
-        <span class="nm">${s.name}</span><span class="pr${own ? ' own' : ''}">${label}</span></button>`;
+        ${swatch(s, secret)}<span class="nm">${secret ? '???' : s.name}</span><span class="pr${own ? ' own' : ''}">${label}</span></button>`;
     }).join('');
     $('shop-gems').innerHTML = Shop.GEM_PACKS.map(p => {
       const price = Store.price(p.product);
@@ -1079,14 +1109,17 @@
   function renderSkinBox() {
     const s = skinById(skinBoxId), w = Store.wallet;
     const own = (!s.product && !s.reward) || w.owned.includes(s.id), on = w.equipped === s.id, price = s.product && Store.price(s.product);
-    const ev = s.reward && EVENTS.find(e => e.id === s.reward);
+    const ev = s.reward && EVENTS.find(e => e.id === s.reward), set = Dex.setFor(s.id), secret = s.hidden && !own;
     const sw = $('skin-box-swatch');
+    sw.classList.toggle('secret', secret);
     sw.style.background = hex(s.body); sw.style.borderColor = hex(s.rim);
     sw.querySelectorAll('i').forEach(i => { i.style.background = hex(s.eye); });
-    $('skin-box-name').textContent = s.name;
-    $('skin-box-desc').textContent = s.desc;
+    $('skin-box-name').textContent = secret ? '히든 스킨 ???' : s.name;
+    $('skin-box-desc').textContent = secret ? `도감에서 ${set.from}~${set.to}번 지도의 친구를 모두 찾으면 모습을 드러내요.` : s.desc;
     const act = $('skin-box-act');
-    act.innerHTML = on ? '장착 중' : own ? '장착하기' : ev ? `${mapIco(ev.theme)} 이벤트 별 ${ev.reward.stars}개를 모으면 받아요` : price ? `${price} 구매하기` : '준비 중';
+    act.innerHTML = on ? '장착 중' : own ? '장착하기' : ev ? `${mapIco(ev.theme)} 이벤트 별 ${ev.reward.stars}개를 모으면 받아요`
+      : set ? `${ico('book')} 도감 ${set.from}~${set.to}번 지도 ${Dex.setFound(w, set)}/${set.entries.length}`
+      : price ? `${price} 구매하기` : '준비 중';
     act.classList.toggle('off', on || (!own && !price));
   }
   function openSkinBox(id) { skinBoxId = id; renderSkinBox(); $('skin-box').classList.remove('hidden'); }
@@ -1103,7 +1136,7 @@
   });
 
   function openShop(from) {
-    shopReturn = from; $('shop-msg').textContent = '';
+    shopReturn = from; $('shop-msg').textContent = ''; grantDexSkins();
     renderShop(); show('shop');
   }
 

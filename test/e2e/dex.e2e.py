@@ -1,6 +1,6 @@
 # Layer: E2E — collection book in real Chromium: silhouettes, a swallow registers a find, the reward pays once.
 # Usage: python3 test/e2e/dex.e2e.py www
-import sys, pathlib
+import sys, pathlib, json
 from playwright.sync_api import sync_playwright
 www = pathlib.Path(sys.argv[1]).resolve()
 URL = (www / 'index.html').as_uri()
@@ -56,13 +56,30 @@ with sync_playwright() as p:
     pg.tap(f'.card[data-dex={kind}]'); frames_wait(pg)
     pg.tap(f'.card[data-dex={kind}]'); frames_wait(pg)
     g1 = wallet(pg)['gems']; reload(pg); g2 = wallet(pg)['gems']
-    rec('X4', 'reward paid exactly once and kept', revealed and g1 == g0 + 10 and g2 == g1 and pg.inner_text('#dex-badge') == '', f'{g0} -> {g1} -> {g2}')
+    rec('X4', 'reward paid exactly once and kept', revealed and g1 == g0 + pg.evaluate('window.DuskDex.REWARD') and g2 == g1 and pg.inner_text('#dex-badge') == '', f'{g0} -> {g1} -> {g2}')
 
     # X5 tapping a silhouette pays nothing and gives a hint instead
     pg.tap('#btn-dex'); frames_wait(pg)
     other = pg.evaluate("document.querySelector('#dex .card.hide').dataset.dex")
     pg.tap(f'.card[data-dex={other}]'); frames_wait(pg)
     rec('X5', 'silhouette tap: no gems, a hint about where to look', wallet(pg)['gems'] == g2 and '꿀꺽' in pg.inner_text('#dex-msg'), pg.inner_text('#dex-msg'))
+    # X7 swallowing the last missing kind of a set unlocks its hidden skin: toast, set bar, shop card all reveal it
+    set1 = pg.evaluate('window.DuskDex.SETS[0]')
+    pg.tap('#btn-dex-back'); frames_wait(pg)
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    last = pg.evaluate(f'(() => {{ const o = {A}.s.objects.find(o => o.state === 0 && !{A}.Store.wallet.dex.includes(o.type)); return o.type; }})()')
+    pg.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ dex: {json.dumps(set1['entries'])}.filter(id => id !== '{last}') }}))")
+    before = pg.evaluate(f"window.DuskDex.dueSkins({A}.Store.wallet).length")
+    pg.evaluate(f'(() => {{ const o = {A}.s.objects.find(o => o.state === 0 && o.type === "{last}"); o.state = 1; o.ft = 0.99; }})()')
+    frames_wait(pg, 4)
+    toast = pg.inner_text('#dex-new'); owned = set1['skin'] in wallet(pg)['owned']
+    reload(pg); pg.tap('#btn-dex'); frames_wait(pg)
+    bar = pg.inner_text(f".dexset[data-set={set1['skin']}]")
+    pg.tap('#btn-dex-back'); frames_wait(pg); pg.tap('#btn-shop-title'); frames_wait(pg)
+    card = pg.inner_text(f".item[data-skin={set1['skin']}] .nm"); locked = pg.inner_text('.item[data-skin=sky] .nm')
+    rec('X7', 'filling set 1 grants its hidden skin once; book bar and shop reveal it, other sets stay ???',
+        before == 0 and owned and '히든 스킨' in toast and '모두 채웠어요' in bar and card != '???' and locked == '???',
+        f'last={last} toast={toast!r} bar={bar!r} card={card!r} locked={locked!r}')
     rec('X0', 'no page errors', not errs, '; '.join(errs[:3]))
     b.close()
 

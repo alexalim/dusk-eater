@@ -1,10 +1,11 @@
 // Collection book: everything that can be swallowed, shown as a silhouette until the first swallow.
-// A found entry pays a small gem reward once, when its card is tapped. Pure functions over the wallet.
+// A found entry pays a small gem reward once, when its card is tapped; filling a whole set of maps
+// unlocks a hidden skin (shop.js). Pure functions over the wallet.
 (function (root) {
   'use strict';
   const St = root.DuskStages || (typeof require !== 'undefined' ? require('./stages.js') : null);
 
-  const REWARD = 10; // gems per entry, the same as one new star
+  const REWARD = 1; // gems per entry: a token, the hidden skins are the real prize
 
   // Names the goal list does not already have.
   const EXTRA_NAMES = {
@@ -33,6 +34,17 @@
   }
   const byId = Object.fromEntries(ENTRIES.map(e => [e.id, e]));
 
+  // Hidden skins: every ladder map in a run of five, filled. Event maps reward through their stars instead.
+  const SETS = [0, 1, 2].map(k => ({
+    skin: ['dawn', 'forest', 'sky'][k], from: k * 5 + 1, to: k * 5 + 5,
+    themes: St.REGIONS.slice(k * 5, k * 5 + 5).map(r => r.theme),
+  }));
+  SETS.forEach(s => { s.entries = ENTRIES.filter(e => s.themes.includes(e.theme)).map(e => e.id); });
+  const setFor = skin => SETS.find(s => s.skin === skin);
+  const setFound = (w, s) => s.entries.filter(id => w.dex.includes(id)).length;
+  // Skins whose set is complete but not yet in the wallet (granted with Shop.grantReward).
+  const dueSkins = w => SETS.filter(s => setFound(w, s) === s.entries.length && !w.owned.includes(s.skin)).map(s => s.skin);
+
   // First swallow of a kind: add it to the book (no-op if known or not an entry).
   function discover(w, id) {
     if (!byId[id] || w.dex.includes(id)) return w;
@@ -47,7 +59,7 @@
 
   const unclaimed = w => w.dex.filter(id => byId[id] && !w.dexClaimed.includes(id)).length;
 
-  const api = { REWARD, ENTRIES, THEME_ORDER, spawnable, discover, claim, unclaimed };
+  const api = { REWARD, ENTRIES, THEME_ORDER, SETS, spawnable, discover, claim, unclaimed, setFor, setFound, dueSkins };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DuskDex = api;
 })(this);

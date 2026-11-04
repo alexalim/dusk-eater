@@ -67,3 +67,25 @@ test('no emoji left in the game: every map and UI mark the screens use has its p
   assert.deepEqual(src.match(/[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u2B00-\u2BFF\uFE0F]/gu), null);
   for (const [, name] of src.matchAll(/ico\('([\w-]+)'\)/g)) assert.ok(fs.existsSync(path.join(www, `img/ui/${name}.svg`)), name);
 });
+
+test('hidden skins: three sets of five ladder maps, each tied to a skin that is never sold', () => {
+  assert.deepEqual(D.SETS.flatMap(s => s.themes), St.REGIONS.slice(0, 15).map(r => r.theme));
+  for (const set of D.SETS) {
+    const skin = S.SKINS.find(k => k.id === set.skin);
+    assert.ok(skin && skin.hidden && skin.reward && !skin.product, set.skin);
+    assert.ok(set.entries.length > 0 && set.entries.every(id => D.ENTRIES.find(e => e.id === id).theme !== 'xmas'));
+  }
+  assert.equal(new Set(D.SETS.flatMap(s => s.entries)).size, D.SETS.reduce((a, s) => a + s.entries.length, 0), 'no entry in two sets');
+});
+
+test('a set is due only when every entry is found, and only until its skin is owned (kept through save and store refresh)', () => {
+  const [set] = D.SETS;
+  let w = wallet({ dex: set.entries.slice(1) });
+  assert.deepEqual(D.dueSkins(w), [], 'one missing');
+  w = D.discover(w, set.entries[0]);
+  assert.deepEqual(D.dueSkins(w), [set.skin]);
+  w = S.grantReward(w, set.skin);
+  assert.deepEqual(D.dueSkins(w), [], 'granted once');
+  w = S.applyEntitlements(S.normalize(JSON.parse(JSON.stringify(w))), []);
+  assert.ok(w.owned.includes(set.skin));
+});
