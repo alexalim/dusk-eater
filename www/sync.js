@@ -12,7 +12,7 @@
   const union = (a, b) => [...new Set([].concat(a || [], b || []))];
 
   // Stars and best scores only ever go up, so the higher value wins per level.
-  // Wallet: skins owned and credited purchases are unions (a purchase is never credited twice per account).
+  // Wallet: skins owned, credited purchases and dex entries are unions (a purchase is never credited twice per account).
   // Gems are spent and earned, so they cannot be added or maxed forever:
   //  - a device that has never synced (a fresh install, or play before signing in) takes the larger
   //    of the two, so neither side's gems are lost and nothing is double-counted;
@@ -29,6 +29,8 @@
       equipped: newer.equipped,
       credited: union(aw.credited, dw.credited),
       pending: dw.pending, // boost gems held for a run on this device only
+      dex: union(aw.dex, dw.dex), // a dex reward taken on either device stays taken
+      dexClaimed: union(aw.dexClaimed, dw.dexClaimed),
     });
     return {
       stars: maxEach(account.stars, device.stars),

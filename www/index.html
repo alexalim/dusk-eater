@@ -162,6 +162,30 @@
   .swatch i { position: absolute; top: 15px; width: 9px; height: 9px; border-radius: 50%; }
   .swatch i:first-child { left: 11px; } .swatch i:last-child { right: 11px; }
   #shop-msg { min-height: 1.4em; }
+  /* Collection book: silhouettes until found, a gold card while its reward waits. */
+  #dex { justify-content: flex-start; }
+  #dex h3 { margin: 6px 0 0; width: min(100%, 380px); display: flex; justify-content: space-between; align-items: baseline;
+    text-align: left; font-size: 15px; color: var(--muted); }
+  #dex h3 small { font-size: 13px; font-weight: 800; }
+  #dex .event-note { width: min(100%, 380px); margin-top: -8px; }
+  .dexgrid { width: min(100%, 380px); display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .card { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px 6px; border-radius: 14px;
+    background: var(--card); border: 2px solid transparent; font: inherit; color: var(--text); cursor: pointer; }
+  .card .ic { font-size: 30px; line-height: 1.2; }
+  .card .nm { font-size: 11px; font-weight: 800; word-break: keep-all; line-height: 1.25; min-height: 2.5em; }
+  .card.hide .ic { filter: brightness(0); opacity: .55; }
+  .card.hide .nm { color: var(--muted); }
+  .card.new { border-color: var(--star); background: rgba(255,210,92,.14); animation: wiggle 1.6s ease-in-out infinite; }
+  .card .rw { font-size: 11px; font-weight: 900; color: var(--star); }
+  @keyframes wiggle { 0%, 80%, 100% { transform: rotate(0); } 86% { transform: rotate(-4deg); } 93% { transform: rotate(4deg); } }
+  .badge { display: inline-block; min-width: 20px; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+    background: var(--star); color: #2a1a05; font-size: 13px; vertical-align: 2px; }
+  .badge:empty { display: none; }
+  #dex-msg { min-height: 1.4em; }
+  #dex-new { position: absolute; left: 50%; top: calc(100% + 48px); transform: translateX(-50%); white-space: nowrap;
+    padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 14px; background: var(--card); color: var(--text);
+    border: 2px solid var(--star); opacity: 0; pointer-events: none; transition: opacity .3s; }
+  #dex-new.show { opacity: 1; }
   .boosts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .boost { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border-radius: 12px;
     border: 2px solid rgba(244,239,230,.18); font-size: 14px; cursor: pointer; }
@@ -186,6 +210,7 @@
   <div id="goals"></div>
   <div id="warn">앗, 햇빛이에요! 몸이 줄어들어요</div>
   <div id="banner">미션 완료! 밤이 일찍 와요 🌙</div>
+  <div id="dex-new"></div>
 </div>
 <div id="tutorial" class="hidden"><span class="step" id="tut-step"></span><span id="tut-text"></span><br><span class="skip" id="tut-skip">설명 건너뛰기</span></div>
 <div id="title" class="overlay">
@@ -197,6 +222,7 @@
   <div class="btns">
     <div class="btn" id="btn-title">시작</div>
     <div class="btn ghost" id="btn-shop-title">상점</div>
+    <div class="btn ghost" id="btn-dex">도감<span class="badge" id="dex-badge"></span></div>
     <div class="btn ghost" id="btn-account">계정 · 친구</div>
   </div>
 </div>
@@ -230,6 +256,13 @@
   <div class="tabs"><span class="chip on" data-r="friends">친구</span><span class="chip" data-r="all">전체</span></div>
   <ol class="panel rank" id="rank-list"></ol>
   <div class="btns"><div class="btn ghost" id="btn-rank-back">돌아가기</div></div></div>
+<div id="dex" class="overlay hidden">
+  <div class="topbar"><h2>도감</h2><span class="gem gem-count"></span></div>
+  <p id="dex-sum"></p>
+  <div id="dex-list"></div>
+  <p id="dex-msg"></p>
+  <div class="btns"><div class="btn ghost" id="btn-dex-back">돌아가기</div></div>
+</div>
 <div id="shop" class="overlay hidden">
   <div class="topbar"><h2>상점</h2><span class="gem gem-count"></span></div>
   <p class="note hidden" id="shop-demo">체험 모드: 실제 결제는 일어나지 않아요.</p>
@@ -250,6 +283,7 @@
 <script src="render3d.js"></script>
 <script src="shop.js"></script>
 <script src="store.js"></script>
+<script src="dex.js"></script>
 <script src="vendor/supabase.js"></script>
 <script src="config.js"></script>
 <script src="sync.js"></script>
@@ -258,7 +292,7 @@
 (() => {
   'use strict';
   const C = window.DuskCore;
-  const { STAGES, goalLabel, EVENTS, EVENT_LEVELS, activeEvents, REGIONS, REGION_SIZE } = window.DuskStages;
+  const { STAGES, THEMES, goalLabel, EVENTS, EVENT_LEVELS, activeEvents, REGIONS, REGION_SIZE } = window.DuskStages;
   const STAGE_IDS = STAGES.map(s => s.id);
   // The level list being played and picked from: the 150-level ladder ('main') or an event's levels.
   let listKey = 'main', list = STAGES, listIds = STAGE_IDS;
@@ -288,7 +322,7 @@
   resize();
 
   // ---------- storage (iOS UserDefaults in the app, localStorage in a browser; loaded at boot) ----------
-  const Shop = window.DuskShop, Store = window.DuskStore;
+  const Shop = window.DuskShop, Store = window.DuskStore, Dex = window.DuskDex;
   const save = (key, v) => { Store.kv.set(key, v); };
   let bestStars = {};
   let bestScore = {};
@@ -705,6 +739,7 @@
       stats.score = score;
       stats.eaten[o.type] = (stats.eaten[o.type] || 0) + 1;
       stats.total++;
+      if (!Store.wallet.dex.includes(o.type)) discoverDex(o.type); // saved now, so a killed app keeps the find
     }
     player.gulp = inFlight ? Math.min(1, player.gulp + dt / 0.08) : gulped ? 0 : Math.max(0, player.gulp - dt / 0.2);
 
@@ -793,8 +828,52 @@
   }
 
   // ---------- screens ----------
+  // ---------- collection book ----------
+  let dexToastTimer = 0;
+  function discoverDex(id) {
+    const w = Dex.discover(Store.wallet, id);
+    if (w === Store.wallet) return;
+    Store.update(w);
+    const e = Dex.ENTRIES.find(x => x.id === id), t = $('dex-new');
+    t.textContent = `📖 도감에 새로 등록! ${e.icon} ${e.name}`;
+    t.classList.add('show');
+    clearTimeout(dexToastTimer); dexToastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  function renderDexBadge() {
+    const n = Dex.unclaimed(Store.wallet);
+    $('dex-badge').textContent = n ? n : '';
+  }
+
+  function renderDex() {
+    const w = Store.wallet;
+    const found = Dex.ENTRIES.filter(e => w.dex.includes(e.id)).length;
+    $('dex-sum').textContent = `${found} / ${Dex.ENTRIES.length} 찾았어요. 처음 삼킨 친구를 누르면 보석 ${Dex.REWARD}개를 드려요.`;
+    $('dex-list').innerHTML = Dex.THEME_ORDER.map(theme => {
+      const t = THEMES[theme], list = Dex.ENTRIES.filter(e => e.theme === theme);
+      const ev = EVENTS.find(x => x.theme === theme), region = REGIONS.find(r => r.theme === theme);
+      const icon = ev ? ev.icon : region.icon, n = list.filter(e => w.dex.includes(e.id)).length;
+      const cards = list.map(e => {
+        const seen = w.dex.includes(e.id), fresh = seen && !w.dexClaimed.includes(e.id);
+        return `<button class="card${seen ? '' : ' hide'}${fresh ? ' new' : ''}" data-dex="${e.id}">
+          <span class="ic">${e.icon}</span><span class="nm">${seen ? e.name : '???'}</span>${fresh ? `<span class="rw gem">${GEM}${Dex.REWARD} 받기</span>` : ''}</button>`;
+      }).join('');
+      return `<h3>${icon} ${t.name}<small>${n}/${list.length}</small></h3>` +
+        (ev ? `<p class="event-note">${ev.title} 때만 만날 수 있어요</p>` : '') + `<div class="dexgrid">${cards}</div>`;
+    }).join('');
+    $('dex-list').querySelectorAll('.card').forEach(el => el.addEventListener('pointerup', () => {
+      const id = el.dataset.dex, e = Dex.ENTRIES.find(x => x.id === id);
+      if (!Store.wallet.dex.includes(id)) { $('dex-msg').textContent = `${THEMES[e.theme].name}에서 그늘에 숨은 걸 찾아 꿀꺽해 봐요.`; return; }
+      const w2 = Dex.claim(Store.wallet, id);
+      $('dex-msg').textContent = w2 === Store.wallet ? `${e.icon} ${e.name}` : `보석 ${Dex.REWARD}개를 받았어요! ${e.icon} ${e.name}`;
+      if (w2 !== Store.wallet) Store.update(w2);
+    }));
+  }
+
+  function openDex() { $('dex-msg').textContent = ''; renderDex(); show('dex'); }
+
   function show(id) {
-    for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking']) $(o).classList.toggle('hidden', o !== id);
+    for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex']) $(o).classList.toggle('hidden', o !== id);
     $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
     if (id !== null) $('tutorial').classList.add('hidden');
   }
@@ -1010,6 +1089,8 @@
     renderGems();
     if (R) R.setSkin(skinById(w.equipped));
     if (!$('shop').classList.contains('hidden')) renderShop();
+    if (!$('dex').classList.contains('hidden')) renderDex();
+    renderDexBadge();
   });
 
   // Menus wait until saved progress and the store have loaded.
@@ -1027,6 +1108,8 @@
 
   $('btn-shop-title').addEventListener('pointerup', whenReady(() => openShop('title')));
   $('btn-shop-map').addEventListener('pointerup', () => openShop('select'));
+  $('btn-dex').addEventListener('pointerup', whenReady(openDex));
+  $('btn-dex-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
   $('btn-title').addEventListener('pointerup', whenReady(() => openSelectAt(lastUnlocked())));
   $('btn-retry').addEventListener('pointerup', () => start(stageIndex));
   $('btn-next').addEventListener('pointerup', () => start(stageIndex + 1));

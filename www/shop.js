@@ -35,7 +35,7 @@
   const allProducts = () => SKINS.filter(s => s.product).map(s => s.product).concat(GEM_PACKS.map(p => p.product));
 
   function emptyWallet() {
-    return { gems: 0, owned: [], equipped: DEFAULT_SKIN, credited: [], pending: 0 };
+    return { gems: 0, owned: [], equipped: DEFAULT_SKIN, credited: [], pending: 0, dex: [], dexClaimed: [] };
   }
 
   // Accept whatever was saved; anything malformed falls back to an empty field.
@@ -46,7 +46,9 @@
     const strs = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string') : []);
     const owned = strs(w.owned).filter(id => SKINS.some(s => s.id === id && (s.product || s.reward)));
     const equipped = owned.includes(w.equipped) ? w.equipped : DEFAULT_SKIN;
-    return { gems: int(w.gems), owned, equipped, credited: strs(w.credited).slice(-CREDIT_LOG), pending: int(w.pending) };
+    const dex = [...new Set(strs(w.dex))]; // collection book (dex.js): kinds swallowed, rewards taken
+    const dexClaimed = [...new Set(strs(w.dexClaimed))].filter(id => dex.includes(id));
+    return { gems: int(w.gems), owned, equipped, credited: strs(w.credited).slice(-CREDIT_LOG), pending: int(w.pending), dex, dexClaimed };
   }
 
   const skinFor = product => SKINS.find(s => s.product === product);
