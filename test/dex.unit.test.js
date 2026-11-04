@@ -1,6 +1,8 @@
 // Layer: Unit — collection book rules from www/dex.js plus its wallet fields in shop.js and sync.js, no DOM.
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const D = require('../www/dex.js');
 const St = require('../www/stages.js');
 const S = require('../www/shop.js');
@@ -8,12 +10,13 @@ const Y = require('../www/sync.js');
 
 const wallet = w => Object.assign(S.emptyWallet(), w);
 
-test('every kind any map can spawn has one entry with a name and an icon (no slot stays ??? forever)', () => {
+test('every kind any map can spawn has one entry with a name and a picture (no slot stays ??? forever)', () => {
   const ids = D.ENTRIES.map(e => e.id);
   assert.equal(new Set(ids).size, ids.length, 'no duplicates');
   for (const theme of D.THEME_ORDER) for (const id of D.spawnable(St.THEMES[theme])) assert.ok(ids.includes(id), `${theme}: ${id}`);
   for (const e of D.ENTRIES) {
-    assert.ok(e.name && e.icon, `${e.id} has name and icon`);
+    assert.ok(e.name, `${e.id} has a name`);
+    assert.ok(fs.existsSync(path.join(__dirname, '../www', e.img)), `${e.img} exists (python3 tools/icons/render.py)`);
     assert.ok(D.spawnable(St.THEMES[e.theme]).includes(e.id), `${e.id} spawns on ${e.theme}`);
   }
 });
@@ -55,4 +58,12 @@ test('cloud merge unions the book, so a reward taken on one phone stays taken on
   const m = Y.merge(save({ dex: ['cat'], dexClaimed: ['cat'] }, 2), save({ dex: ['tree', 'cat'] }, 1));
   assert.deepEqual(m.wallet.dex.sort(), ['cat', 'tree']);
   assert.deepEqual(m.wallet.dexClaimed, ['cat']);
+});
+
+test('no emoji left in the game: every map and UI mark the screens use has its picture', () => {
+  const www = path.join(__dirname, '../www');
+  for (const t of D.THEME_ORDER) assert.ok(fs.existsSync(path.join(www, `img/map/${t}.png`)), t);
+  const src = ['index.html', 'stages.js', 'dex.js', 'shop.js', 'account.js'].map(f => fs.readFileSync(path.join(www, f), 'utf8')).join('');
+  assert.deepEqual(src.match(/[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u2B00-\u2BFF\uFE0F]/gu), null);
+  for (const [, name] of src.matchAll(/ico\('([\w-]+)'\)/g)) assert.ok(fs.existsSync(path.join(www, `img/ui/${name}.svg`)), name);
 });

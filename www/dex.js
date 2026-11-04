@@ -13,24 +13,6 @@
     tube: '튜브', surfer: '서퍼', palm: '야자수', tent: '천막', haystack: '건초더미', tractor: '트랙터',
     xtree: '크리스마스 트리', sleigh: '산타 썰매',
   };
-  const ICONS = {
-    building: '🏢', guard: '👮', person: '🚶', cat: '🐱', trash: '🗑️', bench: '🪑', tree: '🌳', kiosk: '🏪', car: '🚗',
-    officer: '🧑‍💼', vending: '🥤', taxi: '🚕',
-    parasol: '⛱️', planter: '🪴', fountain: '⛲',
-    hanbok: '👘', jangdok: '🏺', persimmon: '🍊', pagoda: '🛕',
-    student: '🧑‍🎓', bicycle: '🚲', statue: '🗽',
-    skier: '⛷️', snowman: '⛄', sled: '🛷', pine: '🌲',
-    grandma: '👵', fruit: '🍎', stall: '🏮', scooter: '🛵',
-    commuter: '🧍', umbrella: '☂️',
-    fan: '📣', ball: '⚽', foodtruck: '🚚',
-    worker: '👷', container: '🚛', crate: '📦', gull: '🐦', boat: '⛵', buoy: '🚩',
-    cone: '🚧', beam: '🪜', pipe: '🔩', excavator: '🏗️',
-    visitor: '🧒', balloon: '🎈', candy: '🍭', carousel: '🎠',
-    sunbather: '😎', sandcastle: '🏰', towel: '🏖️', tube: '🛟', surfer: '🏄',
-    traveler: '🧳', pot: '🫙', camel: '🐫', palm: '🌴', tent: '⛺',
-    chicken: '🐔', sheep: '🐑', cow: '🐄', haystack: '🌾', tractor: '🚜',
-    gift: '🎁', caroler: '🎶', reindeer: '🦌', xtree: '🎄', sleigh: '🎅',
-  };
 
   // What a map can actually put in the world (index.html buildWorld spawns from these same fields).
   function spawnable(t) {
@@ -46,7 +28,7 @@
   for (const theme of THEME_ORDER) {
     for (const id of spawnable(St.THEMES[theme])) {
       if (ENTRIES.some(e => e.id === id)) continue;
-      ENTRIES.push({ id, theme, name: (St.NAMES[id] || [EXTRA_NAMES[id]])[0], icon: ICONS[id] });
+      ENTRIES.push({ id, theme, name: (St.NAMES[id] || [EXTRA_NAMES[id]])[0], img: `img/dex/${id}.png` }); // tools/icons/render.py
     }
   }
   const byId = Object.fromEntries(ENTRIES.map(e => [e.id, e]));

@@ -212,7 +212,7 @@
 
   // Limited-time events, judged by the device date. [month, day] bounds are inclusive and may wrap the new year.
   const EVENTS = [
-    { id: 'xmas', theme: 'xmas', title: '크리스마스 이벤트', icon: '🎄', from: [12, 1], to: [1, 6], count: 10,
+    { id: 'xmas', theme: 'xmas', title: '크리스마스 이벤트', from: [12, 1], to: [1, 6], count: 10,
       reward: { skin: 'santa', stars: 15 } },
   ];
   function eventActive(ev, date) {
@@ -226,21 +226,21 @@
   // the region's first and last level (tuned with the novice/full bots).
   const REGION_SIZE = 10;
   const REGIONS = [
-    { theme: 'town', icon: '🏘', score: [1000, 2500] },
-    { theme: 'city', icon: '🏙', score: [11500, 28700] },
-    { theme: 'oasis', icon: '🌳', score: [2400, 5900] },
-    { theme: 'hanok', icon: '🏯', score: [700, 1000] },
-    { theme: 'campus', icon: '🎓', score: [1300, 2300] },
-    { theme: 'snow', icon: '❄️', score: [2000, 4900] },
-    { theme: 'market', icon: '🛍', score: [700, 1000] },
-    { theme: 'crossing', icon: '🚦', score: [2000, 5000] },
-    { theme: 'stadium', icon: '🏟', score: [500, 800] },
-    { theme: 'harbor', icon: '⚓', score: [1000, 2100] },
-    { theme: 'construction', icon: '🏗', score: [700, 1300] },
-    { theme: 'park', icon: '🎡', score: [900, 2200] },
-    { theme: 'beach', icon: '🏖', score: [1200, 3000] },
-    { theme: 'desert', icon: '🐪', score: [1100, 1800] },
-    { theme: 'farm', icon: '🌾', score: [800, 1300] },
+    { theme: 'town', score: [1000, 2500] },
+    { theme: 'city', score: [11500, 28700] },
+    { theme: 'oasis', score: [2400, 5900] },
+    { theme: 'hanok', score: [700, 1000] },
+    { theme: 'campus', score: [1300, 2300] },
+    { theme: 'snow', score: [2000, 4900] },
+    { theme: 'market', score: [700, 1000] },
+    { theme: 'crossing', score: [2000, 5000] },
+    { theme: 'stadium', score: [500, 800] },
+    { theme: 'harbor', score: [1000, 2100] },
+    { theme: 'construction', score: [700, 1300] },
+    { theme: 'park', score: [900, 2200] },
+    { theme: 'beach', score: [1200, 3000] },
+    { theme: 'desert', score: [1100, 1800] },
+    { theme: 'farm', score: [800, 1300] },
   ];
   const EVENT_SCORE = { xmas: [700, 16000] }; // events borrow a ladder level's difficulty instead
   const regionOf = n => Math.floor((n - 1) / REGION_SIZE);
@@ -278,7 +278,7 @@
   // Event level k borrows the ladder's difficulty at level 4 + 8(k - 1): gentle start, mid-ladder finish.
   const EVENT_LEVELS = Object.fromEntries(EVENTS.map(ev => [ev.id, Array.from({ length: ev.count }, (_, i) => {
     const k = i + 1, base = level(4 + 8 * i, ev.theme, k);
-    return Object.assign(base, { id: `${ev.id}-${k}`, n: k, name: `${ev.icon} ${k}. ${base.name.replace(/^\d+\. /, '')}` });
+    return Object.assign(base, { id: `${ev.id}-${k}`, n: k, name: `${k}. ${base.name.replace(/^\d+\. /, '')}` });
   })]));
 
   // How each goal reads on screen; counters follow Korean usage.

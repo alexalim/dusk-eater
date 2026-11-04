@@ -46,7 +46,7 @@
     background: rgba(18,10,42,.72); border: 2px solid rgba(255,255,255,.22); box-shadow: 0 3px 0 rgba(0,0,0,.3); }
   #size { font-size: 14px; }
   #score { font-size: 20px; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
-  #score::before { content: '★'; color: var(--star); font-size: 16px; margin-right: 4px; }
+  #score::before { content: ''; display: inline-block; width: 18px; height: 18px; margin-right: 4px; vertical-align: -2px; background: url(img/ui/star.svg) center / contain no-repeat; }
   #score.pop { animation: pop .28s ease-out; }
   @keyframes pop { 40% { transform: scale(1.22); } 100% { transform: scale(1); } }
   .gain { position: absolute; right: 8px; top: 100%; color: var(--star); font: 900 16px system-ui, sans-serif;
@@ -58,7 +58,7 @@
     background: linear-gradient(90deg, rgba(183,140,255,.85) var(--p, 0%), rgba(18,10,42,.72) var(--p, 0%));
     box-shadow: 0 2px 0 rgba(0,0,0,.3); transition: background .2s; }
   #goals span.done { color: #2a1a05; background: var(--star); border-color: #fff; }
-  #goals span.done::before { content: '✓ '; }
+  #goals span.done::before { content: ''; display: inline-block; width: 1em; height: 1em; margin-right: 4px; vertical-align: -2px; background: url(img/ui/check.svg) center / contain no-repeat; }
   #warn { text-align: center; color: var(--danger); font-weight: 800; font-size: 15px; opacity: 0;
     transition: opacity .15s; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
   #stats .right { display: flex; align-items: center; gap: 10px; }
@@ -99,7 +99,7 @@
   .node.harbor { background: #8fc3e0; }
   .node.city { background: #a9b8d6; } .node.park { background: #ff9ec4; } .node.snow { background: #e3eef9; } .node.farm { background: #b6d98a; }
   .node .num { font-size: 15px; font-weight: 900; line-height: 1; }
-  .node .stars { font-size: 8px; letter-spacing: 0; color: #2a1a05; }
+  .node .stars { font-size: 10px; letter-spacing: 0; color: #2a1a05; }
   .node .stars .off { color: rgba(42,26,5,.25); }
   .node.sel { box-shadow: 0 0 0 3px var(--star), 0 0 16px rgba(255,210,92,.55); }
   .levels .node.locked { background: #4a4560; color: rgba(244,239,230,.55); }
@@ -137,6 +137,11 @@
     font: 700 12px ui-monospace, monospace; padding: 2px 6px; border-radius: 6px; background: rgba(0,0,0,.55); pointer-events: none; }
   .stars { color: var(--star); letter-spacing: 2px; font-size: 18px; white-space: nowrap; }
   .stars .off { color: rgba(244,239,230,.25); }
+  /* Pictures in place of emoji: sized by the text around them. */
+  .ico { display: inline-block; width: 1.15em; height: 1.15em; vertical-align: -0.2em; object-fit: contain; }
+  .ico.map { border-radius: 26%; }
+  .ico.dex { width: 1.8em; height: 1.8em; vertical-align: middle; margin: -0.3em 0; }
+  .stars .ico { width: 1em; height: 1em; margin: 0 1px; }
   .goal-list { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 300px; text-align: left; }
   .goal-list div { display: flex; gap: 10px; font-size: 15px; }
   .goal-list .mark { color: var(--star); width: 18px; }
@@ -162,6 +167,20 @@
   .swatch i { position: absolute; top: 15px; width: 9px; height: 9px; border-radius: 50%; }
   .swatch i:first-child { left: 11px; } .swatch i:last-child { right: 11px; }
   #shop-msg { min-height: 1.4em; }
+  /* Skin detail: tapping a skin opens this box; buying or equipping happens only from its button. */
+  #skin-box { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: rgba(8,4,20,.6); }
+  #skin-box .box { width: min(100%, 320px); display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 22px 20px 18px; border-radius: 22px; background: #22163f; border: 2px solid rgba(201,168,255,.35);
+    box-shadow: 0 12px 40px rgba(0,0,0,.5); text-align: center; }
+  #skin-box .swatch { width: 104px; height: 104px; border-width: 5px; }
+  #skin-box .swatch i { top: 30px; width: 18px; height: 18px; }
+  #skin-box .swatch i:first-child { left: 22px; } #skin-box .swatch i:last-child { right: 22px; }
+  #skin-box .nm { font-size: 20px; font-weight: 900; color: var(--text); }
+  #skin-box p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--muted); word-break: keep-all; }
+  #skin-box .btns { width: 100%; }
+  #skin-box .btn { text-align: center; }
+  #skin-box .btn.off { opacity: .45; pointer-events: none; }
   /* Collection book: silhouettes until found, a gold card while its reward waits. */
   #dex { justify-content: flex-start; }
   #dex h3 { margin: 6px 0 0; width: min(100%, 380px); display: flex; justify-content: space-between; align-items: baseline;
@@ -171,7 +190,7 @@
   .dexgrid { width: min(100%, 380px); display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .card { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px 6px; border-radius: 14px;
     background: var(--card); border: 2px solid transparent; font: inherit; color: var(--text); cursor: pointer; }
-  .card .ic { font-size: 30px; line-height: 1.2; }
+  .card .ic { width: 52px; height: 52px; object-fit: contain; }
   .card .nm { font-size: 11px; font-weight: 800; word-break: keep-all; line-height: 1.25; min-height: 2.5em; }
   .card.hide .ic { filter: brightness(0); opacity: .55; }
   .card.hide .nm { color: var(--muted); }
@@ -209,7 +228,7 @@
   <div id="stats"><span id="size" class="pill">크기 0</span><span class="right"><span class="pill" id="score-pill"><span id="score">0</span></span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></span></div>
   <div id="goals"></div>
   <div id="warn">앗, 햇빛이에요! 몸이 줄어들어요</div>
-  <div id="banner">미션 완료! 밤이 일찍 와요 🌙</div>
+  <div id="banner">미션 완료! 밤이 일찍 와요 <img class="ico" src="img/ui/moon.svg" alt=""></div>
   <div id="dex-new"></div>
 </div>
 <div id="tutorial" class="hidden"><span class="step" id="tut-step"></span><span id="tut-text"></span><br><span class="skip" id="tut-skip">설명 건너뛰기</span></div>
@@ -277,6 +296,12 @@
     <div class="btn ghost" id="btn-shop-back">돌아가기</div>
   </div>
 </div>
+<div id="skin-box" class="hidden"><div class="box">
+  <span class="swatch" id="skin-box-swatch"><i></i><i></i></span>
+  <div class="nm" id="skin-box-name"></div>
+  <p id="skin-box-desc"></p>
+  <div class="btns"><div class="btn" id="skin-box-act"></div><div class="btn ghost" id="skin-box-close">닫기</div></div>
+</div></div>
 <script src="vendor/three.min.js"></script>
 <script src="core.js"></script>
 <script src="stages.js"></script>
@@ -835,7 +860,7 @@
     if (w === Store.wallet) return;
     Store.update(w);
     const e = Dex.ENTRIES.find(x => x.id === id), t = $('dex-new');
-    t.textContent = `📖 도감에 새로 등록! ${e.icon} ${e.name}`;
+    t.innerHTML = `${ico('book')} 도감에 새로 등록! ${dexIco(e)} ${e.name}`;
     t.classList.add('show');
     clearTimeout(dexToastTimer); dexToastTimer = setTimeout(() => t.classList.remove('show'), 2400);
   }
@@ -851,21 +876,21 @@
     $('dex-sum').textContent = `${found} / ${Dex.ENTRIES.length} 찾았어요. 처음 삼킨 친구를 누르면 보석 ${Dex.REWARD}개를 드려요.`;
     $('dex-list').innerHTML = Dex.THEME_ORDER.map(theme => {
       const t = THEMES[theme], list = Dex.ENTRIES.filter(e => e.theme === theme);
-      const ev = EVENTS.find(x => x.theme === theme), region = REGIONS.find(r => r.theme === theme);
-      const icon = ev ? ev.icon : region.icon, n = list.filter(e => w.dex.includes(e.id)).length;
+      const ev = EVENTS.find(x => x.theme === theme);
+      const n = list.filter(e => w.dex.includes(e.id)).length;
       const cards = list.map(e => {
         const seen = w.dex.includes(e.id), fresh = seen && !w.dexClaimed.includes(e.id);
         return `<button class="card${seen ? '' : ' hide'}${fresh ? ' new' : ''}" data-dex="${e.id}">
-          <span class="ic">${e.icon}</span><span class="nm">${seen ? e.name : '???'}</span>${fresh ? `<span class="rw gem">${GEM}${Dex.REWARD} 받기</span>` : ''}</button>`;
+          <img class="ic" src="${e.img}" alt=""><span class="nm">${seen ? e.name : '???'}</span>${fresh ? `<span class="rw gem">${GEM}${Dex.REWARD} 받기</span>` : ''}</button>`;
       }).join('');
-      return `<h3>${icon} ${t.name}<small>${n}/${list.length}</small></h3>` +
+      return `<h3><span>${mapIco(theme)} ${t.name}</span><small>${n}/${list.length}</small></h3>` +
         (ev ? `<p class="event-note">${ev.title} 때만 만날 수 있어요</p>` : '') + `<div class="dexgrid">${cards}</div>`;
     }).join('');
     $('dex-list').querySelectorAll('.card').forEach(el => el.addEventListener('pointerup', () => {
       const id = el.dataset.dex, e = Dex.ENTRIES.find(x => x.id === id);
       if (!Store.wallet.dex.includes(id)) { $('dex-msg').textContent = `${THEMES[e.theme].name}에서 그늘에 숨은 걸 찾아 꿀꺽해 봐요.`; return; }
       const w2 = Dex.claim(Store.wallet, id);
-      $('dex-msg').textContent = w2 === Store.wallet ? `${e.icon} ${e.name}` : `보석 ${Dex.REWARD}개를 받았어요! ${e.icon} ${e.name}`;
+      $('dex-msg').innerHTML = w2 === Store.wallet ? `${dexIco(e)} ${e.name}` : `보석 ${Dex.REWARD}개를 받았어요! ${dexIco(e)} ${e.name}`;
       if (w2 !== Store.wallet) Store.update(w2);
     }));
   }
@@ -878,8 +903,12 @@
     if (id !== null) $('tutorial').classList.add('hidden');
   }
 
+  // Every icon is a picture (img/): UI marks are SVG, maps and collection-book kinds are 3D renders.
+  const ico = name => `<img class="ico" src="img/ui/${name}.svg" alt="">`;
+  const dexIco = e => `<img class="ico dex" src="${e.img}" alt="">`;
+  const mapIco = theme => `<img class="ico map" src="img/map/${theme}.png" alt="">`;
   function starText(n) {
-    return '★'.repeat(n) + `<span class="off">${'★'.repeat(3 - n)}</span>`;
+    return ico('star').repeat(n) + ico('star-off').repeat(3 - n);
   }
 
   // ---------- stage map ----------
@@ -900,7 +929,7 @@
     if (listKey !== 'main' && !live.some(ev => ev.id === listKey)) { useList('main'); selected = lastUnlocked(); page = Math.floor(selected / pageSize()); }
     const ev = EVENTS.find(e => e.id === listKey);
     const tabs = live.length ? `<div class="tabs"><span class="chip${ev ? '' : ' on'}" data-l="main">레벨</span>` +
-      live.map(e => `<span class="chip${ev === e ? ' on' : ''}" data-l="${e.id}">${e.icon} 이벤트</span>`).join('') + '</div>' : '';
+      live.map(e => `<span class="chip${ev === e ? ' on' : ''}" data-l="${e.id}">${mapIco(e.theme)} 이벤트</span>`).join('') + '</div>' : '';
     const reward = ev && Shop.SKINS.find(k => k.id === ev.reward.skin);
     const progress = ev ? `<div class="event-note">${ev.title}${testBuild && !activeEvents(today()).includes(ev) ? ' (테스트 미리보기)' : ''} · 별 ${eventStars(ev)}/${list.length * 3} — ` +
       (Store.wallet.owned.includes(reward.id) ? `${reward.name} 획득!` : `별 ${ev.reward.stars}개를 모으면 ${reward.name}`) + '</div>' : '';
@@ -913,8 +942,8 @@
     // Ladder pages are regions: name, icon, stars collected there; a locked region says how it opens.
     const region = ev ? null : REGIONS[page];
     const got = list.slice(from, from + size).reduce((a, s) => a + (bestStars[s.id] || 0), 0);
-    const title = region ? `<span class="region"><b>${region.icon} ${page + 1}. ${list[from].name.replace(/^\d+\. /, '')}</b>` +
-      `<small>${C.isUnlocked(listIds, from, bestStars) ? `★ ${got}/${size * 3}` : `${from}레벨을 깨면 열려요`}</small></span>` : `<span>${ev.icon} ${ev.title}</span>`;
+    const title = region ? `<span class="region"><b>${mapIco(region.theme)} ${page + 1}. ${list[from].name.replace(/^\d+\. /, '')}</b>` +
+      `<small>${C.isUnlocked(listIds, from, bestStars) ? `${ico('star')} ${got}/${size * 3}` : `${from}레벨을 깨면 열려요`}</small></span>` : `<span>${mapIco(ev.theme)} ${ev.title}</span>`;
     const pager = pages > 1 ? `<div class="pager"><span class="chip${page ? '' : ' off'}" data-p="-1">‹</span>${title}` +
       `<span class="chip${page < pages - 1 ? '' : ' off'}" data-p="1">›</span></div>` : '';
     $('map').innerHTML = `${tabs}${progress}${pager}<div class="levels">${cells}</div>`;
@@ -945,7 +974,7 @@
       return `<div class="boost${on ? ' on' : ''}${affordable ? '' : ' off'}" data-b="${b.id}">
         <span class="row"><b>${b.name}</b><span class="gem">${GEM}${b.cost}</span></span><small>${b.desc}</small></div>`;
     }).join('');
-    const rank = open && Account.user ? '<span class="chip" id="btn-rank">🏆 랭킹</span>' : '';
+    const rank = open && Account.user ? `<span class="chip" id="btn-rank">${ico('trophy')} 랭킹</span>` : '';
     $('sheet').innerHTML = `<div class="row"><span class="name">${s.name}</span>${rank}<span class="stars">${starText(bestStars[s.id] || 0)}</span></div>
       <div class="desc">${open ? s.desc : '앞 레벨에서 별 1개를 따면 열려요.'}</div>` +
       (open ? `<ul>${s.goals.map(g => `<li>${goalLabel(g)}</li>`).join('')}</ul>
@@ -990,15 +1019,15 @@
     const earned = Math.max(0, n - before) * Shop.GEMS_PER_STAR;
     const notes = [];
     if (earned) notes.push(`새 별 보상: 보석 ${earned}개`);
-    if (gotReward) notes.push(`🎁 ${withObject(Shop.SKINS.find(k => k.id === ev.reward.skin).name)} 받았어요! 상점에서 입어 보세요.`);
-    $('end-gems').textContent = notes.join(' · ');
+    if (gotReward) notes.push(`${ico('gift')} ${withObject(Shop.SKINS.find(k => k.id === ev.reward.skin).name)} 받았어요! 상점에서 입어 보세요.`);
+    $('end-gems').innerHTML = notes.join(' · ');
     $('end-gems').classList.toggle('hidden', !notes.length);
 
-    $('end-title').textContent = n === 3 ? '완벽한 밤이었어요! ✨' : '밤이 끝났어요';
+    $('end-title').innerHTML = n === 3 ? `완벽한 밤이었어요! ${ico('sparkle')}` : '밤이 끝났어요';
     $('end-stars').innerHTML = starText(n);
     $('result').textContent = `${stats.total}개 삼킴 · ${score.toLocaleString()}점`;
     $('end-goals').innerHTML = stage.goals.map((g, k) =>
-      `<div><span class="mark ${got[k] ? '' : 'miss'}">${got[k] ? '★' : '☆'}</span><span>${goalLabel(g)}</span></div>`).join('');
+      `<div><span class="mark">${ico(got[k] ? 'star' : 'star-off')}</span><span>${goalLabel(g)}</span></div>`).join('');
     $('best').textContent = `${stage.name} 최고 기록 ${bestScore[stage.id].toLocaleString()}점`;
     const next = stageIndex + 1;
     $('btn-next').classList.toggle('hidden', !(next < list.length && C.isUnlocked(listIds, next, bestStars)));
@@ -1020,8 +1049,8 @@
     $('shop-skins').innerHTML = Shop.SKINS.map(s => {
       const own = (!s.product && !s.reward) || w.owned.includes(s.id), on = w.equipped === s.id, price = s.product && Store.price(s.product);
       const ev = s.reward && EVENTS.find(e => e.id === s.reward);
-      const label = on ? '장착 중' : own ? '장착하기' : ev ? `${ev.icon} 이벤트 별 ${ev.reward.stars}개` : price || '준비 중';
-      return `<button class="item${on ? ' on' : ''}" data-skin="${s.id}"${own || price ? '' : ' disabled'}>
+      const label = on ? '장착 중' : own ? '장착하기' : ev ? `${mapIco(ev.theme)} 이벤트 별 ${ev.reward.stars}개` : price || '준비 중';
+      return `<button class="item${on ? ' on' : ''}" data-skin="${s.id}">
         <span class="swatch" style="background:${hex(s.body)};border-color:${hex(s.rim)}"><i style="background:${hex(s.eye)}"></i><i style="background:${hex(s.eye)}"></i></span>
         <span class="nm">${s.name}</span><span class="pr${own ? ' own' : ''}">${label}</span></button>`;
     }).join('');
@@ -1030,12 +1059,8 @@
       return `<button class="item" data-pack="${p.product}"${price ? '' : ' disabled'}>
         <span class="gem" style="font-size:18px">${GEM}${p.gems.toLocaleString()}</span><span class="pr">${price || '준비 중'}</span></button>`;
     }).join('');
-    $('shop-skins').querySelectorAll('.item').forEach(el => el.addEventListener('pointerup', async () => {
-      const s = skinById(el.dataset.skin);
-      if (s.reward && !Store.wallet.owned.includes(s.id)) return; // earned in its event, not sold
-      if (s.product && !Store.wallet.owned.includes(s.id)) { if (!(await buy(s.product))) return; }
-      Store.update(Shop.equip(Store.wallet, s.id));
-    }));
+    $('shop-skins').querySelectorAll('.item').forEach(el => el.addEventListener('pointerup', () => openSkinBox(el.dataset.skin)));
+    if (skinBoxId) renderSkinBox();
     $('shop-gems').querySelectorAll('.item').forEach(el => el.addEventListener('pointerup', () => buy(el.dataset.pack)));
   }
 
@@ -1048,6 +1073,34 @@
       : r.pending ? '승인을 기다리는 중이에요. 승인되면 알아서 들어와요.' : '결제를 완료하지 못했어요. 잠시 후 다시 시도해 주세요.';
     return !!r.ok;
   }
+
+  // Skin detail box: preview, description, and the only place a skin is bought or equipped.
+  let skinBoxId = null;
+  function renderSkinBox() {
+    const s = skinById(skinBoxId), w = Store.wallet;
+    const own = (!s.product && !s.reward) || w.owned.includes(s.id), on = w.equipped === s.id, price = s.product && Store.price(s.product);
+    const ev = s.reward && EVENTS.find(e => e.id === s.reward);
+    const sw = $('skin-box-swatch');
+    sw.style.background = hex(s.body); sw.style.borderColor = hex(s.rim);
+    sw.querySelectorAll('i').forEach(i => { i.style.background = hex(s.eye); });
+    $('skin-box-name').textContent = s.name;
+    $('skin-box-desc').textContent = s.desc;
+    const act = $('skin-box-act');
+    act.innerHTML = on ? '장착 중' : own ? '장착하기' : ev ? `${mapIco(ev.theme)} 이벤트 별 ${ev.reward.stars}개를 모으면 받아요` : price ? `${price} 구매하기` : '준비 중';
+    act.classList.toggle('off', on || (!own && !price));
+  }
+  function openSkinBox(id) { skinBoxId = id; renderSkinBox(); $('skin-box').classList.remove('hidden'); }
+  function closeSkinBox() { skinBoxId = null; $('skin-box').classList.add('hidden'); }
+  $('skin-box-close').addEventListener('pointerup', closeSkinBox);
+  $('skin-box').addEventListener('pointerup', e => { if (e.target.id === 'skin-box') closeSkinBox(); }); // tap outside the box
+  $('skin-box-act').addEventListener('pointerup', async () => {
+    const s = skinById(skinBoxId);
+    if (!s || busy || $('skin-box-act').classList.contains('off')) return;
+    if (s.reward && !Store.wallet.owned.includes(s.id)) return; // earned in its event, not sold
+    if (s.product && !Store.wallet.owned.includes(s.id)) { if (!(await buy(s.product))) return; }
+    Store.update(Shop.equip(Store.wallet, s.id));
+    closeSkinBox();
+  });
 
   function openShop(from) {
     shopReturn = from; $('shop-msg').textContent = '';
@@ -1062,6 +1115,7 @@
     $('shop-msg').textContent = ok ? '구매 내역을 복원했어요.' : '복원하지 못했어요. 네트워크를 확인하고 다시 시도해 주세요.';
   });
   $('btn-shop-back').addEventListener('pointerup', () => {
+    closeSkinBox();
     if (shopReturn === 'select') openSelect(); else { state = 'title'; show('title'); }
   });
 
@@ -1169,7 +1223,8 @@
     $('btn-nick').addEventListener('pointerup', async () => msg((await Account.setNickname($('nick').value)) ? '닉네임을 바꿨어요.' : '닉네임을 바꾸지 못했어요.'));
     $('btn-friend').addEventListener('pointerup', async () => {
       const name = await Account.addFriend($('friend-code').value);
-      msg(name ? `${name} 님과 친구가 됐어요! 🎉` : '그 코드를 찾지 못했어요. 6자리를 다시 확인해 주세요.');
+      msg(name ? `${name} 님과 친구가 됐어요!` : '그 코드를 찾지 못했어요. 6자리를 다시 확인해 주세요.');
+      if (name) $('account-msg').insertAdjacentHTML('beforeend', ' ' + ico('party')); // the name stays text
     });
     $('btn-sync').addEventListener('pointerup', () => Account.sync());
     $('btn-signout').addEventListener('pointerup', async () => { await Account.signOut(); msg('로그아웃했어요. 이 폰의 기록은 그대로예요.'); });
@@ -1191,7 +1246,7 @@
   let rankStage = null;
   async function openRanking(s, scope) {
     rankStage = s;
-    $('rank-title').textContent = `🏆 ${s.name}`;
+    $('rank-title').innerHTML = `${ico('trophy')} ${s.name}`;
     document.querySelectorAll('#ranking .chip').forEach(c => c.classList.toggle('on', c.dataset.r === scope));
     $('rank-list').innerHTML = '<li><small>불러오는 중…</small></li>';
     show('ranking');

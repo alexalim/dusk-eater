@@ -113,3 +113,7 @@ test('event reward skin: granted once, survives save/load and an App Store entit
   assert.equal(w.equipped, 'santa');
   assert.ok(!S.allProducts().some(p => p.includes('santa')));
 });
+
+test('every skin has a description for its shop box', () => {
+  for (const s of S.SKINS) assert.ok(typeof s.desc === 'string' && s.desc.length > 10, s.id);
+});

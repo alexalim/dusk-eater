@@ -1,0 +1,60 @@
+<!doctype html>
+<meta charset="utf-8">
+<!-- Renders each swallowable kind with the game's own part lists (render3d.js PARTS) to a transparent PNG.
+     Driven by tools/icons/render.py; not shipped in the app. -->
+<script src="../../www/vendor/three.min.js"></script>
+<script src="../../www/render3d.js"></script>
+<script>
+  const T = THREE, SIZE = 192;
+  const renderer = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setSize(SIZE, SIZE); renderer.setPixelRatio(1);
+  document.documentElement.appendChild(renderer.domElement);
+  const geos = {
+    box: new T.BoxGeometry(1, 1, 1), cyl: new T.CylinderGeometry(1, 1, 1, 24), sphere: new T.SphereGeometry(1, 24, 16),
+    blob: new T.SphereGeometry(1, 20, 14), cone: new T.ConeGeometry(1, 1, 20), capsule: new T.CapsuleGeometry(1, 2, 8, 20),
+  };
+  const mat = c => new T.MeshLambertMaterial({ color: new T.Color(c) });
+  const mesh = (geo, c, s, p) => { const m = new T.Mesh(geos[geo], mat(c)); m.scale.set(...s); m.position.set(...p); return m; };
+
+  // Same placement rule as render3d.js: unit geometry scaled by s*r, lifted y*r, shifted o=[forward, side]*r.
+  function fromParts(parts, color) {
+    const g = new T.Group();
+    for (const p of parts) {
+      const m = p.glow ? new T.Mesh(geos[p.geo], new T.MeshBasicMaterial({ color: new T.Color(p.color) }))
+                       : new T.Mesh(geos[p.geo], mat(p.color === 'inst' ? color : p.color));
+      m.scale.set(...p.s); const o = p.o || [0, 0]; m.position.set(o[0], p.y, o[1]);
+      g.add(m);
+    }
+    return g;
+  }
+  // Buildings and guards are not part lists in the game; these follow their in-game look.
+  function building() {
+    const g = new T.Group();
+    g.add(mesh('box', '#e9dfcf', [1.6, 1.9, 1.3], [0, 0.95, 0]), mesh('box', '#b7a7c9', [1.7, 0.16, 1.4], [0, 1.95, 0]));
+    for (const y of [0.55, 1.05, 1.55]) for (const x of [-0.45, 0, 0.45]) g.add(mesh('box', '#8fb3d9', [0.26, 0.26, 0.04], [x, y, 0.66]));
+    return g;
+  }
+  function guard() {
+    const g = new T.Group();
+    g.add(mesh('cyl', '#2f3e66', [5, 18, 5], [0, 9, 0]), mesh('sphere', '#f6d2b0', [4.5, 4.5, 4.5], [0, 22, 0]),
+          mesh('sphere', '#2f3e66', [4.8, 2.4, 4.8], [0, 25, 0]));
+    const lamp = new T.Mesh(geos.box, new T.MeshBasicMaterial({ color: 0xffd23f })); lamp.scale.set(6, 3, 3); lamp.position.set(7, 14, 0);
+    g.add(lamp);
+    return g;
+  }
+
+  window.renderIcon = (id, color) => {
+    const scene = new T.Scene();
+    scene.add(new T.HemisphereLight(0xffffff, 0x8a7aa8, 0.55));
+    const sun = new T.DirectionalLight(0xffffff, 0.75); sun.position.set(2, 4, 3); scene.add(sun);
+    const obj = id === 'building' ? building() : id === 'guard' ? guard() : fromParts(DuskRender.PARTS[id], color);
+    obj.rotation.y = -0.6; // three-quarter view, facing toward the camera's right
+    scene.add(obj);
+    const box = new T.Box3().setFromObject(obj), c = box.getCenter(new T.Vector3()), r = box.getBoundingSphere(new T.Sphere()).radius;
+    const cam = new T.PerspectiveCamera(26, 1, 0.01, 1000);
+    const dir = new T.Vector3(0.15, 0.62, 1).normalize();
+    cam.position.copy(c).addScaledVector(dir, r / Math.sin(13 * Math.PI / 180) * 1.02); cam.lookAt(c);
+    renderer.setClearColor(0x000000, 0); renderer.render(scene, cam);
+    return renderer.domElement.toDataURL('image/png');
+  };
+</script>

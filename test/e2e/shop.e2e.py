@@ -50,7 +50,8 @@ with sync_playwright() as p:
     rec('H3', 'cancelled purchase leaves wallet unchanged', wallet(pg)['gems'] == 100 and pg.inner_text('#shop-msg') == '', '')
 
     # H4 buying a skin owns + equips it; renderer rim = skin color in shade, red when lit, for every skin
-    pg.query_selector_all('#shop-skins .item')[1].tap(); frames_wait(pg, 5)
+    pg.query_selector_all('#shop-skins .item')[1].tap(); frames_wait(pg)
+    pg.tap('#skin-box-act'); frames_wait(pg, 5)
     w = wallet(pg)
     bought = w['equipped'] == 'mint' and 'mint' in w['owned']
     pg.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ owned: {A}.Shop.SKINS.filter(s => s.product || s.reward).map(s => s.id) }}))")
@@ -134,6 +135,24 @@ with sync_playwright() as p:
     pg5.tap('#btn-title'); frames_wait(pg5); store = tabs(pg5)
     rec('H11', 'TestFlight build previews the event in November; store build does not', tf == ['main', 'xmas'] and '테스트 미리보기' in note
         and nodes == 10 and store == [], f'testflight={tf} store={store} note={note!r}')
+    b.close()
+
+    # H12 tapping a skin opens its box (preview, description, price) and buys nothing; closing changes nothing;
+    # the event skin opens too, with a button that cannot buy it
+    b = p.chromium.launch(args=GL)
+    pg6, errs6 = open_page(b)
+    pg6.tap('#btn-shop-title'); frames_wait(pg6)
+    pg6.tap('.item[data-skin=starry]'); frames_wait(pg6)
+    box = [pg6.is_visible('#skin-box'), pg6.inner_text('#skin-box-name'), pg6.inner_text('#skin-box-desc'), pg6.inner_text('#skin-box-act')]
+    w0 = wallet(pg6)
+    pg6.tap('#skin-box-close'); frames_wait(pg6)
+    closed = not pg6.is_visible('#skin-box') and wallet(pg6) == w0 and 'starry' not in (w0 or {}).get('owned', [])
+    pg6.tap('.item[data-skin=santa]'); frames_wait(pg6)
+    santa_act = pg6.inner_text('#skin-box-act'); santa_off = pg6.evaluate("document.querySelector('#skin-box-act').classList.contains('off')")
+    pg6.mouse.click(5, 5); frames_wait(pg6)  # outside the box
+    rec('H12', 'skin box shows description and price, buys nothing until its button; event skin cannot be bought',
+        box[0] and box[1] == '별밤 그림자' and len(box[2]) > 10 and '구매하기' in box[3] and closed
+        and '이벤트' in santa_act and santa_off and not pg6.is_visible('#skin-box') and not errs6, f'box={box} santa={santa_act!r}')
     b.close()
 
 print(f'{sum(res)}/{len(res)} passed')

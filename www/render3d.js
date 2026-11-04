@@ -732,5 +732,5 @@
     return { build, resize, draw, setSkin, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera } };
   }
 
-  root.DuskRender = { create };
+  root.DuskRender = { create, PARTS }; // PARTS also feeds tools/icons (collection-book pictures)
 })(this);
