@@ -182,33 +182,52 @@
   #skin-box .btns { width: 100%; }
   #skin-box .btn { text-align: center; }
   #skin-box .btn.off { opacity: .45; pointer-events: none; }
-  /* Collection book: silhouettes until found, a gold card while its reward waits. */
-  #dex { justify-content: flex-start; }
-  #dex h3 { margin: 6px 0 0; width: min(100%, 380px); display: flex; justify-content: space-between; align-items: baseline;
-    text-align: left; font-size: 15px; color: var(--muted); }
-  #dex h3 small { font-size: 13px; font-weight: 800; }
-  .dexset { width: min(100%, 380px); box-sizing: border-box; display: flex; align-items: center; gap: 12px; margin-top: 10px;
-    padding: 8px 12px; border-radius: 14px; background: var(--card); border: 2px dashed rgba(244,239,230,.25); text-align: left; }
-  .dexset.got { border: 2px solid var(--star); }
+  /* Collection book: a light pop-up window with map sets as tabs along the bottom. Found friends sit on
+     yellow tiles, unfound ones are grey silhouettes, and a tile whose reward waits wiggles. */
+  #dex { justify-content: center; background: rgba(8, 6, 24, .78); padding-left: 14px; padding-right: 14px; }
+  .dexwin { box-sizing: border-box; width: min(100%, 400px); max-height: 100%; min-height: 0; flex-shrink: 1; display: flex; flex-direction: column;
+    background: #eef2ff; color: #2a2350; border: 3px solid #fff; border-radius: 22px; overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .45); }
+  .dexhead { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 18px; color: #fff; font-size: 20px; font-weight: 900;
+    background: linear-gradient(#6a97ff, #3f6fe8); }
+  .dexhead .gem-count { margin-left: auto; font-size: 15px; }
+  .dexhead .x { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; font-size: 22px; line-height: 1;
+    background: rgba(255, 255, 255, .25); cursor: pointer; }
+  #dex-sum { margin: 8px 14px 0; font-size: 13px; color: #5a5480; }
+  #dex-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; touch-action: pan-y; padding: 2px 12px 12px; }
+  .dexpane { display: none; } .dexpane.on { display: block; }
+  #dex h3 { display: flex; align-items: center; gap: 8px; margin: 14px 0 8px; font-size: 14px; color: #3f5bb8; }
+  #dex h3::before, #dex h3::after { content: ''; flex: 1; height: 2px; background: #c9d3f2; }
+  #dex h3 small { font-size: 12px; font-weight: 800; color: #5a5480; }
+  #dex .event-note { margin: -4px 0 8px; font-size: 12px; color: #5a5480; }
+  .dexgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .card { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px 5px; border-radius: 14px;
+    background: #ffe39a; border: 3px solid #fff; box-shadow: 0 2px 0 #c9b06a; font: inherit; color: #2a2350; cursor: pointer; }
+  .card .ic { width: 48px; height: 48px; object-fit: contain; }
+  .card .nm { font-size: 11px; font-weight: 800; word-break: keep-all; line-height: 1.25; min-height: 2.5em; }
+  .card.hide { background: #dfe6f7; box-shadow: 0 2px 0 #b9c5e6; }
+  .card.hide .ic { filter: brightness(0); opacity: .45; }
+  .card.hide .nm { color: #8a8fb0; }
+  .card.new { background: #ffd36b; border-color: #ffc83d; animation: wiggle 1.6s ease-in-out infinite; }
+  .card .rw { font-size: 11px; font-weight: 900; color: #8a5a00; }
+  @keyframes wiggle { 0%, 80%, 100% { transform: rotate(0); } 86% { transform: rotate(-4deg); } 93% { transform: rotate(4deg); } }
+  .dexset { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 8px 12px; border-radius: 14px;
+    background: #fff; border: 2px dashed #b9c5e6; text-align: left; }
+  .dexset.got { background: #fff6d6; border: 2px solid #ffc83d; }
   .dexset .swatch { flex: none; width: 44px; height: 44px; }
   .dexset .swatch i { top: 12px; width: 8px; height: 8px; }
   .dexset .swatch i:first-child { left: 9px; } .dexset .swatch i:last-child { right: 9px; }
-  .dexset span { display: flex; flex-direction: column; } .dexset small { color: var(--muted); font-weight: 800; }
-  #dex .event-note { width: min(100%, 380px); margin-top: -8px; }
-  .dexgrid { width: min(100%, 380px); display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .card { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px 6px; border-radius: 14px;
-    background: var(--card); border: 2px solid transparent; font: inherit; color: var(--text); cursor: pointer; }
-  .card .ic { width: 52px; height: 52px; object-fit: contain; }
-  .card .nm { font-size: 11px; font-weight: 800; word-break: keep-all; line-height: 1.25; min-height: 2.5em; }
-  .card.hide .ic { filter: brightness(0); opacity: .55; }
-  .card.hide .nm { color: var(--muted); }
-  .card.new { border-color: var(--star); background: rgba(255,210,92,.14); animation: wiggle 1.6s ease-in-out infinite; }
-  .card .rw { font-size: 11px; font-weight: 900; color: var(--star); }
-  @keyframes wiggle { 0%, 80%, 100% { transform: rotate(0); } 86% { transform: rotate(-4deg); } 93% { transform: rotate(4deg); } }
+  .dexset span { display: flex; flex-direction: column; } .dexset small { color: #5a5480; font-weight: 800; }
+  #dex-msg { margin: 0 14px; min-height: 1.4em; font-size: 13px; }
+  #dex-tabs { display: flex; gap: 6px; padding: 8px; background: #d7e0f7; }
+  .dextab { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0 5px;
+    border-radius: 12px; background: #fff; border: 2px solid transparent; font-size: 11px; font-weight: 800; color: #5a5480; cursor: pointer; }
+  .dextab.on { background: #ffe39a; border-color: #ffc83d; color: #2a2350; }
+  .dextab .ico.map { width: 28px; height: 28px; }
+  .dextab .badge { position: absolute; top: -6px; right: -4px; margin: 0; }
   .badge { display: inline-block; min-width: 20px; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
     background: var(--star); color: #2a1a05; font-size: 13px; vertical-align: 2px; }
   .badge:empty { display: none; }
-  #dex-msg { min-height: 1.4em; }
   #dex-new { position: absolute; left: 50%; top: calc(100% + 48px); transform: translateX(-50%); white-space: nowrap;
     padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 14px; background: var(--card); color: var(--text);
     border: 2px solid var(--star); opacity: 0; pointer-events: none; transition: opacity .3s; }
@@ -254,7 +273,7 @@
   </div>
 </div>
 <div id="select" class="overlay hidden">
-  <div class="topbar"><span class="gem gem-count"></span><span class="chip" id="btn-shop-map">상점</span></div>
+  <div class="topbar"><span class="chip" id="btn-select-back">‹ 처음으로</span><span class="gem gem-count"></span><span class="chip" id="btn-shop-map">상점</span></div>
   <h2>황혼 레벨</h2>
   <div id="map"></div>
   <div class="sheet" id="sheet"></div>
@@ -284,11 +303,13 @@
   <ol class="panel rank" id="rank-list"></ol>
   <div class="btns"><div class="btn ghost" id="btn-rank-back">돌아가기</div></div></div>
 <div id="dex" class="overlay hidden">
-  <div class="topbar"><h2>도감</h2><span class="gem gem-count"></span></div>
-  <p id="dex-sum"></p>
-  <div id="dex-list"></div>
-  <p id="dex-msg"></p>
-  <div class="btns"><div class="btn ghost" id="btn-dex-back">돌아가기</div></div>
+  <div class="dexwin">
+    <div class="dexhead"><span>도감</span><span class="gem gem-count"></span><span class="x" id="btn-dex-back" aria-label="닫기">×</span></div>
+    <p id="dex-sum"></p>
+    <div id="dex-list"></div>
+    <p id="dex-msg"></p>
+    <div id="dex-tabs"></div>
+  </div>
 </div>
 <div id="shop" class="overlay hidden">
   <div class="topbar"><h2>상점</h2><span class="gem gem-count"></span></div>
@@ -728,11 +749,9 @@
     player.x = Math.max(0, Math.min(WORLD, player.x + player.vx * dt));
     player.y = Math.max(0, Math.min(WORLD, player.y + player.vy * dt));
     if (ml > 0.1 && !view.fp) player.face = Math.atan2(my, mx);
-    // The face turns toward where it is going but never fully away from the camera (screen-down),
-    // so the eyes and mouth stay in sight from above. In first person it simply looks ahead.
-    const FRONT = Math.PI / 2, turn = a => Math.atan2(Math.sin(a), Math.cos(a));
-    const want = view.fp ? player.face : FRONT + Math.max(-1.2, Math.min(1.2, turn(player.face - FRONT)));
-    player.look += turn(want - player.look) * Math.min(1, dt * 10);
+    // The body turns all the way toward where it is going (its back shows when heading up the screen).
+    const turn = a => Math.atan2(Math.sin(a), Math.cos(a));
+    player.look += turn(player.face - player.look) * Math.min(1, dt * 10);
 
     for (const g of guards) {
       if (g.state !== 0) continue;
@@ -889,11 +908,17 @@
   function renderDex() {
     const w = Store.wallet;
     const found = Dex.ENTRIES.filter(e => w.dex.includes(e.id)).length;
-    $('dex-sum').textContent = `${found} / ${Dex.ENTRIES.length} 찾았어요. 처음 삼킨 친구를 누르면 보석 ${Dex.REWARD}개를 드려요.`;
-    $('dex-list').innerHTML = Dex.THEME_ORDER.map(theme => {
-      const set = Dex.SETS.find(x => x.themes[0] === theme);
-      return (set ? dexSetBar(set, w) : '') + dexChapter(theme, w);
+    $('dex-sum').textContent = `${found} / ${Dex.ENTRIES.length} 찾았어요 · 찾은 친구를 누르면 보석 ${Dex.REWARD}개`;
+    const tabs = dexTabs();
+    $('dex-list').innerHTML = tabs.map((t, i) => `<div class="dexpane${i === dexTab ? ' on' : ''}">` +
+      (t.set ? dexSetBar(t.set, w) : '') + t.themes.map(theme => dexChapter(theme, w)).join('') + '</div>').join('');
+    $('dex-tabs').innerHTML = tabs.map((t, i) => {
+      const n = dexWaiting(t, w);
+      return `<div class="dextab${i === dexTab ? ' on' : ''}" data-tab="${i}">${mapIco(t.themes[0])}${t.label}<span class="badge">${n || ''}</span></div>`;
     }).join('');
+    $('dex-tabs').querySelectorAll('.dextab').forEach(el => el.addEventListener('pointerup', () => {
+      dexTab = +el.dataset.tab; $('dex-msg').textContent = ''; renderDex(); $('dex-list').scrollTop = 0;
+    }));
     $('dex-list').querySelectorAll('.card').forEach(el => el.addEventListener('pointerup', () => {
       const id = el.dataset.dex, e = Dex.ENTRIES.find(x => x.id === id);
       if (!Store.wallet.dex.includes(id)) { $('dex-msg').textContent = `${THEMES[e.theme].name}에서 그늘에 숨은 걸 찾아 꿀꺽해 봐요.`; return; }
@@ -902,6 +927,12 @@
       if (w2 !== Store.wallet) Store.update(w2);
     }));
   }
+
+  // Tabs along the bottom: one per hidden-skin set, then the event maps.
+  let dexTab = 0;
+  const dexTabs = () => Dex.SETS.map(set => ({ set, themes: set.themes, label: `${set.from}~${set.to}` }))
+    .concat({ themes: Dex.THEME_ORDER.filter(t => !Dex.SETS.some(s => s.themes.includes(t))), label: '이벤트' });
+  const dexWaiting = (t, w) => Dex.ENTRIES.filter(e => t.themes.includes(e.theme) && w.dex.includes(e.id) && !w.dexClaimed.includes(e.id)).length;
 
   function dexChapter(theme, w) {
     const t = THEMES[theme], list = Dex.ENTRIES.filter(e => e.theme === theme);
@@ -912,7 +943,7 @@
       return `<button class="card${seen ? '' : ' hide'}${fresh ? ' new' : ''}" data-dex="${e.id}">
         <img class="ic" src="${e.img}" alt=""><span class="nm">${seen ? e.name : '???'}</span>${fresh ? `<span class="rw gem">${GEM}${Dex.REWARD} 받기</span>` : ''}</button>`;
     }).join('');
-    return `<h3><span>${mapIco(theme)} ${t.name}</span><small>${n}/${list.length}</small></h3>` +
+    return `<h3>${mapIco(theme)} ${t.name} <small>${n}/${list.length}</small></h3>` +
       (ev ? `<p class="event-note">${ev.title} 때만 만날 수 있어요</p>` : '') + `<div class="dexgrid">${cards}</div>`;
   }
 
@@ -923,7 +954,13 @@
       <small>${set.from}~${set.to}번 지도 ${got ? '모두 채웠어요!' : `${n}/${set.entries.length} 채우면 받아요`}</small></span></div>`;
   }
 
-  function openDex() { $('dex-msg').textContent = ''; grantDexSkins(); renderDex(); show('dex'); }
+  // Opens on the first tab with a reward waiting, else where it was left.
+  function openDex() {
+    $('dex-msg').textContent = ''; grantDexSkins();
+    const tabs = dexTabs(), waiting = tabs.findIndex(t => dexWaiting(t, Store.wallet) > 0);
+    if (waiting >= 0) dexTab = waiting;
+    renderDex(); show('dex'); $('dex-list').scrollTop = 0;
+  }
 
   function show(id) {
     for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex']) $(o).classList.toggle('hidden', o !== id);
@@ -1195,6 +1232,7 @@
 
   $('btn-shop-title').addEventListener('pointerup', whenReady(() => openShop('title')));
   $('btn-shop-map').addEventListener('pointerup', () => openShop('select'));
+  $('btn-select-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
   $('btn-dex').addEventListener('pointerup', whenReady(openDex));
   $('btn-dex-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
   $('btn-title').addEventListener('pointerup', whenReady(() => openSelectAt(lastUnlocked())));

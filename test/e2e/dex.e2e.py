@@ -80,6 +80,18 @@ with sync_playwright() as p:
     rec('X7', 'filling set 1 grants its hidden skin once; book bar and shop reveal it, other sets stay ???',
         before == 0 and owned and '히든 스킨' in toast and '모두 채웠어요' in bar and card != '???' and locked == '???',
         f'last={last} toast={toast!r} bar={bar!r} card={card!r} locked={locked!r}')
+    # X8 the book is a window with map-set tabs: a tab shows only its maps; X closes; the level map has a way back
+    pg.tap('#btn-shop-back') if pg.is_visible('#btn-shop-back') else None; frames_wait(pg)
+    pg.tap('#btn-dex'); frames_wait(pg)
+    on0 = pg.evaluate("[...document.querySelectorAll('.dexpane')].map(e => e.offsetParent !== null)")
+    pg.tap('.dextab[data-tab="3"]'); frames_wait(pg)
+    on3 = pg.evaluate("[...document.querySelectorAll('.dexpane')].map(e => e.offsetParent !== null)")
+    xmas = pg.is_visible('.card[data-dex=reindeer]') and not pg.is_visible('.card[data-dex=cat]')
+    pg.tap('#btn-dex-back'); frames_wait(pg); closed = pg.is_visible('#title')
+    pg.tap('#btn-title'); frames_wait(pg); pg.tap('#btn-select-back'); frames_wait(pg)
+    rec('X8', 'tabs switch map sets (event tab holds the event maps); X closes; level map has a back button to the title',
+        on0 == [True, False, False, False] and on3 == [False, False, False, True] and xmas and closed and pg.is_visible('#title'),
+        f'on0={on0} on3={on3} xmas={xmas} closed={closed}')
     rec('X0', 'no page errors', not errs, '; '.join(errs[:3]))
     b.close()
 

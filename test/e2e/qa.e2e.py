@@ -197,6 +197,11 @@ with sync_playwright() as p:
         and '산타 그림자' in note and '획득' in note1 and jan == [[], 'main'],
         f'nov={nov} dec={dec} nodes={nodes} owned_after_each={owned} note={note!r} jan={jan}')
     pg.evaluate("window.__DUSK_TEST__.today = null"); pg.evaluate(f'{A}.useList("main"); {A}.start(0)'); frames_wait(pg)
+    # S18 third person: heading up the screen turns the body all the way round (back to the camera), not just sideways
+    pg.evaluate(f"{A}.input.keys.add('ArrowUp')"); frames_wait(pg, 40)
+    look = pg.evaluate(f'(() => {{ const l = {A}.s.player.look + Math.PI / 2; return Math.abs(Math.atan2(Math.sin(l), Math.cos(l))); }})()')
+    pg.evaluate(f"{A}.input.keys.delete('ArrowUp')"); pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    rec('S18', 'third person turns fully toward an upward heading', look < 0.3, f'off by {look:.2f} rad')
     # S3 round end: stars + goal list + next button rule (fast frames can be ~16 ms, so leave 10 ms and wait 8)
     pg.evaluate(f'{A}.skipTo(119.99)'); frames_wait(pg, 8)
     end_vis = pg.is_visible('#end'); goals = len(pg.query_selector_all('#end-goals > div'))
