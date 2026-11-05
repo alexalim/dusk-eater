@@ -119,6 +119,19 @@ with sync_playwright() as p:
     rec('L1', 'run experience shows on the end screen, levels up with its gems, and the title chip follows',
         xp >= 120 and '경험치' in gain and lvl == 'Lv.2' and '레벨 업' in note and g1 >= g0 + 10 and 'Lv.2' in chip,
         f'xp={xp} gain={gain!r} lvl={lvl!r} note={note!r} gems {g0}->{g1} chip={chip!r}')
+    # A1 sound: a tap unlocks audio and the tune runs; a swallow plays without errors; the switches turn off and stay off
+    pg.tap('#btn-info'); frames_wait(pg)
+    state0 = pg.evaluate('window.DuskSound.ctx && window.DuskSound.ctx.state')
+    pg.tap('#btn-sfx2'); pg.tap('#btn-music2'); frames_wait(pg)
+    labels = [pg.inner_text('#btn-sfx2'), pg.inner_text('#btn-music2')]
+    pg.tap('#btn-info-back'); frames_wait(pg)
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    pg.evaluate(f'(() => {{ const o = {A}.s.objects.find(o => o.state === 0); o.state = 1; o.ft = 0.99; }})()'); frames_wait(pg, 4)
+    reload(pg); kept = pg.evaluate('window.DuskSound.on')
+    pg.tap('#btn-info'); frames_wait(pg); pg.tap('#btn-sfx2'); pg.tap('#btn-music2'); pg.tap('#btn-info-back'); frames_wait(pg)
+    rec('A1', 'audio unlocks on a tap; sound switches turn off, survive a reload and turn back on',
+        state0 == 'running' and labels == ['효과음 꺼짐', '음악 꺼짐'] and kept == {'sfx': False, 'music': False} and pg.evaluate('window.DuskSound.on.sfx'),
+        f'state={state0} labels={labels} kept={kept}')
     rec('X0', 'no page errors', not errs, '; '.join(errs[:3]))
     b.close()
 
@@ -136,10 +149,14 @@ with sync_playwright() as p:
                  for q in ['#btn-title', '#btn-shop-title', '#btn-dex', '#btn-badges', '#btn-account', '#btn-info'])
     start_txt = pg2.inner_text('#btn-title')
     pg2.tap('#btn-info'); frames_wait(pg2); info = pg2.inner_text('#info')
+    dark = pg2.evaluate("getComputedStyle(document.querySelector('.info-body p')).color") != pg2.evaluate("getComputedStyle(document.querySelector('.info-body')).backgroundColor")
     pg2.tap('#btn-info-back'); frames_wait(pg2)
+    pg2.tap('#btn-title'); frames_wait(pg2)
+    flat = pg2.evaluate("(() => { const o = document.querySelector('#select'); return o.scrollWidth <= o.clientWidth; })()")
+    pg2.tap('#btn-select-back'); frames_wait(pg2)
     rec('T1', 'title fits 375x667 with every entry in view; info tells what is stored and closes',
-        fits and inview and start_txt == '시작' and '서버에 저장' in info and '지울 수' in info and pg2.is_visible('#title'),
-        f'fits={fits} inview={inview} start={start_txt!r}')
+        fits and inview and start_txt == '시작' and '서버에 저장' in info and '지울 수' in info and dark and flat and pg2.is_visible('#title'),
+        f'fits={fits} inview={inview} start={start_txt!r} info_text_dark={dark} select_no_sideways={flat}')
     b.close()
 
 print(f'{sum(res)}/{len(res)} passed')

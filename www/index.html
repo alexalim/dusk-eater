@@ -72,7 +72,8 @@
     box-shadow: 0 2px 0 rgba(0,0,0,.3); transition: background .2s; }
   #goals span.done { color: #2a1a05; background: var(--star); border-color: #fff; }
   #goals span.done::before { content: ''; display: inline-block; width: 1em; height: 1em; margin-right: 4px; vertical-align: -2px; background: url(img/ui/check.svg) center / contain no-repeat; }
-  #warn { text-align: center; color: var(--danger); font-weight: 800; font-size: 15px; opacity: 0;
+  #warn { align-self: center; padding: 4px 14px; border-radius: 999px; background: rgba(18,10,42,.78); /* readable on sunny ground */
+    text-align: center; color: var(--danger); font-weight: 800; font-size: 15px; opacity: 0;
     transition: opacity .15s; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
   #stats .right { display: flex; align-items: center; gap: 10px; }
   #btn-pause { pointer-events: auto; width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
@@ -125,9 +126,12 @@
     border-radius: 18px; background: var(--card); border: 2px solid rgba(244,239,230,.18); font-weight: 800; font-size: 14px; cursor: pointer; }
   .tile img { width: 34px; height: 34px; }
   .tile .badge { position: absolute; top: -6px; right: -4px; margin: 0; }
+  .sound-row { display: flex; gap: 8px; justify-content: center; }
+  .info-body .sound-row { justify-content: flex-start; }
+  .info-body .chip { background: #dfe6f7; color: #2a2350; }
   .info-body { overflow-y: auto; padding: 4px 18px 16px; text-align: left; font-size: 14px; line-height: 1.6; }
   .info-body h4 { margin: 12px 0 4px; font-size: 16px; }
-  .info-body p { margin: 6px 0; }
+  .info-body p { margin: 6px 0; max-width: none; font-size: 14px; color: #3a3360; } /* dark text: the window is light */
   .btns { display: flex; flex-direction: column; gap: 10px; align-items: stretch; margin-top: 6px; }
   /* Level picker: one page of numbered levels, paged with ‹ ›, plus a detail sheet for the chosen level. */
   #select { gap: 12px; }
@@ -165,7 +169,7 @@
   .region { display: flex; flex-direction: column; align-items: center; gap: 1px; }
   .region small { font-size: 12px; color: var(--muted); font-weight: 700; }
   .pager .chip.off { opacity: .35; }
-  .sheet { width: min(100%, 380px); display: flex; flex-direction: column; gap: 8px; text-align: left;
+  .sheet { box-sizing: border-box; width: min(100%, 380px); display: flex; flex-direction: column; gap: 8px; text-align: left;
     padding: 16px; border-radius: 16px; background: var(--card); }
   .sheet .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .sheet .name { font-weight: 800; font-size: 18px; }
@@ -179,6 +183,10 @@
   /* Pictures in place of emoji: sized by the text around them. */
   .ico { display: inline-block; width: 1.15em; height: 1.15em; vertical-align: -0.2em; object-fit: contain; }
   .ico.map { border-radius: 26%; }
+  /* Expression faces (img/ui/face-*.svg): big on the end and pause screens, small beside the tutorial and warning. */
+  .face-big { width: 84px; height: 84px; filter: drop-shadow(0 4px 12px rgba(183,140,255,.45)); }
+  .ico.face { width: 1.5em; height: 1.5em; vertical-align: middle; margin: -0.3em 0; }
+  #tutorial .face { float: left; width: 40px; height: 40px; margin: 0 8px 0 0; }
   .ico.dex { width: 1.8em; height: 1.8em; vertical-align: middle; margin: -0.3em 0; }
   .stars .ico { width: 1em; height: 1em; margin: 0 1px; }
   .goal-list { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 300px; text-align: left; }
@@ -310,11 +318,11 @@
   <div id="sunbar"><div id="sun"></div></div>
   <div id="stats"><span id="size" class="pill">크기 0</span><span class="right"><span class="pill" id="score-pill"><span id="score">0</span></span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></span></div>
   <div id="goals"></div>
-  <div id="warn">앗, 햇빛이에요! 몸이 줄어들어요</div>
+  <div id="warn"><img class="ico face" src="img/ui/face-surprised.svg" alt=""> 앗, 햇빛이에요! 몸이 줄어들어요</div>
   <div id="banner">미션 완료! 밤이 일찍 와요 <img class="ico" src="img/ui/moon.svg" alt=""></div>
   <div id="dex-new"></div>
 </div>
-<div id="tutorial" class="hidden"><span class="step" id="tut-step"></span><span id="tut-text"></span><br><span class="skip" id="tut-skip">설명 건너뛰기</span></div>
+<div id="tutorial" class="hidden"><img class="face" src="img/ui/face-happy.svg" alt=""><span class="step" id="tut-step"></span><span id="tut-text"></span><br><span class="skip" id="tut-skip">설명 건너뛰기</span></div>
 <div id="title" class="overlay">
   <div class="corner"><span class="left"><span class="chip round" id="btn-info" aria-label="정보">i</span><span class="chip lv" id="title-level"></span></span><span class="chip" id="btn-account">계정 · 친구</span></div>
   <img class="logo" src="logo.svg" alt="">
@@ -329,8 +337,10 @@
 </div>
 <div id="info" class="overlay hidden">
   <div class="dexwin">
-    <div class="dexhead"><span>정보</span><span class="x" id="btn-info-back" aria-label="닫기">×</span></div>
+    <div class="dexhead"><span>정보</span><span class="x" id="btn-info-back" aria-label="닫기" style="margin-left: auto">×</span></div>
     <div class="info-body">
+      <h4>소리</h4>
+      <div class="sound-row"><div class="chip" id="btn-sfx2"></div><div class="chip" id="btn-music2"></div></div>
       <h4>개인정보는 이렇게 다뤄요</h4>
       <p>로그인하지 않으면 모든 기록이 이 휴대폰에만 저장돼요.</p>
       <p>로그인하면 기기를 바꿔도 이어서 할 수 있도록 별, 최고 점수, 보석·스킨·도감·배지 기록, 닉네임, 친구 목록을 서버에 저장해요. 로그인 서비스가 알려 준 계정 정보(이메일 등)도 함께 보관돼요.</p>
@@ -346,11 +356,13 @@
   <div class="sheet" id="sheet"></div>
 </div>
 <div id="fps" class="hidden"></div>
-<div id="pause" class="overlay hidden"><p class="big">일시정지</p>
+<div id="pause" class="overlay hidden"><img class="face-big" src="img/ui/face-sleepy.svg" alt=""><p class="big">일시정지</p>
   <div class="btns"><div class="btn" id="btn-resume">계속</div><div class="btn ghost" id="btn-quit">그만두기</div></div>
   <p>그만두면 이번 판 기록은 안 남아요. 부스터에 쓴 보석은 돌려드려요.</p>
+  <div class="sound-row"><div class="chip" id="btn-sfx"></div><div class="chip" id="btn-music"></div></div>
   <div class="chip" id="btn-fps">FPS 표시</div></div>
 <div id="end" class="overlay hidden">
+  <img class="face-big" id="end-face" src="img/ui/face-happy.svg" alt="">
   <h2 id="end-title">밤이 끝났어요</h2>
   <div class="stars" id="end-stars"></div>
   <p class="big" id="result"></p>
@@ -416,6 +428,7 @@
 <script src="dex.js"></script>
 <script src="badges.js"></script>
 <script src="level.js"></script>
+<script src="sound.js"></script>
 <script src="vendor/supabase.js"></script>
 <script src="config.js"></script>
 <script src="sync.js"></script>
@@ -454,7 +467,7 @@
   resize();
 
   // ---------- storage (iOS UserDefaults in the app, localStorage in a browser; loaded at boot) ----------
-  const Shop = window.DuskShop, Store = window.DuskStore, Dex = window.DuskDex, Badges = window.DuskBadges, Level = window.DuskLevel;
+  const Shop = window.DuskShop, Store = window.DuskStore, Dex = window.DuskDex, Badges = window.DuskBadges, Level = window.DuskLevel, Sound = window.DuskSound;
   const save = (key, v) => { Store.kv.set(key, v); };
   let bestStars = {};
   let bestScore = {};
@@ -668,6 +681,30 @@
     lighthouse = L ? { x: WORLD * L.x, y: WORLD * L.y, range: L.range, half: L.half, speed: L.speed, dir: 0 } : null;
   }
 
+  // Buildings are solid unless they are food right now (small enough and in shade, the same rule as eating):
+  // the body is pushed back out to its edge and bounces off instead of sliding through the walls.
+  const BODY = 0.8, BOUNCE = 0.6; // collision radius as a share of r; share of the inward speed kept, reversed
+  function bumpBuildings() {
+    for (const b of buildings) {
+      if (b.state !== 0) continue;
+      const R = player.r * BODY;
+      const px = Math.max(b.x, Math.min(b.x + b.w, player.x)), py = Math.max(b.y, Math.min(b.y + b.d, player.y));
+      let nx = player.x - px, ny = player.y - py, d = Math.hypot(nx, ny);
+      if (d >= R) continue;
+      if (b.r < player.r * C.EAT_RATIO && isShaded(centerOf(b), b)) continue;
+      if (d < 1e-6) { // center already inside: leave by the nearest wall
+        const out = [[player.x - b.x, -1, 0], [b.x + b.w - player.x, 1, 0], [player.y - b.y, 0, -1], [b.y + b.d - player.y, 0, 1]]
+          .sort((a, c) => a[0] - c[0])[0];
+        nx = out[1]; ny = out[2]; d = 0;
+        player.x = out[1] ? (out[1] < 0 ? b.x : b.x + b.w) : player.x; player.y = out[2] ? (out[2] < 0 ? b.y : b.y + b.d) : player.y;
+      } else { nx /= d; ny /= d; }
+      const qx = Math.max(b.x, Math.min(b.x + b.w, player.x)), qy = Math.max(b.y, Math.min(b.y + b.d, player.y));
+      player.x = qx + nx * R; player.y = qy + ny * R;
+      const vn = player.vx * nx + player.vy * ny;
+      if (vn < 0) { player.vx -= (1 + BOUNCE) * vn * nx; player.vy -= (1 + BOUNCE) * vn * ny; }
+    }
+  }
+
   function pickTarget(g) {
     // Guards walk along road centerlines so their routes stay readable.
     const cells = WORLD / CELL, maxY = waterY - 30;
@@ -703,6 +740,7 @@
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
     runDuration = C.DURATION + used.reduce((a, b) => a + (b.extraTime || 0), 0);
     stats = { score: 0, eaten: {}, beamHit: false, total: 0, lit: false, night: 0, maxR: 0 };
+    Sound.music.night(false);
     phase = C.dayPhase(0); sun = C.sunState(phase.dayT, stage.sunMax);
     shadows = buildings.map(b => C.shadowPolygon(b, sun));
     const spawn = pickSpawn();
@@ -826,6 +864,7 @@
     if (dv > 0) { const k = Math.min(dv, rate * dt) / dv; player.vx += dvx * k; player.vy += dvy * k; }
     player.x = Math.max(0, Math.min(WORLD, player.x + player.vx * dt));
     player.y = Math.max(0, Math.min(WORLD, player.y + player.vy * dt));
+    bumpBuildings();
     if (ml > 0.1 && !view.fp) player.face = Math.atan2(my, mx);
     // The body turns all the way toward where it is going (its back shows when heading up the screen).
     const turn = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -844,6 +883,8 @@
     if (beamed) stats.beamHit = true;
     player.lit = beamed || !isShaded(player, null);
     if (player.lit) { player.r = Math.max(10, player.r - (beamed ? 7 : 1.6) * dt); stats.lit = true; }
+    if (player.lit && !stats.wasLit) Sound.sfx.lit(); // once per step into the light
+    stats.wasLit = player.lit;
 
     const tryEat = (o, ox, oy, exclude) => {
       const dist = Math.hypot(ox - player.x, oy - player.y);
@@ -864,6 +905,7 @@
       o.ft += dt / SWALLOW_S;
       if (o.ft < 1) { inFlight = true; continue; }
       o.state = 2; player.bulge = 1; gulped = true;
+      Sound.sfx.gulp(Math.min(1, o.r / player.r));
       player.r = C.grow(player.r, o.r);
       score += Math.round(o.r * o.r / 2);
       stats.score = score;
@@ -876,6 +918,10 @@
     player.gulp = inFlight ? Math.min(1, player.gulp + dt / 0.08) : gulped ? 0 : Math.max(0, player.gulp - dt / 0.2);
 
     // All three missions done: night falls at once, a short finale where everything is shade.
+    const done = C.evaluateStars(stage.goals, stats).filter(Boolean).length;
+    if (done > (stats.doneSeen || 0)) Sound.sfx.star(); // a mission just completed
+    stats.doneSeen = done;
+    if (phase.night && !stats.nightSeen) { stats.nightSeen = true; Sound.sfx.night(); Sound.music.night(true); }
     if (!phase.night && C.evaluateStars(stage.goals, stats).every(Boolean)) {
       elapsed = runDuration * C.NIGHT_START;
       bannerUntil = elapsed + 3;
@@ -1004,14 +1050,15 @@
       if (!Store.wallet.dex.includes(id)) { $('dex-msg').textContent = `${THEMES[e.theme].name}에서 그늘에 숨은 걸 찾아 꿀꺽해 봐요.`; return; }
       const w2 = Dex.claim(Store.wallet, id);
       $('dex-msg').innerHTML = w2 === Store.wallet ? `${dexIco(e)} ${e.name}` : `보석 ${Dex.REWARD}개를 받았어요! ${dexIco(e)} ${e.name}`;
+      if (w2 !== Store.wallet) Sound.sfx.coin();
       if (w2 !== Store.wallet) Store.update(w2);
     }));
   }
 
   // Tabs along the bottom: one per hidden-skin set, then the event maps.
   let dexTab = 0;
-  const dexTabs = () => Dex.SETS.map(set => ({ set, themes: set.themes, label: `${set.from}~${set.to}` }))
-    .concat({ themes: Dex.THEME_ORDER.filter(t => !Dex.SETS.some(s => s.themes.includes(t))), label: '이벤트' });
+  const dexTabs = () => Dex.SETS.map(set => ({ set, themes: set.themes, label: set.name }))
+    .concat({ themes: Dex.THEME_ORDER.filter(t => !Dex.SETS.some(s => s.themes.includes(t))), label: '반짝 축제' });
   const dexWaiting = (t, w) => Dex.ENTRIES.filter(e => t.themes.includes(e.theme) && w.dex.includes(e.id) && !w.dexClaimed.includes(e.id)).length;
 
   function dexChapter(theme, w) {
@@ -1031,7 +1078,7 @@
   function dexSetBar(set, w) {
     const s = skinById(set.skin), got = w.owned.includes(s.id), n = Dex.setFound(w, set);
     return `<div class="dexset${got ? ' got' : ''}" data-set="${s.id}">${swatch(s, !got)}<span><b>${got ? s.name : '히든 스킨 ???'}</b>
-      <small>${set.from}~${set.to}번 지도 ${got ? '모두 채웠어요!' : `${n}/${set.entries.length} 채우면 받아요`}</small></span></div>`;
+      <small>${set.name} ${got ? '모두 채웠어요!' : `${n}/${set.entries.length} 채우면 받아요`}</small></span></div>`;
   }
 
   // ---------- player level ----------
@@ -1082,6 +1129,7 @@
       const w2 = Badges.claim(Store.wallet, b.id, c2);
       $('badges-msg').textContent = w2 !== Store.wallet ? `${b.name} 배지! 보석 ${b.gems}개를 받았어요.`
         : on ? `${b.name} · ${b.goal}` : b.cat.secret ? '숨겨진 배지예요. 이것저것 해 보세요!' : `${b.name}: ${b.goal}`;
+      if (w2 !== Store.wallet) Sound.sfx.coin();
       if (w2 !== Store.wallet) Store.update(w2);
     }));
   }
@@ -1231,6 +1279,7 @@
     $('end-gems').classList.toggle('hidden', !notes.length);
 
     $('end-title').innerHTML = n === 3 ? `완벽한 밤이었어요! ${ico('sparkle')}` : '밤이 끝났어요';
+    $('end-face').src = `img/ui/face-${['sleepy', 'determined', 'happy', 'excited'][n]}.svg`; // the character reacts to the stars
     $('end-stars').innerHTML = starText(n);
     $('result').textContent = `${stats.total}개 삼킴 · ${score.toLocaleString()}점`;
     $('end-goals').innerHTML = stage.goals.map((g, k) =>
@@ -1240,6 +1289,8 @@
     $('btn-next').classList.toggle('hidden', !(next < list.length && C.isUnlocked(listIds, next, bestStars)));
     show('end');
     showXp(xpBefore, xp); // after show: the bar only animates once it is on screen
+    if (n) Sound.sfx.win(); else Sound.sfx.lose();
+    if (lv.to > lv.from) setTimeout(() => Sound.sfx.level(), 700);
   }
 
   // ---------- shop ----------
@@ -1260,7 +1311,7 @@
       const own = (!s.product && !s.reward) || w.owned.includes(s.id), on = w.equipped === s.id, price = s.product && Store.price(s.product);
       const ev = s.reward && EVENTS.find(e => e.id === s.reward), set = Dex.setFor(s.id), secret = s.hidden && !own;
       const label = on ? '장착 중' : own ? '장착하기' : ev ? `${mapIco(ev.theme)} 이벤트 별 ${ev.reward.stars}개`
-        : set ? `${ico('book')} 도감 ${set.from}~${set.to}` : price || '준비 중';
+        : set ? `${ico('book')} ${set.name}` : price || '준비 중';
       return `<button class="item${on ? ' on' : ''}" data-skin="${s.id}">
         ${swatch(s, secret)}<span class="nm">${secret ? '???' : s.name}</span><span class="pr${own ? ' own' : ''}">${label}</span></button>`;
     }).join('');
@@ -1295,10 +1346,10 @@
     sw.style.background = hex(s.body); sw.style.borderColor = hex(s.rim);
     sw.querySelectorAll('i').forEach(i => { i.style.background = hex(s.eye); });
     $('skin-box-name').textContent = secret ? '히든 스킨 ???' : s.name;
-    $('skin-box-desc').textContent = secret ? `도감에서 ${set.from}~${set.to}번 지도의 친구를 모두 찾으면 모습을 드러내요.` : s.desc;
+    $('skin-box-desc').textContent = secret ? `도감 '${set.name}'의 친구를 모두 찾으면 모습을 드러내요.` : s.desc;
     const act = $('skin-box-act');
     act.innerHTML = on ? '장착 중' : own ? '장착하기' : ev ? `${mapIco(ev.theme)} 이벤트 별 ${ev.reward.stars}개를 모으면 받아요`
-      : set ? `${ico('book')} 도감 ${set.from}~${set.to}번 지도 ${Dex.setFound(w, set)}/${set.entries.length}`
+      : set ? `${ico('book')} ${set.name} ${Dex.setFound(w, set)}/${set.entries.length}`
       : price ? `${price} 구매하기` : '준비 중';
     act.classList.toggle('off', on || (!own && !price));
   }
@@ -1370,6 +1421,8 @@
     if (await Store.isTestBuild()) testBuild = true;
     lastWallet = JSON.stringify(Store.wallet);
     $('shop-demo').classList.toggle('hidden', !Store.demo);
+    const snd = await Store.kv.get('dusk-sound');
+    if (snd) { Sound.setOn('sfx', snd.sfx !== false); Sound.setOn('music', snd.music !== false); renderSound(); }
     Account.init(accountHooks); // signs back in and syncs in the background; the game never waits for it
   })();
   const whenReady = f => () => ready.then(f);
@@ -1508,6 +1561,20 @@
     if (slowN / slowT < 45) R.setQuality(R.quality + 1);
     slowT = 0; slowN = 0;
   }
+  // Sound switches (pause screen and info box), saved on this phone.
+  function renderSound() {
+    const o = Sound.on;
+    for (const id of ['btn-sfx', 'btn-sfx2']) $(id).textContent = `효과음 ${o.sfx ? '켜짐' : '꺼짐'}`;
+    for (const id of ['btn-music', 'btn-music2']) $(id).textContent = `음악 ${o.music ? '켜짐' : '꺼짐'}`;
+  }
+  const toggleSound = kind => () => { Sound.setOn(kind, !Sound.on[kind]); save('dusk-sound', Sound.on); renderSound(); };
+  ['btn-sfx', 'btn-sfx2'].forEach(id => $(id).addEventListener('pointerup', toggleSound('sfx')));
+  ['btn-music', 'btn-music2'].forEach(id => $(id).addEventListener('pointerup', toggleSound('music')));
+  renderSound();
+  // A soft click on every button.
+  document.addEventListener('pointerup', e => { if (e.target.closest && e.target.closest('.btn, .chip, .tile, .dextab, .item, .node')) Sound.sfx.tap(); });
+  Sound.music.start(); // plays once the first tap unlocks audio
+
   $('btn-fps').addEventListener('pointerup', () => {
     const on = $('fps').classList.toggle('hidden') === false;
     $('btn-fps').textContent = on ? 'FPS 숨기기' : 'FPS 표시';

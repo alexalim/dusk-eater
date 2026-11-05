@@ -55,7 +55,7 @@ with sync_playwright() as p:
     cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
     # release: a short glide (GLIDE_S 0.3 s at start size), then a full stop
     frames_wait(pg, 4); v_glide = pg.evaluate(f'Math.hypot({A}.s.player.vx, {A}.s.player.vy)')
-    pg.wait_for_timeout(700); frames_wait(pg, 4)
+    frames_wait(pg, 40)  # by frames, not wall time: a slow software GPU runs fewer frames (dt is capped at 0.05 s)
     v_after = pg.evaluate(f'Math.hypot({A}.s.player.vx, {A}.s.player.vy)')
     rec('S2', 'touch drag moves right, release glides then stops', x1 - x0 > 30 and v_glide > 5 and v_after == 0, f'dx={x1-x0:.0f} v_glide={v_glide:.1f} v_after={v_after:.1f}')
     # S10 spawn state for several rounds of each stage
@@ -154,7 +154,12 @@ with sync_playwright() as p:
     T = lambda: pg.evaluate(f"[{A}.tut && {A}.tut.i, document.querySelector('#tut-text').textContent, !document.querySelector('#tutorial').classList.contains('hidden')]")
     pg.evaluate(f'{A}.start(0)'); frames_wait(pg, 10)
     t0 = T(); sun0 = pg.evaluate("document.querySelector('#sun').style.left")
-    drag(0, -60, 3000); t1 = T()
+    # buildings are solid now, so walk the way with the most open room (spawns usually hug a building's shade)
+    way = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player;
+      const free = (dx, dy) => {{ let d = 0; while (d < 400 && !s.buildings.some(b => b.state === 0 && p.x + dx * d > b.x - p.r && p.x + dx * d < b.x + b.w + p.r
+        && p.y + dy * d > b.y - p.r && p.y + dy * d < b.y + b.d + p.r)) d += 5; return d; }};
+      return [[1, 0], [-1, 0], [0, 1], [0, -1]].sort((a, c) => free(...c) - free(...a))[0]; }})()''')
+    drag(way[0] * 60, way[1] * 60, 3000); t1 = T()
     sun1 = pg.evaluate("document.querySelector('#sun').style.left")  # steps 1-2: clock still frozen
     ate = pg.evaluate(f'{A}.s.stats.total')
     pg.evaluate(f'{A}.tut.t = 10'); frames_wait(pg, 3); t1b = T()  # the timed "stay in shade" step
@@ -202,6 +207,15 @@ with sync_playwright() as p:
     look = pg.evaluate(f'(() => {{ const l = {A}.s.player.look + Math.PI / 2; return Math.abs(Math.atan2(Math.sin(l), Math.cos(l))); }})()')
     pg.evaluate(f"{A}.input.keys.delete('ArrowUp')"); pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
     rec('S18', 'third person turns fully toward an upward heading', look < 0.3, f'off by {look:.2f} rad')
+    # S19 a building too big to swallow is solid: walking into it stops at its wall and bounces back
+    wall = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player, b = s.buildings.filter(b => b.state === 0 && b.r > p.r).sort((a, c) => c.d - a.d)[0];
+      p.x = b.x - p.r * 2; p.y = b.y + b.d / 2; p.vx = p.vy = 0; return b.x; }})()''')
+    pg.evaluate(f"{A}.input.keys.add('ArrowRight')"); frames_wait(pg, 60)
+    pressed = pg.evaluate(f'(() => {{ const p = {A}.s.player; return [p.x, p.r]; }})()')
+    pg.evaluate(f"{A}.input.keys.delete('ArrowRight')"); frames_wait(pg, 2)
+    vx = pg.evaluate(f'{A}.s.player.vx'); pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    rec('S19', 'big building is solid: the body stops at the wall (no deeper than 80% of its radius)',
+        pressed[0] <= wall - pressed[1] * 0.8 + 1 and vx <= 0.5, f'wall={wall:.0f} x={pressed[0]:.1f} r={pressed[1]:.1f} vx_after={vx:.1f}')
     # S3 round end: stars + goal list + next button rule (fast frames can be ~16 ms, so leave 10 ms and wait 8)
     pg.evaluate(f'{A}.skipTo(119.99)'); frames_wait(pg, 8)
     end_vis = pg.is_visible('#end'); goals = len(pg.query_selector_all('#end-goals > div'))

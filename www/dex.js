@@ -37,6 +37,7 @@
   // Hidden skins: every ladder map in a run of five, filled. Event maps reward through their stars instead.
   const SETS = [0, 1, 2].map(k => ({
     skin: ['dawn', 'forest', 'sky'][k], from: k * 5 + 1, to: k * 5 + 5,
+    name: ['동네 한 바퀴', '두근두근 나들이', '멀리멀리 여행'][k], // shown on the book tabs, set bars and shop
     themes: St.REGIONS.slice(k * 5, k * 5 + 5).map(r => r.theme),
   }));
   SETS.forEach(s => { s.entries = ENTRIES.filter(e => s.themes.includes(e.theme)).map(e => e.id); });
