@@ -117,6 +117,17 @@ with sync_playwright() as p:
     sideways = pg2.evaluate("document.querySelector('#dex').scrollWidth > document.querySelector('#dex').clientWidth")
     pg2.query_selector('#btn-dex-back').scroll_into_view_if_needed(); pg2.tap('#btn-dex-back'); frames_wait(pg2)
     rec('X6', 'book fits 375x667 (scrolls), back returns to title', not sideways and pg2.is_visible('#title'), f'sideways={sideways}')
+    # T1 the title fits a small phone without scrolling: start, three menu tiles, account and info in the corners;
+    # info explains what is stored and closes back to the title
+    fits = pg2.evaluate("(() => { const t = document.querySelector('#title'); return t.scrollHeight <= t.clientHeight; })()")
+    inview = all(pg2.evaluate(f"(() => {{ const r = document.querySelector('{q}').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }})()")
+                 for q in ['#btn-title', '#btn-shop-title', '#btn-dex', '#btn-badges', '#btn-account', '#btn-info'])
+    start_txt = pg2.inner_text('#btn-title')
+    pg2.tap('#btn-info'); frames_wait(pg2); info = pg2.inner_text('#info')
+    pg2.tap('#btn-info-back'); frames_wait(pg2)
+    rec('T1', 'title fits 375x667 with every entry in view; info tells what is stored and closes',
+        fits and inview and start_txt == '시작' and '서버에 저장' in info and '지울 수' in info and pg2.is_visible('#title'),
+        f'fits={fits} inview={inview} start={start_txt!r}')
     b.close()
 
 print(f'{sum(res)}/{len(res)} passed')
