@@ -236,13 +236,17 @@
     // Body: a round bean (sphere squashed to BODY_SY, centered BODY_Y·r up, its bottom under the ground)
     // with the face on its front. Shading is baked into vertex colors (white top, lavender underside)
     // so it needs no lights and looks the same by day and night.
-    const BODY_Y = 0.5, BODY_SY = 0.78;
-    const bodyGeo = new T.SphereGeometry(1, 28, 16);
-    const bodyCols = [], under = col(0xc9b2f2), top = col(0xffffff);
-    for (let i = 0; i < bodyGeo.attributes.position.count; i++) {
-      const c = under.clone().lerp(top, Math.pow((bodyGeo.attributes.position.getY(i) + 1) / 2, 0.6));
+    // Mochi shape: the lower half spreads out and the top stays round, like a soft rice cake sitting down.
+    const BODY_Y = 0.5, BODY_SY = 0.86;
+    const bodyGeo = new T.SphereGeometry(1, 32, 20);
+    const bodyCols = [], under = col(0xc9b2f2), top = col(0xffffff), bp = bodyGeo.attributes.position;
+    for (let i = 0; i < bp.count; i++) {
+      const y = bp.getY(i), spread = 1 + Math.max(0, -y) * 0.14 - Math.max(0, y) * 0.04;
+      bp.setXYZ(i, bp.getX(i) * spread, y, bp.getZ(i) * spread);
+      const c = under.clone().lerp(top, Math.pow((y + 1) / 2, 0.6));
       bodyCols.push(c.r, c.g, c.b);
     }
+    bodyGeo.computeBoundingSphere();
     bodyGeo.setAttribute('color', new T.Float32BufferAttribute(bodyCols, 3));
     const bodyMat = new T.MeshBasicMaterial({ color: bodyColor, vertexColors: true });
     const body = new T.Mesh(bodyGeo, bodyMat);
@@ -258,7 +262,23 @@
       scene.add(e, p);
       return { e, p };
     });
-    scene.add(body, mouth, throat, ...arms);
+    // Growth glow: a swirl of violet darkness shows through the body as it grows (a translucent shell over it).
+    const swirl = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const g = c.getContext('2d'), grd = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+      grd.addColorStop(0, 'rgba(201,77,255,1)'); grd.addColorStop(1, 'rgba(58,14,106,0)');
+      g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
+      g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath();
+      for (let a = 0; a < Math.PI * 5; a += 0.1) { const r = 6 + a * 3.4; g.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r); }
+      g.stroke();
+      const tex = new T.CanvasTexture(c); tex.wrapS = tex.wrapT = T.RepeatWrapping; return tex;
+    })();
+    const auraMat = new T.MeshBasicMaterial({ map: swirl, color: 0xb78cff, transparent: true, opacity: 0, depthWrite: false });
+    const aura = new T.Mesh(bodyGeo, auraMat);
+    aura.renderOrder = 7;
+    const cheekMat = new T.MeshBasicMaterial({ color: 0xff9fc0, transparent: true, opacity: 0.55, depthWrite: false });
+    const cheeks = [0, 1].map(() => new T.Mesh(unit.sphere, cheekMat));
+    scene.add(body, aura, mouth, throat, ...arms, ...cheeks);
     // A point on the body's surface: horizontal angle a, elevation el (radians), pushed out by `out`·r.
     const onBody = (player, a, el, out, v) => {
       const r = player.r, c = Math.cos(el);
@@ -679,26 +699,38 @@
       body.rotation.set(0, -L, 0);
       const grown = Math.min(1, Math.max(0, (player.r / (player.r0 || player.r) - 1) / 4));
       bodyMat.color.copy(bodyColor).lerp(glowColor, grown * 0.25);
+      // Growth stages: the darkness it has eaten swirls inside, brighter the bigger it gets.
+      aura.position.copy(body.position); aura.scale.copy(body.scale).multiplyScalar(1.01); aura.rotation.copy(body.rotation);
+      auraMat.opacity = grown * 0.8; auraMat.color.copy(glowColor);
+      swirl.offset.set(t * 0.05, 0); swirl.rotation = t * 0.4;
       armMat.color.copy(bodyMat.color).multiplyScalar(0.94);
       // First person looks over the top of the head; the eyes high on its front would peek over it.
       eyes.forEach(o => { o.e.visible = o.p.visible = k < 0.6; });
       arms.forEach((m, k) => {
-        onBody(player, L + (k ? 1 : -1) * (1.25 - gulp * 0.45), -0.2, 0.04, m.position);
-        m.scale.set(R * 0.26, R * 0.2, R * 0.26);
+        onBody(player, L + (k ? 1 : -1) * (1.05 - gulp * 0.45), -0.28, 0.06, m.position);
+        m.scale.set(R * 0.3, R * 0.24, R * 0.3);
       });
       const MOUTH_EL = 0.28 - gulp * 0.06;
       onBody(player, L, MOUTH_EL, 0.02, mouth.position);
       mouth.rotation.set(0, -L, 0);
-      mouth.scale.set(R * 0.1, R * (0.08 + gulp * 0.42), R * (0.2 + gulp * 0.38));
+      mouth.scale.set(R * 0.1, R * (0.14 + gulp * 0.4), R * (0.24 + gulp * 0.36));
       onBody(player, L, MOUTH_EL, 0.08, throat.position);
       throat.rotation.copy(mouth.rotation);
       throat.scale.set(R * 0.06, mouth.scale.y * (0.45 + gulp * 0.35), mouth.scale.z * (0.5 + gulp * 0.3));
+      // Eyes: big glossy ovals that squeeze shut happily (^^) for a moment after each gulp.
+      const happy = Math.min(1, bulge * 1.6);
       eyes.forEach(({ e, p }, k) => {
-        onBody(player, L + (k ? 1 : -1) * 0.38, 0.72 + gulp * 0.1, 0.0, e.position);
+        onBody(player, L + (k ? 1 : -1) * 0.4, 0.7 + gulp * 0.1, 0.0, e.position);
         e.rotation.set(0, -L, 0);
-        e.scale.set(R * 0.1, R * 0.2, R * 0.15);
-        onBody(player, L + (k ? 1 : -1) * 0.34, 0.8 + gulp * 0.1, 0.08, p.position);
-        p.scale.setScalar(R * 0.055);
+        e.scale.set(R * 0.1, R * (0.22 - happy * 0.17), R * 0.16);
+        onBody(player, L + (k ? 1 : -1) * 0.35, 0.8 + gulp * 0.1, 0.09, p.position);
+        p.scale.setScalar(R * 0.06 * (1 - happy));
+      });
+      cheeks.forEach((m, i) => {
+        onBody(player, L + (i ? 1 : -1) * 0.66, 0.5, 0.0, m.position);
+        m.rotation.set(0, -L, 0);
+        m.scale.set(R * 0.05, R * 0.06, R * 0.12);
+        m.visible = k < 0.6;
       });
 
       // Hints: pulse rings under things the player could eat right now.

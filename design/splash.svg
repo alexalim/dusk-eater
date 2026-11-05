@@ -1,15 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732">
+  <!-- Launch screen: the app icon's art on a full-bleed square (aspect-fill). A portrait phone shows about the
+       middle 1260 px across, so the character and the stars stay inside x 760..1970. -->
   <defs>
-    <radialGradient id="unused-bg" cx="0.62" cy="0.62" r="0.85"><stop offset="0" stop-color="#7a3dff"/><stop offset=".45" stop-color="#3a0e6a"/><stop offset="1" stop-color="#0b0620"/></radialGradient>
+    <radialGradient id="bg" cx="0.5" cy="0.54" r="0.5"><stop offset="0" stop-color="#7a3dff"/><stop offset=".45" stop-color="#3a0e6a"/><stop offset="1" stop-color="#0b0620"/></radialGradient>
     <radialGradient id="body" cx="0.38" cy="0.3" r="0.8"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#fff7f8"/><stop offset="1" stop-color="#d9c2ff"/></radialGradient>
     <radialGradient id="mouth" cx="0.45" cy="0.4" r="0.7"><stop offset="0" stop-color="#d8436a"/><stop offset=".7" stop-color="#8a1640"/><stop offset="1" stop-color="#3a0e2a"/></radialGradient>
     <radialGradient id="orb" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#7a3dff"/><stop offset=".55" stop-color="#2a0b55"/><stop offset="1" stop-color="#0b0620"/></radialGradient>
     <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5"><stop offset=".55" stop-color="#c94dff" stop-opacity=".7"/><stop offset="1" stop-color="#c94dff" stop-opacity="0"/></radialGradient>
   </defs>
-  <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#7a3dff" stop-opacity=".45"/><stop offset="1" stop-color="#7a3dff" stop-opacity="0"/></radialGradient>
-  <rect width="2732" height="2732" fill="#120a2a"/>
-  <circle cx="1366" cy="1366" r="700" fill="url(#glow)"/>
-  <g transform="translate(1366 1366) scale(0.85) translate(-510 -530)">
+  <rect width="2732" height="2732" fill="url(#bg)"/>
+  <g fill="#ead9ff"><circle cx="830" cy="900" r="9"/><circle cx="1880" cy="840" r="12"/><circle cx="1930" cy="1420" r="8"/>
+    <circle cx="800" cy="1700" r="8"/><circle cx="1050" cy="760" r="6"/><circle cx="1700" cy="1930" r="7"/><circle cx="940" cy="2010" r="6"/></g>
+  <path d="M1840 1010 l18 45 45 18 -45 18 -18 45 -18 -45 -45 -18 45 -18z" fill="#fff7f8"/>
+  <g transform="translate(1366 1400) scale(1.05) translate(-530 -525)">
+  <!-- floating shards of darkness (it eats the dark) -->
+  <g stroke="#c94dff" stroke-width="5" stroke-linejoin="round">
+    <path d="M150 300 l52 -30 40 44 -30 58 -58 -10z" fill="#1a0f2e"/>
+    <path d="M905 470 l40 22 -6 50 -46 10 -18 -44z" fill="#2a0b55"/>
+    <path d="M880 820 l60 -18 30 52 -40 46 -56 -26z" fill="#1a0f2e"/>
+    <path d="M95 880 l34 -26 34 30 -24 36 -40 -6z" fill="#2a0b55"/>
+    <path d="M700 95 l30 -14 24 26 -18 30 -32 -8z" fill="#2a0b55"/>
+  </g>
+  <g fill="#ead9ff" opacity=".8"><path d="M176 296 l18 -10 10 12z"/><path d="M898 812 l22 -6 8 14z"/></g>
   <!-- body -->
   <path d="M500 150 C 760 150 880 330 880 560 C 880 760 790 900 560 900 L 300 900 C 170 900 120 830 130 740 C 140 660 170 620 160 540 C 150 320 270 150 500 150 Z" fill="url(#body)"/>
   <!-- mouth -->
@@ -17,12 +29,14 @@
   <path d="M380 690 C 470 620 640 630 740 700 C 680 760 470 770 380 690 Z" fill="#e8607f" opacity=".85"/>
   <!-- orb of darkness -->
   <circle cx="640" cy="650" r="250" fill="url(#halo)"/>
+  <ellipse cx="640" cy="650" rx="330" ry="92" transform="rotate(-18 640 650)" fill="none" stroke="#c94dff" stroke-width="14" opacity=".45"/>
   <circle cx="640" cy="650" r="190" fill="url(#orb)"/>
   <g fill="none" stroke="#c94dff" stroke-linecap="round" opacity=".9">
     <path d="M520 610 C 560 520 720 520 750 620 C 770 700 680 760 620 720 C 570 690 600 630 650 650" stroke-width="16"/>
     <path d="M500 700 C 540 790 700 820 770 740" stroke-width="10" opacity=".7"/>
   </g>
   <circle cx="575" cy="560" r="18" fill="#7debff"/><circle cx="720" cy="700" r="9" fill="#ead9ff"/>
+  <path d="M314 650 A 330 92 0 0 0 966 650" transform="rotate(-18 640 650)" fill="none" stroke="#e3b3ff" stroke-width="12" stroke-linecap="round" opacity=".9"/>
   <!-- arm hugging the orb -->
   <path d="M300 780 C 380 700 560 720 600 800 C 630 860 560 900 480 890 C 400 880 300 870 300 780 Z" fill="url(#body)" stroke="#cdb3f5" stroke-width="6"/>
   <!-- eyes -->
