@@ -740,7 +740,7 @@
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
     runDuration = C.DURATION + used.reduce((a, b) => a + (b.extraTime || 0), 0);
     stats = { score: 0, eaten: {}, beamHit: false, total: 0, lit: false, night: 0, maxR: 0 };
-    Sound.music.night(false);
+    Sound.music.mode('play');
     phase = C.dayPhase(0); sun = C.sunState(phase.dayT, stage.sunMax);
     shadows = buildings.map(b => C.shadowPolygon(b, sun));
     const spawn = pickSpawn();
@@ -921,7 +921,7 @@
     const done = C.evaluateStars(stage.goals, stats).filter(Boolean).length;
     if (done > (stats.doneSeen || 0)) Sound.sfx.star(); // a mission just completed
     stats.doneSeen = done;
-    if (phase.night && !stats.nightSeen) { stats.nightSeen = true; Sound.sfx.night(); Sound.music.night(true); }
+    if (phase.night && !stats.nightSeen) { stats.nightSeen = true; Sound.sfx.night(); Sound.music.mode('night'); }
     if (!phase.night && C.evaluateStars(stage.goals, stats).every(Boolean)) {
       elapsed = runDuration * C.NIGHT_START;
       bannerUntil = elapsed + 3;
@@ -1145,6 +1145,7 @@
   }
 
   function show(id) {
+    if (id && id !== 'pause') Sound.music.mode('title'); // menus get the quiet arrangement
     for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info']) $(o).classList.toggle('hidden', o !== id);
     $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
     if (id !== null) $('tutorial').classList.add('hidden');

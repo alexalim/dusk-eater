@@ -14,7 +14,7 @@
     ctx = new AC();
     master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
     sfxBus = ctx.createGain(); sfxBus.gain.value = on.sfx ? 0.6 : 0; sfxBus.connect(master);
-    musicBus = ctx.createGain(); musicBus.gain.value = on.music ? 0.22 : 0; musicBus.connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = on.music ? 0.3 : 0; musicBus.connect(master);
     return ctx;
   }
   const unlock = () => { if (init() && ctx.state === 'suspended') ctx.resume(); };
@@ -59,30 +59,85 @@
     lose() { [67, 64, 60].forEach((n, i) => tone(note(n), note(n), 0.4, { type: 'triangle', vol: 0.25, at: i * 0.16 })); },
   };
 
-  // Background tune: a soft pentatonic melody over a two-chord bass, scheduled a little ahead of time.
-  // `night` adds a high sparkle line for the finale.
-  const BPM = 92, STEP = 60 / BPM / 2; // eighth notes
-  const MELODY = [72, null, 74, 76, null, 79, 76, null, 74, null, 72, 69, null, 72, null, null,
-                  76, null, 79, 81, null, 79, 76, null, 74, 76, null, 72, null, 69, null, null];
-  const BASS = [48, 48, 55, 55, 45, 45, 52, 52]; // one per bar half
-  let timer = null, stepN = 0, nextT = 0, nightMode = false;
+  // Background music: a small synth band in A minor (Am - F - C - G), scheduled a little ahead of time.
+  //   pad: three detuned saws per chord note through a slowly breathing low-pass
+  //   arp: a 16th-note pluck with a dotted-8th echo     bass: filtered saw on 8ths
+  //   lead: a soft pentatonic line                       drums: synthesized kick and hi-hat
+  // mode 'title' keeps it to pad + arp; 'play' brings in bass and drums; 'night' opens the filter and adds sparkle.
+  const BPM = 100, S16 = 60 / BPM / 4;
+  const CHORDS = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]]; // Am F C G (one bar each)
+  const ROOTS = [45, 41, 36, 43];
+  const LEAD = [76, null, null, 74, 72, null, 69, null, 72, null, 74, null, 76, null, 79, null,
+                81, null, 79, null, 76, null, 74, null, 72, null, null, null, 69, null, null, null];
+  let timer = null, step = 0, nextT = 0, mode = 'title', fx = null, noise = null;
+
+  function buildFx() {
+    if (fx) return fx;
+    const delay = ctx.createDelay(1), fb = ctx.createGain(), wet = ctx.createGain(), tone = ctx.createBiquadFilter();
+    delay.delayTime.value = S16 * 3; fb.gain.value = 0.35; wet.gain.value = 0.4; tone.type = 'lowpass'; tone.frequency.value = 2400;
+    delay.connect(tone).connect(fb).connect(delay); tone.connect(wet).connect(musicBus);
+    const padLp = ctx.createBiquadFilter(); padLp.type = 'lowpass'; padLp.frequency.value = 900; padLp.Q.value = 2; padLp.connect(musicBus);
+    const len = ctx.sampleRate * 0.2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    noise = buf;
+    fx = { echo: delay, padLp };
+    return fx;
+  }
+
+  // One synth voice: oscillator(s) -> optional filter sweep -> envelope -> destination(s).
+  function voice(freq, at, dur, { type = 'sawtooth', vol = 0.2, detune = [0], attack = 0.01, release = dur, cutoff = 0, to = [musicBus] }) {
+    const t = ctx.currentTime + at, g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + release);
+    let head = g;
+    if (cutoff) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(cutoff * 3, t); f.frequency.exponentialRampToValueAtTime(cutoff, t + release * 0.6); f.connect(g); head = f; }
+    for (const dt of detune) { const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq; o.detune.value = dt; o.connect(head); o.start(t); o.stop(t + release + 0.05); }
+    for (const d of to) g.connect(d);
+  }
+  function kick(at) {
+    const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    o.connect(g).connect(musicBus); o.start(t); o.stop(t + 0.32);
+  }
+  function hat(at, vol) {
+    const t = ctx.currentTime + at, src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = noise; f.type = 'highpass'; f.frequency.value = 7000;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    src.connect(f).connect(g).connect(musicBus); src.start(t); src.stop(t + 0.06);
+  }
+
   function schedule() {
-    while (nextT < ctx.currentTime + 0.25) {
-      const at = nextT - ctx.currentTime, m = MELODY[stepN % MELODY.length];
-      if (m) tone(note(m), note(m), STEP * 1.8, { type: 'triangle', vol: 0.35, at, bus: musicBus, attack: 0.02 });
-      if (stepN % 4 === 0) { const b = BASS[(stepN / 4) % BASS.length]; tone(note(b), note(b), STEP * 3.6, { type: 'sine', vol: 0.5, at, bus: musicBus, attack: 0.03 }); }
-      if (nightMode && stepN % 2 === 1) { const s = [84, 88, 91, 96][(stepN >> 1) % 4]; tone(note(s), note(s), STEP, { type: 'sine', vol: 0.12, at, bus: musicBus }); }
-      nextT += STEP; stepN++;
+    const { echo, padLp } = buildFx();
+    while (nextT < ctx.currentTime + 0.3) {
+      const at = Math.max(0, nextT - ctx.currentTime), bar = (step >> 4) % 4, s = step % 16, chord = CHORDS[bar];
+      const play = mode !== 'title', night = mode === 'night';
+      if (s === 0) { // pad: the whole bar, filter breathing with the bar
+        padLp.frequency.setTargetAtTime(night ? 2600 : play ? 1400 : 900, ctx.currentTime + at, 0.8);
+        for (const n of chord) voice(note(n), at, 16 * S16, { vol: 0.05, detune: [-9, 0, 9], attack: 0.35, release: 16 * S16 + 0.3, to: [padLp] });
+      }
+      const arp = chord[[0, 1, 2, 1][s % 4]] + 12 + (s >= 8 && night ? 12 : 0); // arp: up an octave, higher at night
+      voice(note(arp), at, S16, { type: 'square', vol: 0.05, release: 0.18, cutoff: night ? 2600 : 1500, to: [musicBus, echo] });
+      if (play) {
+        if (s % 2 === 0) voice(note(ROOTS[bar] + (s % 8 === 6 ? 12 : 0)), at, 2 * S16, { vol: 0.16, detune: [0, 6], release: 0.22, cutoff: 380 });
+        if (s % 4 === 0) kick(at);
+        if (s % 4 === 2 || (night && s % 2 === 1)) hat(at, s % 4 === 2 ? 0.12 : 0.05);
+        const m = LEAD[(step >> 1) % LEAD.length];
+        if (s % 2 === 0 && m) voice(note(m), at, 2 * S16, { type: 'triangle', vol: 0.12, attack: 0.02, release: 0.5, to: [musicBus, echo] });
+      }
+      if (night && s % 4 === 3) voice(note(chord[2] + 24), at, S16, { type: 'sine', vol: 0.05, release: 0.4, to: [musicBus, echo] });
+      nextT += S16; step++;
     }
   }
   const music = {
     start() {
       if (!init() || timer) return;
-      nextT = ctx.currentTime + 0.05; stepN = 0;
+      nextT = ctx.currentTime + 0.05; step = 0;
       timer = setInterval(() => { if (ctx.state === 'running') schedule(); else nextT = ctx.currentTime + 0.05; }, 100);
     },
     stop() { clearInterval(timer); timer = null; },
-    night(v) { nightMode = !!v; },
+    mode(m) { mode = m; },
   };
 
   function setOn(kind, v) {
