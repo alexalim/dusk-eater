@@ -107,6 +107,18 @@ with sync_playwright() as p:
     rec('B1', 'run end records progress and names the new badge; its gems pay once; hidden badges stay ???',
         '먹보 동' in note and eaten >= 300 and count != '' and g1 == g0 + 5 and locked == '?' and pg.is_visible('#title'),
         f'note={note!r} eaten={eaten} count={count!r} gems {g0}->{g1} locked={locked!r}')
+    # L1 a finished run adds experience: the end screen shows the gain and a level-up note, the title chip shows the level
+    pg.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ stats: Object.assign({{}}, {A}.Store.wallet.stats, {{ xp: 119 }}) }}))")
+    g0 = wallet(pg)['gems']
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    pg.evaluate(f'(() => {{ const o = {A}.s.objects.find(o => o.state === 0); o.state = 1; o.ft = 0.99; }})()'); frames_wait(pg, 4)
+    pg.evaluate(f'{A}.skipTo(119.99)'); frames_wait(pg, 8)
+    gain = pg.inner_text('#end-xp-gain'); lvl = pg.inner_text('#end-lv'); note = pg.inner_text('#end-gems')
+    xp = wallet(pg)['stats']['xp']; g1 = wallet(pg)['gems']
+    reload(pg); chip = pg.inner_text('#title-level')
+    rec('L1', 'run experience shows on the end screen, levels up with its gems, and the title chip follows',
+        xp >= 120 and '경험치' in gain and lvl == 'Lv.2' and '레벨 업' in note and g1 >= g0 + 10 and 'Lv.2' in chip,
+        f'xp={xp} gain={gain!r} lvl={lvl!r} note={note!r} gems {g0}->{g1} chip={chip!r}')
     rec('X0', 'no page errors', not errs, '; '.join(errs[:3]))
     b.close()
 

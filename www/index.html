@@ -106,6 +106,16 @@
   #title { gap: 12px; }
   #title .corner { position: absolute; top: calc(env(safe-area-inset-top) + 12px); left: max(16px, env(safe-area-inset-left));
     right: max(16px, env(safe-area-inset-right)); display: flex; justify-content: space-between; }
+  #title .corner .left { display: flex; gap: 8px; }
+  /* Player level: a chip with a thin progress bar on the title, a fuller bar on the end screen. */
+  .chip.lv { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 64px; padding: 4px 12px; }
+  .lvbar, .xpbar { position: relative; height: 6px; border-radius: 999px; background: rgba(255,255,255,.18); overflow: hidden; }
+  .lvbar i, .xpbar i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: linear-gradient(90deg, #b78cff, #ffd25c); }
+  .xpbox { width: min(100%, 300px); display: flex; flex-direction: column; gap: 6px; }
+  .xprow { display: flex; justify-content: space-between; font-family: var(--display); font-size: 16px; }
+  #end-xp-gain { color: var(--star); }
+  .xpbar { height: 12px; border: 2px solid rgba(255,255,255,.5); }
+  .xpbar i { transition: width .9s ease-out; }
   .chip.round { width: 36px; height: 36px; padding: 0; display: grid; place-items: center; font: italic 900 17px Georgia, serif; }
   #title .tagline { margin: 0; color: var(--muted); line-height: 1.55; }
   .btn.hero { width: min(100%, 300px); box-sizing: border-box; padding: 18px 0; font-size: 22px; text-align: center; margin-top: 6px; }
@@ -306,7 +316,7 @@
 </div>
 <div id="tutorial" class="hidden"><span class="step" id="tut-step"></span><span id="tut-text"></span><br><span class="skip" id="tut-skip">설명 건너뛰기</span></div>
 <div id="title" class="overlay">
-  <div class="corner"><span class="chip round" id="btn-info" aria-label="정보">i</span><span class="chip" id="btn-account">계정 · 친구</span></div>
+  <div class="corner"><span class="left"><span class="chip round" id="btn-info" aria-label="정보">i</span><span class="chip lv" id="title-level"></span></span><span class="chip" id="btn-account">계정 · 친구</span></div>
   <img class="logo" src="logo.svg" alt="">
   <h1>Dusk Eater</h1>
   <p class="tagline">어둠을 냠냠 먹고 쑥쑥 자라는 아이예요.<br>그늘에 숨어 꿀꺽, 해가 지면 온 동네가 내 거예요!</p>
@@ -344,6 +354,7 @@
   <h2 id="end-title">밤이 끝났어요</h2>
   <div class="stars" id="end-stars"></div>
   <p class="big" id="result"></p>
+  <div class="xpbox" id="end-xp"><div class="xprow"><span id="end-lv"></span><span id="end-xp-gain"></span></div><div class="xpbar"><i id="end-xp-fill"></i></div></div>
   <div class="goal-list" id="end-goals"></div>
   <p id="best"></p>
   <p class="note hidden" id="end-gems"></p>
@@ -404,6 +415,7 @@
 <script src="store.js"></script>
 <script src="dex.js"></script>
 <script src="badges.js"></script>
+<script src="level.js"></script>
 <script src="vendor/supabase.js"></script>
 <script src="config.js"></script>
 <script src="sync.js"></script>
@@ -442,7 +454,7 @@
   resize();
 
   // ---------- storage (iOS UserDefaults in the app, localStorage in a browser; loaded at boot) ----------
-  const Shop = window.DuskShop, Store = window.DuskStore, Dex = window.DuskDex, Badges = window.DuskBadges;
+  const Shop = window.DuskShop, Store = window.DuskStore, Dex = window.DuskDex, Badges = window.DuskBadges, Level = window.DuskLevel;
   const save = (key, v) => { Store.kv.set(key, v); };
   let bestStars = {};
   let bestScore = {};
@@ -1022,6 +1034,24 @@
       <small>${set.from}~${set.to}번 지도 ${got ? '모두 채웠어요!' : `${n}/${set.entries.length} 채우면 받아요`}</small></span></div>`;
   }
 
+  // ---------- player level ----------
+  function renderLevel() {
+    const L = Level.levelOf(Store.wallet.stats.xp);
+    $('title-level').innerHTML = `Lv.${L.level}<span class="lvbar"><i style="width:${L.into / L.next * 100}%"></i></span>`;
+  }
+
+  // End screen bar: fills from where the run started; a level-up fills to the end first, then starts the new level.
+  function showXp(xpBefore, gained) {
+    const a = Level.levelOf(xpBefore), b = Level.levelOf(xpBefore + gained), fill = $('end-xp-fill');
+    $('end-lv').textContent = `Lv.${b.level}`;
+    $('end-xp-gain').textContent = gained ? `+${gained.toLocaleString()} 경험치` : '';
+    fill.style.transition = 'none'; fill.style.width = `${a.into / a.next * 100}%`; void fill.offsetWidth; fill.style.transition = '';
+    const to = `${b.into / b.next * 100}%`;
+    if (b.level === a.level) { fill.style.width = to; return; }
+    fill.style.width = '100%';
+    setTimeout(() => { fill.style.transition = 'none'; fill.style.width = '0%'; void fill.offsetWidth; fill.style.transition = ''; fill.style.width = to; }, 950);
+  }
+
   // ---------- badges ----------
   let runBadges = [];
   const totalStars = () => Object.values(bestStars).reduce((a, n) => a + (n || 0), 0);
@@ -1183,6 +1213,8 @@
     let w = Shop.finishRun(Shop.awardStars(Store.wallet, before, n));
     w = Badges.record(w, { eaten: stats.total, guards: stats.eaten.guard || 0, clean: stats.lit ? 0 : 1,
       size: Math.round(stats.maxR / 4 * 10) / 10, night: stats.night, buildings: stats.eaten.building || 0 });
+    const xpBefore = w.stats.xp || 0, xp = Level.runXp(stats.total, n), lv = Level.gain(w, xp);
+    w = lv.wallet;
     // Event reward: enough stars across the event's levels grants its skin (once).
     const ev = EVENTS.find(e => e.id === listKey);
     const gotReward = ev && !w.owned.includes(ev.reward.skin) && eventStars(ev) >= ev.reward.stars;
@@ -1191,6 +1223,7 @@
     const earned = Math.max(0, n - before) * Shop.GEMS_PER_STAR;
     const notes = [];
     if (earned) notes.push(`새 별 보상: 보석 ${earned}개`);
+    if (lv.to > lv.from) notes.push(`${ico('sparkle')} 레벨 업! Lv.${lv.to} · 보석 ${lv.gems}개`);
     if (gotReward) notes.push(`${ico('gift')} ${withObject(Shop.SKINS.find(k => k.id === ev.reward.skin).name)} 받았어요! 상점에서 입어 보세요.`);
     const fresh = Badges.BADGES.filter(b => Badges.earned(badgeCtx()).includes(b.id) && !runBadges.includes(b.id));
     if (fresh.length) notes.push(`${ico('medal')} 새 배지: ${fresh.map(b => b.name).join(', ')}`);
@@ -1206,6 +1239,7 @@
     const next = stageIndex + 1;
     $('btn-next').classList.toggle('hidden', !(next < list.length && C.isUnlocked(listIds, next, bestStars)));
     show('end');
+    showXp(xpBefore, xp); // after show: the bar only animates once it is on screen
   }
 
   // ---------- shop ----------
@@ -1324,7 +1358,7 @@
     if (!$('shop').classList.contains('hidden')) renderShop();
     if (!$('dex').classList.contains('hidden')) renderDex();
     if (!$('badges').classList.contains('hidden')) renderBadges();
-    renderDexBadge(); renderBadgeCount();
+    renderDexBadge(); renderBadgeCount(); renderLevel();
   });
 
   // Menus wait until saved progress and the store have loaded.
