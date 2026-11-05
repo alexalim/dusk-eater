@@ -89,3 +89,12 @@ test('a set is due only when every entry is found, and only until its skin is ow
   w = S.applyEntitlements(S.normalize(JSON.parse(JSON.stringify(w))), []);
   assert.ok(w.owned.includes(set.skin));
 });
+
+test('bundled fonts: every @font-face file exists and the OFL license ships with them', () => {
+  const www = path.join(__dirname, '../www');
+  const html = fs.readFileSync(path.join(www, 'index.html'), 'utf8');
+  const urls = [...html.matchAll(/@font-face[^}]*url\(([^)]+)\)/g)].map(m => m[1]);
+  assert.equal(urls.length, 4);
+  for (const u of urls) assert.ok(fs.statSync(path.join(www, u)).size > 50000, u);
+  assert.match(fs.readFileSync(path.join(www, 'fonts/LICENSE.txt'), 'utf8'), /SIL Open Font License/);
+});

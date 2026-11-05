@@ -18,10 +18,23 @@
     --star: #ffd25c;
     --danger: #ff6b6b;
     --node: #c9a8ff;
+    --font: 'NanumSquareRound', -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    --display: 'Jua', var(--font);
   }
+  /* Display face: one weight only, so never fake-bolded. */
+  h1, h2, h3, h4, .btn, .chip, .tile, .pill, .gain, .badge, .dexhead, .dextab, #goals, #warn, #btn-pause, #tutorial .step,
+  .node .num, .hex, .rw, .gem, .item .nm, .item .pr, .sheet .name, .region, #skin-box .nm, #dex-new, #banner,
+  #end-title, #result, .card .nm, .bcat small, .dexset b, .boost .row {
+    font-family: var(--display); font-weight: 400; font-synthesis: none; }
+  /* Fonts (fonts/LICENSE.txt, both SIL OFL): Jua for titles, buttons and numbers, NanumSquareRound for reading text.
+     Subset to the 2,350 common Hangul; a rarer character (say in a nickname) falls back to the system font. */
+  @font-face { font-family: 'Jua'; src: url(fonts/jua.woff) format('woff'); font-display: swap; }
+  @font-face { font-family: 'NanumSquareRound'; src: url(fonts/nanum-round-r.woff) format('woff'); font-weight: 400; font-display: swap; }
+  @font-face { font-family: 'NanumSquareRound'; src: url(fonts/nanum-round-b.woff) format('woff'); font-weight: 600 700; font-display: swap; }
+  @font-face { font-family: 'NanumSquareRound'; src: url(fonts/nanum-round-eb.woff) format('woff'); font-weight: 800 900; font-display: swap; }
   html, body {
     margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    font-family: var(--font); font-weight: 700; /* NanumSquareRound Bold reads better on the dark screens */
     touch-action: none; user-select: none; -webkit-user-select: none;
     -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
@@ -49,7 +62,7 @@
   #score::before { content: ''; display: inline-block; width: 18px; height: 18px; margin-right: 4px; vertical-align: -2px; background: url(img/ui/star.svg) center / contain no-repeat; }
   #score.pop { animation: pop .28s ease-out; }
   @keyframes pop { 40% { transform: scale(1.22); } 100% { transform: scale(1); } }
-  .gain { position: absolute; right: 8px; top: 100%; color: var(--star); font: 900 16px system-ui, sans-serif;
+  .gain { position: absolute; right: 8px; top: 100%; color: var(--star); font: 16px var(--display);
     text-shadow: 0 2px 0 rgba(0,0,0,.4); pointer-events: none; animation: gain .8s ease-out forwards; }
   @keyframes gain { from { opacity: 1; transform: translateY(0) scale(1.1); } to { opacity: 0; transform: translateY(-34px) scale(.9); } }
   /* Each mission chip fills like a progress bar (--p) and turns gold with a check when done. */
@@ -63,7 +76,7 @@
     transition: opacity .15s; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
   #stats .right { display: flex; align-items: center; gap: 10px; }
   #btn-pause { pointer-events: auto; width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
-    background: rgba(20,18,38,.6); color: var(--text); font: 800 14px system-ui, sans-serif; }
+    background: rgba(20,18,38,.6); color: var(--text); font: 14px var(--display); }
   #tutorial { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 24px);
     width: min(calc(100% - 32px), 360px); box-sizing: border-box; padding: 14px 16px; border-radius: 16px;
     background: rgba(20,18,38,.82); color: var(--text); font-size: 16px; font-weight: 700; line-height: 1.45;
@@ -125,12 +138,12 @@
     display: flex; flex-direction: column; gap: 10px; text-align: left; }
   .panel small { color: var(--muted); font-size: 13px; line-height: 1.45; word-break: keep-all; }
   .login { display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; border-radius: 12px;
-    font: 700 16px system-ui, sans-serif; border: 0; cursor: pointer; }
+    font: 16px var(--display); border: 0; cursor: pointer; }
   .login.apple { background: #000; color: #fff; } .login.google { background: #fff; color: #1f1f1f; }
   .login.kakao { background: #fee500; color: rgba(0,0,0,.85); }
   .code { font: 800 28px ui-monospace, monospace; letter-spacing: 4px; color: var(--star); }
   .field { display: flex; gap: 8px; }
-  .field input { flex: 1; min-width: 0; height: 40px; border-radius: 10px; border: 0; padding: 0 12px; font: 600 16px system-ui, sans-serif; }
+  .field input { flex: 1; min-width: 0; height: 40px; border-radius: 10px; border: 0; padding: 0 12px; font: 600 16px var(--font); }
   .danger { color: #ff8a8a !important; border-color: rgba(255,138,138,.5) !important; }
   .rank { margin: 0; padding: 12px 16px; list-style: none; min-height: 120px; }
   .rank li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(244,239,230,.08); }
@@ -219,7 +232,7 @@
   .bcat small { font-size: 11px; font-weight: 800; color: #5a5480; }
   .bcat .rw { font-size: 11px; font-weight: 900; color: #8a5a00; }
   .hexes { display: flex; gap: 4px; }
-  .hex { width: 44px; height: 50px; display: grid; place-items: center; padding: 0; border: 0; cursor: pointer; font: 900 18px system-ui, sans-serif;
+  .hex { width: 44px; height: 50px; display: grid; place-items: center; padding: 0; border: 0; cursor: pointer; font: 18px var(--display);
     color: #8a8fb0; background: #dfe6f7; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
   .hex img { width: 24px; height: 24px; filter: grayscale(1); opacity: .35; }
   .hex.on img { filter: none; opacity: 1; }
