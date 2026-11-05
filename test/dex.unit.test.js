@@ -63,7 +63,7 @@ test('cloud merge unions the book, so a reward taken on one phone stays taken on
 test('no emoji left in the game: every map and UI mark the screens use has its picture', () => {
   const www = path.join(__dirname, '../www');
   for (const t of D.THEME_ORDER) assert.ok(fs.existsSync(path.join(www, `img/map/${t}.png`)), t);
-  const src = ['index.html', 'stages.js', 'dex.js', 'shop.js', 'account.js'].map(f => fs.readFileSync(path.join(www, f), 'utf8')).join('');
+  const src = ['index.html', 'stages.js', 'dex.js', 'badges.js', 'shop.js', 'account.js'].map(f => fs.readFileSync(path.join(www, f), 'utf8')).join('');
   assert.deepEqual(src.match(/[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u2B00-\u2BFF\uFE0F]/gu), null);
   for (const [, name] of src.matchAll(/ico\('([\w-]+)'\)/g)) assert.ok(fs.existsSync(path.join(www, `img/ui/${name}.svg`)), name);
 });

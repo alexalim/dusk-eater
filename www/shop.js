@@ -47,7 +47,7 @@
   const allProducts = () => SKINS.filter(s => s.product).map(s => s.product).concat(GEM_PACKS.map(p => p.product));
 
   function emptyWallet() {
-    return { gems: 0, owned: [], equipped: DEFAULT_SKIN, credited: [], pending: 0, dex: [], dexClaimed: [] };
+    return { gems: 0, owned: [], equipped: DEFAULT_SKIN, credited: [], pending: 0, dex: [], dexClaimed: [], stats: {}, badges: [] };
   }
 
   // Accept whatever was saved; anything malformed falls back to an empty field.
@@ -60,7 +60,11 @@
     const equipped = owned.includes(w.equipped) ? w.equipped : DEFAULT_SKIN;
     const dex = [...new Set(strs(w.dex))]; // collection book (dex.js): kinds swallowed, rewards taken
     const dexClaimed = [...new Set(strs(w.dexClaimed))].filter(id => dex.includes(id));
-    return { gems: int(w.gems), owned, equipped, credited: strs(w.credited).slice(-CREDIT_LOG), pending: int(w.pending), dex, dexClaimed };
+    // Lifetime records and claimed badges (badges.js): plain non-negative numbers and badge ids.
+    const stats = {};
+    if (w.stats && typeof w.stats === 'object') for (const [k, v] of Object.entries(w.stats)) if (Number.isFinite(v) && v > 0) stats[k] = v;
+    const badges = [...new Set(strs(w.badges))];
+    return { gems: int(w.gems), owned, equipped, credited: strs(w.credited).slice(-CREDIT_LOG), pending: int(w.pending), dex, dexClaimed, stats, badges };
   }
 
   const skinFor = product => SKINS.find(s => s.product === product);

@@ -1,4 +1,4 @@
-# Layer: E2E — collection book in real Chromium: silhouettes, a swallow registers a find, the reward pays once.
+# Layer: E2E — collection book and badges in real Chromium: silhouettes, a swallow registers a find, rewards pay once.
 # Usage: python3 test/e2e/dex.e2e.py www
 import sys, pathlib, json
 from playwright.sync_api import sync_playwright
@@ -92,6 +92,21 @@ with sync_playwright() as p:
     rec('X8', 'tabs switch map sets (event tab holds the event maps); X closes; level map has a back button to the title',
         on0 == [True, False, False, False] and on3 == [False, False, False, True] and xmas and closed and pg.is_visible('#title'),
         f'on0={on0} on3={on3} xmas={xmas} closed={closed}')
+    # B1 a finished run feeds the lifetime records; crossing a threshold names the new badge on the end screen,
+    # the title button counts it, and its gems are paid once from the badge window
+    pg.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ stats: {{ eaten: 299 }} }}))")
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    pg.evaluate(f'(() => {{ const o = {A}.s.objects.find(o => o.state === 0); o.state = 1; o.ft = 0.99; }})()'); frames_wait(pg, 4)
+    pg.evaluate(f'{A}.skipTo(119.99)'); frames_wait(pg, 8)
+    note = pg.inner_text('#end-gems'); eaten = wallet(pg)['stats'].get('eaten', 0)
+    reload(pg); count = pg.inner_text('#badges-badge'); g0 = wallet(pg)['gems']
+    pg.tap('#btn-badges'); frames_wait(pg)
+    pg.tap('.hex[data-badge="eater.0"]'); frames_wait(pg); pg.tap('.hex[data-badge="eater.0"]'); frames_wait(pg)
+    g1 = wallet(pg)['gems']; locked = pg.inner_text('.hex[data-badge="hidden.1"]')
+    pg.tap('#btn-badges-back'); frames_wait(pg)
+    rec('B1', 'run end records progress and names the new badge; its gems pay once; hidden badges stay ???',
+        '먹보 동' in note and eaten >= 300 and count != '' and g1 == g0 + 5 and locked == '?' and pg.is_visible('#title'),
+        f'note={note!r} eaten={eaten} count={count!r} gems {g0}->{g1} locked={locked!r}')
     rec('X0', 'no page errors', not errs, '; '.join(errs[:3]))
     b.close()
 

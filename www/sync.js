@@ -31,6 +31,8 @@
       pending: dw.pending, // boost gems held for a run on this device only
       dex: union(aw.dex, dw.dex), // a dex reward taken on either device stays taken
       dexClaimed: union(aw.dexClaimed, dw.dexClaimed),
+      stats: maxEach(aw.stats, dw.stats), // records only grow; max never counts a run twice
+      badges: union(aw.badges, dw.badges), // like dex rewards: claimed once per account
     });
     return {
       stars: maxEach(account.stars, device.stars),
