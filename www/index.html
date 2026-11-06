@@ -143,6 +143,12 @@
   .lvstep .swatch { flex: none; width: 34px; height: 34px; border-width: 2px; }
   .lvstep .swatch i { top: 9px; width: 6px; height: 6px; } .lvstep .swatch i:first-child { left: 7px; } .lvstep .swatch i:last-child { right: 7px; }
   .lvstep ul { margin: 0; padding-left: 16px; font-size: 13px; color: #3a3360; }
+  .twist-body { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 12px; }
+  .twist-body img { width: 88px; height: 88px; filter: drop-shadow(0 6px 12px rgba(63,111,232,.35)); }
+  #twist .twist-body h4 { font-family: var(--display); font-size: 24px; font-weight: 400; margin: 4px 0 0; }
+  .twist-body ul { text-align: left; margin: 6px 0 10px; padding-left: 20px; font-size: 14px; line-height: 1.6; color: #3a3360; align-self: stretch; }
+  .twist-body .btn { align-self: stretch; text-align: center; }
+  #twist-card.boss .dexhead { background: linear-gradient(#a24dff, #5a2a6e); }
   .info-body h4 { margin: 12px 0 4px; font-size: 16px; }
   .info-body p { margin: 6px 0; max-width: none; font-size: 14px; color: #3a3360; } /* dark text: the window is light */
   .btns { display: flex; flex-direction: column; gap: 10px; align-items: stretch; margin-top: 6px; }
@@ -201,7 +207,7 @@
   .ico { display: inline-block; width: 1.15em; height: 1.15em; vertical-align: -0.2em; object-fit: contain; }
   .ico.map { border-radius: 26%; }
   /* Expression faces (img/ui/face-*.svg): big on the end and pause screens, small beside the tutorial and warning. */
-  .face-big { width: 84px; height: 84px; filter: drop-shadow(0 4px 12px rgba(183,140,255,.45)); }
+  .face-big { width: 92px; height: 92px; } /* shaded like the 3D body; no glow behind it */
   .ico.face { width: 1.5em; height: 1.5em; vertical-align: middle; margin: -0.3em 0; }
   #tutorial .face { float: left; width: 40px; height: 40px; margin: 0 8px 0 0; }
   .ico.dex { width: 1.8em; height: 1.8em; vertical-align: middle; margin: -0.3em 0; }
@@ -248,7 +254,7 @@
   #skin-box .btn.off { opacity: .45; pointer-events: none; }
   /* Collection book: a light pop-up window with map sets as tabs along the bottom. Found friends sit on
      yellow tiles, unfound ones are grey silhouettes, and a tile whose reward waits wiggles. */
-  #dex, #badges, #info, #levelinfo { justify-content: center; background: rgba(8, 6, 24, .78); padding-left: 14px; padding-right: 14px; }
+  #dex, #badges, #info, #levelinfo, #twist { justify-content: center; background: rgba(8, 6, 24, .78); padding-left: 14px; padding-right: 14px; }
   .dexwin { box-sizing: border-box; width: min(100%, 400px); max-height: 100%; min-height: 0; flex-shrink: 1; display: flex; flex-direction: column;
     background: #eef2ff; color: #2a2350; border: 3px solid #fff; border-radius: 22px; overflow: hidden;
     box-shadow: 0 10px 40px rgba(0, 0, 0, .45); }
@@ -351,6 +357,18 @@
     <div class="tile" id="btn-shop-title"><img src="img/ui/bag.svg" alt="">상점</div>
     <div class="tile" id="btn-dex"><img src="img/ui/book.svg" alt="">도감<span class="badge" id="dex-badge"></span></div>
     <div class="tile" id="btn-badges"><img src="img/ui/medal.svg" alt="">배지<span class="badge" id="badges-badge"></span></div>
+  </div>
+</div>
+<div id="twist" class="overlay hidden">
+  <div class="dexwin" id="twist-card">
+    <div class="dexhead"><span id="twist-head">새로운 규칙!</span><span class="x" id="btn-twist-back" aria-label="닫기" style="margin-left: auto">×</span></div>
+    <div class="info-body twist-body">
+      <img id="twist-ico" alt="">
+      <h4 id="twist-name"></h4>
+      <p id="twist-text"></p>
+      <ul id="twist-tips"></ul>
+      <div class="btn" id="btn-twist-go">알겠어요, 출발!</div>
+    </div>
   </div>
 </div>
 <div id="levelinfo" class="overlay hidden">
@@ -885,7 +903,9 @@
     eclipse = stage.twist === 'eclipse' && gameT >= ECLIPSE_AT && gameT < ECLIPSE_AT + ECLIPSE_S / runDuration;
     if (eclipse && !wasEclipse) { banner(`${ico('eclipse')} 일식! 지금은 어디든 그늘이에요`, ECLIPSE_S); Sound.sfx.night(); }
     shadows = phase.night || eclipse ? [] : buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun));
-    for (const c of clouds) { c.x = (c.x + 22 * dt + WORLD + 200) % (WORLD + 200) - 100; c.y += Math.sin(elapsed * 0.3 + c.r) * 6 * dt; }
+    // Clouds drift slowly with the wind (about a third of a map per run), with only a faint sideways sway.
+    const CLOUD_V = 8;
+    for (const c of clouds) { c.x = (c.x + CLOUD_V * dt + WORLD + 200) % (WORLD + 200) - 100; c.y += Math.sin(elapsed * 0.1 + c.r) * 1.5 * dt; }
     if (stage.twist === 'golden' && elapsed >= nextGold) { // a golden friend near the player, gone again after 8 s
       nextGold = elapsed + 9;
       const near = objects.filter(o => o.state === 0 && !(o.goldUntil > elapsed) && Math.hypot(o.x - player.x, o.y - player.y) < 420);
@@ -1006,6 +1026,7 @@
       if (isShaded(c, b)) hints.push({ x: c.x, y: c.y, r: Math.hypot(b.w, b.d) / 2 });
     }
     const golden = stage.twist === 'golden' ? objects.filter(o => o.state === 0 && o.goldUntil > elapsed) : [];
+    if (stage.twist === 'golden') for (const o of objects) o.glow = o.state === 0 && o.goldUntil > elapsed; // painted gold by the renderer
     R.draw({ t, phase, sun, player, view: cam.view, camX: cam.x, camY: cam.y, swallowPos, hints, fp: state === 'title' ? 0 : view.t,
       clouds, golden, eclipse });
     $('vignette').classList.toggle('hidden', !phase.night && !eclipse);
@@ -1235,7 +1256,7 @@
 
   function show(id) {
     if (id && id !== 'pause') { Sound.music.mode('title'); if (id === 'title') Sound.music.tune('town'); } // menus get the quiet arrangement
-    for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo']) $(o).classList.toggle('hidden', o !== id);
+    for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo', 'twist']) $(o).classList.toggle('hidden', o !== id);
     $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
     if (id !== null) $('tutorial').classList.add('hidden');
   }
@@ -1325,8 +1346,26 @@
       else if (!el.classList.contains('off')) chosen.add(id);
       renderSheet();
     }));
-    $('btn-go').addEventListener('pointerup', () => start(selected, [...chosen]));
+    $('btn-go').addEventListener('pointerup', () => go(selected, [...chosen]));
     if ($('btn-rank')) $('btn-rank').addEventListener('pointerup', () => openRanking(list[selected], 'friends'));
+  }
+
+  // Levels with a twist (2, 5, 8, 10 of a region) first show a card explaining it; the run starts from its button.
+  let twistGo = null;
+  function go(i, boosts = []) {
+    const s = list[i], tw = s && s.twist && TWIST_INFO[s.twist];
+    if (!tw) return start(i, boosts);
+    twistGo = () => start(i, boosts);
+    const boss = s.twist === 'boss';
+    $('twist-head').textContent = boss ? '보스 등장!' : '새로운 규칙!';
+    $('twist-card').classList.toggle('boss', boss);
+    $('twist-ico').src = `img/ui/${twistIco[s.twist]}.svg`;
+    $('twist-name').textContent = tw.name;
+    $('twist-text').textContent = tw.text;
+    const tips = tw.tips.slice();
+    if (boss) tips.splice(1, 0, `크기가 ${(s.boss.r / C.EAT_RATIO / 4).toFixed(1)}m를 넘으면 삼킬 수 있어요.`);
+    $('twist-tips').innerHTML = tips.map(t => `<li>${t}</li>`).join('');
+    show('twist');
   }
 
   function start(i, boosts = []) {
@@ -1337,8 +1376,6 @@
     chosen.clear();
     setupStage(i, boosts);
     runBadges = Badges.earned(badgeCtx()); // to name the badges this run earns
-    const tw = stage.twist && TWIST_INFO[stage.twist];
-    if (tw) banner(`${ico(twistIco[stage.twist])} <b>${tw.name}</b><br>${tw.text}`, 5);
     endDrag();
     state = 'play';
     show(null);
@@ -1537,6 +1574,8 @@
   $('btn-select-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
   $('btn-dex').addEventListener('pointerup', whenReady(openDex));
   $('btn-info').addEventListener('pointerup', () => show('info'));
+  $('btn-twist-go').addEventListener('pointerup', () => { const f = twistGo; twistGo = null; if (f) f(); });
+  $('btn-twist-back').addEventListener('pointerup', () => { twistGo = null; openSelectAt(selected); });
   $('title-level').addEventListener('pointerup', whenReady(openLevel));
   $('btn-level-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
   $('btn-info-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
@@ -1545,7 +1584,7 @@
   $('btn-dex-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
   $('btn-title').addEventListener('pointerup', whenReady(() => openSelectAt(lastUnlocked())));
   $('btn-retry').addEventListener('pointerup', () => start(stageIndex));
-  $('btn-next').addEventListener('pointerup', () => start(stageIndex + 1));
+  $('btn-next').addEventListener('pointerup', () => go(stageIndex + 1));
   $('btn-select').addEventListener('pointerup', () => {
     // After unlocking the next level, point the map at it; otherwise stay on the stage just played.
     const next = stageIndex + 1;

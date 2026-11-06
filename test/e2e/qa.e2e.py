@@ -245,7 +245,9 @@ with sync_playwright() as p:
     pg.tap('#btn-title'); frames_wait(pg)
     sel0 = pg.evaluate("document.querySelector('.node.sel').dataset.i")
     pg.query_selector_all('.node')[1].tap(); frames_wait(pg); pg.tap('#btn-go'); frames_wait(pg)
-    rec('S4', 'level 2 opens after 1 star on level 1, picker preselects it', sel0 == '1' and pg.evaluate(f'{A}.s.state') == 'play' and '고양이' in pg.evaluate("document.querySelector('#goals').textContent"))
+    card = pg.is_visible('#twist')  # level 2 is a twist level: its intro card comes first
+    pg.tap('#btn-twist-go'); frames_wait(pg)
+    rec('S4', 'level 2 opens after 1 star on level 1 (after its intro card), picker preselects it', sel0 == '1' and card and pg.evaluate(f'{A}.s.state') == 'play' and '고양이' in pg.evaluate("document.querySelector('#goals').textContent"))
     # S7/S11 frame cost: early, late-big, night transition
     def stats(setup):
         pg.evaluate(setup); frames_wait(pg, 2)

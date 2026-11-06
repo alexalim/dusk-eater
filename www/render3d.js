@@ -298,7 +298,7 @@
     goldRings.renderOrder = 4; goldRings.count = 0; goldRings.frustumCulled = false;
     // A gold pillar of light rises over each golden friend so it can't be mistaken for an orange hint ring.
     const goldBeam = new T.InstancedMesh(new T.CylinderGeometry(1, 1, 1, 12, 1, true),
-      new T.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.45, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide }), MAX_GOLD);
+      new T.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.25, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide }), MAX_GOLD);
     goldBeam.renderOrder = 8; goldBeam.count = 0; goldBeam.frustumCulled = false;
     scene.add(cloudShade, goldRings, goldBeam);
 
@@ -485,10 +485,10 @@
           const mat = part.glow ? new T.MeshBasicMaterial({ color: col(c) }) : lambert(c);
           const im = new T.InstancedMesh(low[part.geo], mat, list.length);
           im.receiveShadow = true;
-          list.forEach((o, i) => {
-            if (part.color === 'inst') im.setColorAt(i, tmpCol.set(o.color));
-          });
-          if (im.instanceColor) im.instanceColor.needsUpdate = true;
+          // Every part gets an instance color up front (white = the material's own color), so turning an object
+          // golden later is just a color write, never a shader recompile.
+          list.forEach((o, i) => im.setColorAt(i, tmpCol.set(part.color === 'inst' ? o.color : '#ffffff')));
+          im.instanceColor.needsUpdate = true;
           group.add(im);
           w.instanced.push({ im, part, list, hidden: new Uint8Array(list.length) });
         }
@@ -651,16 +651,22 @@
         placeBuilding(b, p.x, p.y, p.s, p.lift);
       }
 
-      // Instanced objects: rewrite matrices only for objects that changed this frame.
+      // Instanced objects: rewrite matrices only for objects that changed this frame. A golden friend (o.glow)
+      // is painted gold, a little bigger, and bobs, so it is redrawn every frame while it shines.
       for (const { im, part, list, hidden } of world.instanced) {
-        let changed = false;
+        let changed = false, recolor = false;
         for (let i = 0; i < list.length; i++) {
           const o = list[i];
-          if ((o.state === 0 && !o.dirty) || (o.state === 2 && hidden[i])) continue;
+          if (!!o.glow !== !!o.glowShown) {
+            im.setColorAt(i, tmpCol.set(o.glow ? (part.color === 'inst' ? '#ffd23f' : '#ffe27a') : (part.color === 'inst' ? o.color : '#ffffff')));
+            recolor = true;
+          }
+          if ((o.state === 0 && !o.dirty && !o.glow && !o.glowShown) || (o.state === 2 && hidden[i])) continue;
           if (o.state === 2) hidden[i] = 1;
           let x = o.x, y = o.y, s = 1, lift = 0;
           if (o.state === 1) { const p = f.swallowPos(o); x = p.x; y = p.y; s = p.s; lift = p.lift; }
           if (o.state === 2) s = 0;
+          if (o.glow) { s *= 1.2; lift += o.r * (0.6 + Math.sin(t * 6 + o.x) * 0.4); }
           const r = o.r * s;
           dummy.position.set(x, part.y * r + lift, y);
           dummy.rotation.set(0, -o.rot, 0);
@@ -671,8 +677,9 @@
           changed = true;
         }
         if (changed) im.instanceMatrix.needsUpdate = true;
+        if (recolor) im.instanceColor.needsUpdate = true;
       }
-      for (const o of world.objects) if (o.state !== 1) o.dirty = false;
+      for (const o of world.objects) { if (o.state !== 1) o.dirty = false; o.glowShown = o.glow; }
 
       for (const g of world.guards) {
         if (g.state === 2) { g.mesh.visible = false; continue; }
@@ -766,7 +773,7 @@
       goldBeam.count = goldRings.count;
       for (let i = 0; i < goldBeam.count; i++) {
         const w = Math.max(golden[i].r * 0.9, 8);
-        dummy.position.set(golden[i].x, 70, golden[i].y); dummy.rotation.set(0, t * 2, 0); dummy.scale.set(w, 140, w); dummy.updateMatrix();
+        dummy.position.set(golden[i].x, 50, golden[i].y); dummy.rotation.set(0, t * 2, 0); dummy.scale.set(w * 0.6, 100, w * 0.6); dummy.updateMatrix();
         goldBeam.setMatrixAt(i, dummy.matrix);
       }
       goldBeam.instanceMatrix.needsUpdate = true;

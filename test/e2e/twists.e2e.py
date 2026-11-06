@@ -20,29 +20,44 @@ with sync_playwright() as p:
     errs = []
     pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.add_init_script('window.__DUSK_TEST__ = { fixedQuality: true };')
-    pg.goto(URL); pg.evaluate(f'{A}.ready'); frames_wait(pg)
+    pg.goto(URL); pg.evaluate(f'{A}.ready')
+    # region 1 cleared up to level 9 with one star each, so levels 2..10 are open
+    pg.evaluate("localStorage.setItem('dusk-stars', JSON.stringify(Object.fromEntries(Array.from({ length: 9 }, (_, i) => ['L' + (i + 1), 1]))))")
+    pg.reload(); pg.evaluate(f'{A}.ready'); frames_wait(pg)
 
     # W1 level select: a region's ten levels sit in two rows of five; 2, 5, 8 and 10 carry their twist marker
     pg.tap('#btn-title'); frames_wait(pg)
+    if pg.is_visible('.pager .chip[data-p="-1"]:not(.off)'): pg.tap('.pager .chip[data-p="-1"]'); frames_wait(pg)
     tops = pg.evaluate("[...new Set([...document.querySelectorAll('.levels .node')].map(n => Math.round(n.getBoundingClientRect().top)))].length")
     marked = pg.evaluate("[...document.querySelectorAll('.levels .node')].map((n, i) => n.querySelector('.tw') ? i + 1 : 0).filter(Boolean)")
     rec('W1', '10 levels in 2 rows of 5; twist markers on 2, 5, 8, 10', tops == 2 and marked == [2, 5, 8, 10], f'rows={tops} marked={marked}')
-    pg.tap('#btn-select-back'); frames_wait(pg)
+    # W7 starting a twist level shows its card first (name, tips; the boss card says how big to grow); its button starts the run
+    cards = []
+    for k in (1, 9):
+        pg.tap(f'.node[data-i="{k}"]'); frames_wait(pg); pg.tap('#btn-go'); frames_wait(pg)
+        cards.append([pg.is_visible('#twist'), pg.inner_text('#twist-name'), pg.inner_text('#twist-tips')])
+        if k == 1: pg.tap('#btn-twist-back'); frames_wait(pg)
+    pg.tap('#btn-twist-go'); frames_wait(pg, 4)
+    playing = pg.evaluate(f"[{A}.s.state, document.querySelector('#twist').classList.contains('hidden')]")
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    rec('W7', 'twist levels open with an intro card; the boss card names the size to reach; Go starts the level',
+        cards[0][0] and '구름' in cards[0][1] and cards[1][0] and '등불지기' in cards[1][1] and 'm를 넘으면' in cards[1][2] and playing == ['play', True],
+        f'cards={[c[:2] for c in cards]} playing={playing}')
 
     # W2 clouds: a spot under a cloud counts as shade even in full sun (and outside any guard beam); clouds drift
     pg.evaluate(f'{A}.start(1)'); pg.evaluate(f'{A}.skipTo(30)'); frames_wait(pg, 3)
     c0 = pg.evaluate(f'{A}.s.clouds.map(c => [c.x, c.y, c.r])')
     shaded = pg.evaluate(f'{A}.s.clouds.every(c => {A}.isShaded({{ x: c.x, y: c.y }}, null) || {A}.s.guards.some(g => Math.hypot(g.x - c.x, g.y - c.y) < g.range))')
     frames_wait(pg, 20); c1 = pg.evaluate(f'{A}.s.clouds.map(c => c.x)')
-    intro = pg.inner_text('#banner')
-    rec('W2', 'cloud shade counts as shade, clouds drift, the level opens with its intro', len(c0) >= 5 and shaded and c1 != [c[0] for c in c0] and '구름' in intro,
-        f'clouds={len(c0)} shaded={shaded} intro={intro[:20]!r}')
+    rec('W2', 'cloud shade counts as shade and clouds drift', len(c0) >= 5 and shaded and c1 != [c[0] for c in c0],
+        f'clouds={len(c0)} shaded={shaded}')
 
     # W3 golden friend: one appears near the player, glows, and is worth 5x when swallowed
     pg.evaluate(f'{A}.start(4)'); pg.evaluate(f'{A}.skipTo(5)'); frames_wait(pg, 3)
+    glow = pg.evaluate(f'{A}.s.objects.some(o => o.glow)')  # the renderer paints these gold
     gold = pg.evaluate(f'(() => {{ const s = {A}.s, o = s.objects.find(o => o.goldUntil > s.elapsed); if (!o) return null; o.state = 1; o.ft = 0.99; return [o.type, Math.round(o.r * o.r / 2) * 5]; }})()')
     s0 = pg.evaluate(f'{A}.s.score'); frames_wait(pg, 4); s1 = pg.evaluate(f'{A}.s.score')
-    rec('W3', 'a golden friend shows up and pays 5x', gold is not None and s1 - s0 == gold[1], f'gold={gold} score {s0}->{s1}')
+    rec('W3', 'a golden friend shows up painted gold and pays 5x', glow and gold is not None and s1 - s0 == gold[1], f'glow={glow} gold={gold} score {s0}->{s1}')
 
     # W4 eclipse: 30% into the run the whole town is shade for 6 s and the screen dims; before and after it is not
     pg.evaluate(f'{A}.start(7)')
