@@ -36,3 +36,21 @@ test('experience is saved with the other records and merges by max across phones
   const save = (xp, t) => ({ stars: {}, best: {}, wallet: wallet({ stats: { xp } }), updatedAt: t, syncedAt: 1 });
   assert.equal(Y.merge(save(300, 2), save(500, 1)).wallet.stats.xp, 500);
 });
+
+test('perks: the strongest reached so far, nothing before 5, capped at level 20', () => {
+  assert.deepEqual([L.perksOf(4).startR, L.perksOf(4).sun], [1, 1]);
+  assert.deepEqual([L.perksOf(5).startR, L.perksOf(5).sun], [1.05, 1]);
+  assert.deepEqual([L.perksOf(12).startR, L.perksOf(12).sun], [1.05, 0.9]);
+  assert.deepEqual([L.perksOf(99).startR, L.perksOf(99).sun], [1.1, 0.8]);
+});
+
+test('titles follow the level; level skins are due once reached and never sold', () => {
+  assert.equal(L.titleOf(1), '아기 그림자');
+  assert.equal(L.titleOf(9), '동네 그림자');
+  assert.equal(L.titleOf(30), '어둠의 전설');
+  const xpFor = lv => Array.from({ length: lv - 1 }, (_, i) => L.need(i + 1)).reduce((a, b) => a + b, 0);
+  const w = wallet({ stats: { xp: xpFor(10) } });
+  assert.deepEqual(L.dueSkins(w, S.SKINS), ['candy', 'aurora']);
+  assert.deepEqual(L.dueSkins(S.grantReward(S.grantReward(w, 'candy'), 'aurora'), S.SKINS), []);
+  for (const s of S.SKINS.filter(k => k.level)) assert.ok(!s.product && s.reward, s.id);
+});

@@ -9,6 +9,26 @@
 
   const runXp = (swallowed, stars) => swallowed + stars * XP_PER_STAR;
 
+  // What a level brings besides gems. Skins live in shop.js (their `level` field); perks stop at 20 so the
+  // star goals keep their bite; titles show on the level card and the end screen.
+  const PERKS = [
+    { level: 5, startR: 1.05, text: '시작 크기 +5%' },
+    { level: 10, sun: 0.9, text: '햇빛에서 덜 줄어요 (−10%)' },
+    { level: 15, startR: 1.1, text: '시작 크기 +10%' },
+    { level: 20, sun: 0.8, text: '햇빛에서 덜 줄어요 (−20%)' },
+  ];
+  const TITLES = [[1, '아기 그림자'], [5, '동네 그림자'], [10, '골목 대장'], [15, '노을 사냥꾼'], [20, '밤의 지배자'], [30, '어둠의 전설']];
+
+  // The strongest of each perk reached so far.
+  function perksOf(level) {
+    const got = PERKS.filter(p => p.level <= level);
+    return { startR: Math.max(1, ...got.map(p => p.startR || 1)), sun: Math.min(1, ...got.map(p => p.sun || 1)), got };
+  }
+  const titleOf = level => TITLES.filter(([l]) => l <= level).pop()[1];
+
+  // Level skins reached but not yet in the wallet (granted with Shop.grantReward).
+  const dueSkins = (w, skins) => skins.filter(s => s.level && s.level <= levelOf(w.stats.xp).level && !w.owned.includes(s.id)).map(s => s.id);
+
   // Level 1 at 0 xp. `into` is the progress inside the current level, out of `next`.
   function levelOf(xp) {
     let level = 1, left = Math.max(0, Math.floor(xp || 0));
@@ -26,7 +46,7 @@
     return { wallet, from, to, gems };
   }
 
-  const api = { XP_PER_STAR, need, reward, runXp, levelOf, gain };
+  const api = { XP_PER_STAR, PERKS, TITLES, need, reward, runXp, levelOf, gain, perksOf, titleOf, dueSkins };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DuskLevel = api;
 })(this);

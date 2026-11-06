@@ -23,6 +23,13 @@
     // Earned, not bought: `reward` names the event whose stars unlock it.
     { id: 'santa', name: '산타 그림자', body: 0x3a0d14, rim: 0x7fe08a, eye: 0xffffff, reward: 'xmas',
       desc: '크리스마스 이벤트 선물이에요. 빨간 몸에 초록 테두리로 겨울 기분을 내요.' },
+    // Level rewards: granted on reaching `level` (level.js), shown with the level they open at.
+    { id: 'candy', name: '솜사탕 그림자', body: 0xffeef8, rim: 0xffa6ec, eye: 0x3a1240, pupil: 0xffffff, reward: 'level', level: 5,
+      desc: 'Lv.5가 되면 찾아오는 달콤한 친구예요. 분홍 솜사탕처럼 폭신폭신해요.' },
+    { id: 'aurora', name: '오로라 그림자', body: 0x0a1f2a, rim: 0x5ee7ff, eye: 0xffffff, reward: 'level', level: 10,
+      desc: 'Lv.10을 넘긴 그림자만 입을 수 있어요. 북쪽 하늘처럼 푸른빛이 일렁여요.' },
+    { id: 'galaxy', name: '은하 그림자', body: 0x120a2a, rim: 0xe0c3ff, eye: 0xffe08a, reward: 'level', level: 20,
+      desc: 'Lv.20, 밤의 지배자에게 주는 선물이에요. 몸 안에 은하수가 반짝여요.' },
     // Hidden: shown as ??? until its collection-book set is filled (`reward` is the set, dex.js SETS).
     { id: 'dawn', name: '새벽 그림자', body: 0x1d1430, rim: 0xf6a8ff, eye: 0xffffff, reward: 'dex', hidden: true,
       desc: '도감 첫 다섯 지도를 모두 채운 친구만 만나요. 새벽빛 분홍 테두리가 살랑거려요.' },
