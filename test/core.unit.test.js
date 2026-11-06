@@ -95,3 +95,12 @@ test('a lower sun ceiling keeps the sun lower and shadows longer at the same tim
   assert.ok(C.shadowLength(50, winter.elev) > 2 * C.shadowLength(50, noon.elev));
   assert.deepEqual([winter.sx, winter.sy], [noon.sx, noon.sy]); // same direction, only the height changes
 });
+
+test('clearing: one star normally, two on a hard level, the boss goal (third) on a super-hard one', () => {
+  assert.equal(C.isCleared({ hard: null }, [false, true, false]), true);
+  assert.equal(C.isCleared({ hard: null }, [false, false, false]), false);
+  assert.equal(C.isCleared({ hard: 'hard' }, [true, false, false]), false);
+  assert.equal(C.isCleared({ hard: 'hard' }, [true, false, true]), true);
+  assert.equal(C.isCleared({ hard: 'super' }, [true, true, false]), false, 'two stars without the boss do not clear');
+  assert.equal(C.isCleared({ hard: 'super' }, [false, false, true]), true);
+});

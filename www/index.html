@@ -74,6 +74,7 @@
     box-shadow: 0 2px 0 rgba(0,0,0,.3); transition: background .2s; }
   #goals span.done { color: #2a1a05; background: var(--star); border-color: #fff; }
   #goals span.done::before { content: ''; display: inline-block; width: 1em; height: 1em; margin-right: 4px; vertical-align: -2px; background: url(img/ui/check.svg) center / contain no-repeat; }
+  #cont .btn.off { opacity: .45; pointer-events: none; }
   #rush-pill { align-self: center; font-size: 16px; padding: 4px 16px; color: #2a1a05; background: linear-gradient(#ffe8a0, #ffc94d);
     border-color: #fff; animation: rushpulse .5s ease-in-out infinite alternate; }
   @keyframes rushpulse { to { transform: scale(1.08); } }
@@ -162,6 +163,11 @@
   .node { position: relative; }
   .node .tw { position: absolute; top: -6px; right: -4px; width: 20px; height: 20px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
   .node.boss:not(.locked) { background: linear-gradient(#e2b8ff, #b78cff); box-shadow: 0 0 0 2px #ffd25c inset; }
+  .node.hard:not(.locked) { box-shadow: 0 0 0 2px #ff8a5c inset; }
+  .node.hard:not(.locked)::after { content: '어려움'; position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%); font-size: 9px;
+    padding: 0 5px; border-radius: 6px; background: #ff8a5c; color: #2a1a05; font-family: var(--display); white-space: nowrap; }
+  .node.boss.hard:not(.locked)::after { content: '아주 어려움'; background: #ff6bd0; }
+  .sheet .hardnote { font-size: 13px; font-family: var(--display); color: #ffb08a; }
   .sheet .twist { font-size: 13px; line-height: 1.45; padding: 8px 10px; border-radius: 12px; background: rgba(255,210,92,.12); color: var(--text); }
   .node { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; height: 46px;
     border-radius: 14px; border: 0; padding: 0; font: inherit; cursor: pointer; color: #2a1a05; background: var(--node); }
@@ -401,6 +407,12 @@
   <p>그만두면 이번 판 기록은 안 남아요. 부스터에 쓴 보석은 돌려드려요.</p>
   <div class="sound-row"><div class="chip" id="btn-sfx"></div><div class="chip" id="btn-music"></div></div>
   <div class="chip" id="btn-fps">FPS 표시</div></div>
+<div id="cont" class="overlay hidden">
+  <img class="face-big" src="img/ui/face-surprised.svg" alt="">
+  <h2>아깝다!</h2>
+  <p id="cont-why"></p>
+  <div class="btns"><div class="btn" id="btn-cont-yes"></div><div class="btn ghost" id="btn-cont-no">그만하기</div></div>
+</div>
 <div id="end" class="overlay hidden">
   <img class="face-big" id="end-face" src="img/ui/face-happy.svg" alt="">
   <h2 id="end-title">밤이 끝났어요</h2>
@@ -790,7 +802,7 @@
   function setupStage(i, boosts = []) {
     stageIndex = i; stage = list[i];
     buildWorld(Date.now() & 0xffff);
-    elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; nextGold = 4; rush = false; rushTick = 0; Sound.music.rush(false);
+    elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; continued = false; nextGold = 4; rush = false; rushTick = 0; Sound.music.rush(false);
     clouds = stage.twist === 'clouds' ? Array.from({ length: 7 }, (_, k) => ({ x: rnd() * WORLD, y: rnd() * waterY, r: 70 + rnd() * 50 })) : [];
     tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
@@ -1264,7 +1276,7 @@
 
   function show(id) {
     if (id && id !== 'pause') { Sound.music.mode('title'); Sound.music.rush(false); if (id === 'title') Sound.music.tune('town'); } // menus get the quiet arrangement
-    for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo', 'twist']) $(o).classList.toggle('hidden', o !== id);
+    for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo', 'twist', 'cont']) $(o).classList.toggle('hidden', o !== id);
     $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
     if (id !== null) $('tutorial').classList.add('hidden');
   }
@@ -1303,7 +1315,7 @@
     const cells = list.slice(from, from + size).map((s, k) => {
       const i = from + k, open = C.isUnlocked(listIds, i, bestStars);
       const tw = s.twist ? `<img class="tw" src="img/ui/${twistIco[s.twist]}.svg" alt="">` : '';
-      return `<button class="node ${s.theme}${open ? '' : ' locked'}${i === selected ? ' sel' : ''}${s.twist === 'boss' ? ' boss' : ''}" data-i="${i}" aria-label="${s.name}">
+      return `<button class="node ${s.theme}${open ? '' : ' locked'}${i === selected ? ' sel' : ''}${s.twist === 'boss' ? ' boss' : ''}${s.hard ? ' hard' : ''}" data-i="${i}" aria-label="${s.name}">
         ${open ? `<span class="num">${s.n}</span><span class="stars">${starText(bestStars[s.id] || 0)}</span>` : LOCK}${tw}</button>`;
     }).join('');
     // Ladder pages are regions: name, icon, stars collected there; a locked region says how it opens.
@@ -1344,6 +1356,7 @@
     const rank = open && Account.user ? `<span class="chip" id="btn-rank">${ico('trophy')} 랭킹</span>` : '';
     $('sheet').innerHTML = `<div class="row"><span class="name">${s.name}</span>${rank}<span class="stars">${starText(bestStars[s.id] || 0)}</span></div>
       <div class="desc">${open ? s.desc : '앞 레벨에서 별 1개를 따면 열려요.'}</div>` +
+      (s.hard ? `<div class="hardnote">${s.hard === 'super' ? '아주 어려움 · 보스를 삼켜야 깨져요' : '어려움 · 별 2개를 따야 깨져요'}</div>` : '') +
       (s.twist ? `<div class="twist">${ico(twistIco[s.twist])} <b>${TWIST_INFO[s.twist].name}</b> ${TWIST_INFO[s.twist].text}</div>` : '') +
       (open ? `<ul>${s.goals.map(g => `<li>${goalLabel(g)}</li>`).join('')}</ul>
         <div class="boosts">${boosts}</div><div class="btn" id="btn-go">출발</div>` : '');
@@ -1389,10 +1402,39 @@
     show(null);
   }
 
+  // Time's up. A run that did not clear its level may continue once: 20 more seconds for gems.
+  const CONTINUE_GEMS = 30, CONTINUE_S = 20;
+  let continued = false;
   function finish() {
-    state = 'end';
     const got = C.evaluateStars(stage.goals, stats);
+    if (!C.isCleared(stage, got) && !continued) return offerContinue(got);
+    endRun(got);
+  }
+
+  function offerContinue(got) {
+    state = 'cont';
     const n = got.filter(Boolean).length;
+    $('cont-why').textContent = stage.hard === 'super' ? '거대 등불지기를 삼켜야 깰 수 있어요.'
+      : stage.hard === 'hard' ? `어려움 레벨은 별 2개가 필요해요. (지금 ${n}개)` : '별을 하나도 못 땄어요.';
+    const can = Store.wallet.gems >= CONTINUE_GEMS;
+    $('btn-cont-yes').innerHTML = can ? `${GEM}${CONTINUE_GEMS}로 ${CONTINUE_S}초 더!` : `보석이 부족해요 (${GEM}${CONTINUE_GEMS})`;
+    $('btn-cont-yes').classList.toggle('off', !can);
+    show('cont');
+    Sound.sfx.lose();
+  }
+  function continueRun() {
+    const paid = Shop.spend(Store.wallet, CONTINUE_GEMS);
+    if (!paid) return;
+    Store.update(paid);
+    continued = true;
+    runDuration += CONTINUE_S; rush = false; Sound.music.rush(false);
+    state = 'play'; show(null);
+  }
+
+  function endRun(got) {
+    state = 'end';
+    const cleared = C.isCleared(stage, got);
+    const n = cleared ? got.filter(Boolean).length : 0; // an uncleared hard level keeps no stars
     const before = bestStars[stage.id] || 0;
     bestStars[stage.id] = Math.max(before, n);
     bestScore[stage.id] = Math.max(bestScore[stage.id] || 0, score);
@@ -1424,7 +1466,7 @@
     $('end-gems').innerHTML = notes.join(' · ');
     $('end-gems').classList.toggle('hidden', !notes.length);
 
-    $('end-title').innerHTML = n === 3 ? `완벽한 밤이었어요! ${ico('sparkle')}` : '밤이 끝났어요';
+    $('end-title').innerHTML = !cleared ? '아쉬워요, 다시 도전!' : n === 3 ? `완벽한 밤이었어요! ${ico('sparkle')}` : '밤이 끝났어요';
     $('end-face').src = `img/ui/face-${['sleepy', 'determined', 'happy', 'excited'][n]}.svg`; // the character reacts to the stars
     $('end-stars').innerHTML = starText(n);
     $('result').textContent = `${stats.total}개 삼킴 · ${score.toLocaleString()}점`;
@@ -1614,6 +1656,8 @@
   $('btn-dex-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
   $('btn-title').addEventListener('pointerup', whenReady(() => openSelectAt(lastUnlocked())));
   $('btn-retry').addEventListener('pointerup', () => start(stageIndex));
+  $('btn-cont-yes').addEventListener('pointerup', () => { if (!$('btn-cont-yes').classList.contains('off')) continueRun(); });
+  $('btn-cont-no').addEventListener('pointerup', () => { continued = true; endRun(C.evaluateStars(stage.goals, stats)); });
   $('btn-next').addEventListener('pointerup', () => go(stageIndex + 1));
   $('btn-select').addEventListener('pointerup', () => {
     // After unlocking the next level, point the map at it; otherwise stay on the stage just played.

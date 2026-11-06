@@ -286,8 +286,10 @@
       boss = { r: 30 + regionOf(n) * 3 }; // must be outgrown (and caught in shade) to swallow
       goals[2] = { kind: 'eat', what: 'boss', n: 1 };
     }
+    // Hard levels: the 8th of a region needs two stars to clear, the boss (10th) needs the boss swallowed.
+    const hard = region ? { 7: 'hard', 9: 'super' }[local] || null : null;
     return Object.assign({}, t, {
-      id: 'L' + n, n, name: `${n}. ${t.name}`, goals, guards, twist, boss,
+      id: 'L' + n, n, name: `${n}. ${t.name}`, goals, guards, twist, boss, hard,
       sunDrain: lerp(0.4, 1.6, ramp), beamDrain: lerp(3, 7, ramp),
       lighthouse: t.theme === 'harbor' ? { x: 0.5, y: 0.87, range: lerp(380, 560, ramp), half: 0.16, speed: lerp(0.35, 0.55, ramp) } : null,
     });

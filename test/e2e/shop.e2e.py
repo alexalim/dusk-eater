@@ -13,6 +13,10 @@ def rec(sid, name, ok, detail=''):
 def frames_wait(pg, n=3):
     pg.evaluate(f'new Promise(r => {{ let k = {n}; const f = () => --k <= 0 ? r() : requestAnimationFrame(f); requestAnimationFrame(f); }})')
 
+def decline_continue(pg):
+    # a run that did not clear its level offers a paid continue first; these checks want the plain end screen
+    if pg.is_visible('#cont'): pg.tap('#btn-cont-no'); frames_wait(pg, 4)
+
 def open_page(b, w=390, h=844, init=''):
     ctx = b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=2, has_touch=True, is_mobile=True)
     pg = ctx.new_page(); errs = []
@@ -91,6 +95,7 @@ with sync_playwright() as p:
     for k in range(2): pg.tap(f'.boost >> nth={k}'); frames_wait(pg)  # each tap re-renders the sheet
     pg.tap('#btn-go'); frames_wait(pg)
     pg.evaluate(f'{A}.skipTo(139.9)'); frames_wait(pg, 4)
+    decline_continue(pg)
     w = wallet(pg); end = pg.is_visible('#end')
     pg.tap('#btn-retry'); frames_wait(pg)
     retry = pg.evaluate(f'[{A}.runDuration, {A}.s.player.r]')

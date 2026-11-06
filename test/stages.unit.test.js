@@ -91,3 +91,11 @@ test('every region: level 2 clouds, 5 golden, 8 eclipse, 10 a boss you must swal
   for (const list of Object.values(St.EVENT_LEVELS)) for (const s of list) assert.equal(s.twist, null);
   assert.equal(St.goalLabel({ kind: 'eat', what: 'boss', n: 1 }), '거대 등불지기 1명 삼키기');
 });
+
+test('hard levels: the 8th of every region is hard, the boss level super-hard; nothing else, no events', () => {
+  for (let r = 0; r < St.REGIONS.length; r++) {
+    const hard = St.STAGES.slice(r * St.REGION_SIZE, (r + 1) * St.REGION_SIZE).map(s => s.hard);
+    assert.deepEqual(hard, [null, null, null, null, null, null, null, 'hard', null, 'super'], `region ${r}`);
+  }
+  for (const list of Object.values(St.EVENT_LEVELS)) for (const s of list) assert.equal(s.hard, null);
+});

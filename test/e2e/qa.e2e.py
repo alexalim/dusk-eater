@@ -31,6 +31,9 @@ A = 'window.__DUSK_TEST__.api'
 CITY, SNOW, CROSS, HARB, PARK, DESERT, FARM = 10, 50, 70, 90, 110, 130, 140
 def frames_wait(pg, n=3):
     pg.evaluate(f'new Promise(r => {{ let k = {n}; const f = () => --k <= 0 ? r() : requestAnimationFrame(f); requestAnimationFrame(f); }})')
+def decline_continue(pg):
+    # a run that did not clear its level offers a paid continue first; these checks want the plain end screen
+    if pg.is_visible('#cont'): pg.tap('#btn-cont-no'); frames_wait(pg, 4)
 with sync_playwright() as p:
     # S1 flow: title -> level picker, level 2 locked, locked card ignores taps
     b, pg, errs = page(p)
@@ -224,6 +227,7 @@ with sync_playwright() as p:
         pressed[0] <= wall - pressed[1] * 0.8 + 1 and vx <= 0.5, f'wall={wall:.0f} x={pressed[0]:.1f} r={pressed[1]:.1f} vx_after={vx:.1f}')
     # S3 round end: stars + goal list + next button rule (fast frames can be ~16 ms, so leave 10 ms and wait 8)
     pg.evaluate(f'{A}.skipTo(119.99)'); frames_wait(pg, 8)
+    decline_continue(pg)
     end_vis = pg.is_visible('#end'); goals = len(pg.query_selector_all('#end-goals > div'))
     stars = pg.evaluate("JSON.parse(localStorage.getItem('dusk-stars') || '{}')")
     nxt = pg.is_visible('#btn-next')
@@ -277,6 +281,7 @@ with sync_playwright() as p:
         ov = pg.evaluate('document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight')
         hud = pg.evaluate("(() => { const r = document.querySelector('#hud').getBoundingClientRect(); return [Math.round(r.height), innerHeight]; })()")
         pg.evaluate(f'{A}.skipTo(119.99)'); frames_wait(pg, 8)
+        decline_continue(pg)
         pg.screenshot(path=str(out / f'layout-{w}x{h}-end.png'))
         pg.evaluate("document.querySelector('#btn-select').scrollIntoView({block: 'nearest'})"); frames_wait(pg)
         fits = pg.evaluate("(() => { const b = document.querySelector('#btn-select').getBoundingClientRect(); return b.bottom <= innerHeight + 1 && b.top >= -1; })()")

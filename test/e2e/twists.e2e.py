@@ -96,6 +96,22 @@ with sync_playwright() as p:
     rec('W8', 'last 10 s: rush on, a swallow scores double, the pill counts down', early is False and pg.evaluate(f'{A}.s.rush') and s1 - s0 == base * 2 and '2배' in pill,
         f'early={early} gain={s1 - s0} base={base} pill={pill!r}')
 
+    # W9 a hard level ending with one star does not clear: the continue prompt says why; paying 30 gems adds 20 s once
+    pg.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ gems: 100 }}))")
+    had = pg.evaluate("JSON.parse(localStorage.getItem('dusk-stars') || '{}').L8 || 0")
+    pg.evaluate(f'{A}.start(7)'); frames_wait(pg, 2)
+    pg.evaluate(f"(() => {{ const g = window.DuskStages.STAGES[7].goals[0]; {A}.s.stats.score = g.n; }})()")  # one star only
+    pg.evaluate(f'{A}.skipTo({A}.s.runDuration - 0.02)'); frames_wait(pg, 4)
+    why = pg.inner_text('#cont-why') if pg.is_visible('#cont') else None
+    dur0 = pg.evaluate(f'{A}.s.runDuration'); pg.tap('#btn-cont-yes'); frames_wait(pg, 3)
+    after = pg.evaluate(f'[{A}.s.state, {A}.s.runDuration, {A}.Store.wallet.gems]')
+    pg.evaluate(f'{A}.skipTo({A}.s.runDuration - 0.02)'); frames_wait(pg, 4)  # time's up again: no second offer
+    again = [pg.is_visible('#cont'), pg.is_visible('#end'), pg.inner_text('#end-title')]
+    stars = pg.evaluate("JSON.parse(localStorage.getItem('dusk-stars') || '{}').L8 || 0")
+    rec('W9', 'hard level: 1 star does not clear; continue costs 30 gems for +20 s, offered once; no new stars saved',
+        why and '별 2개' in why and after == ['play', dur0 + 20, 70] and again[:2] == [False, True] and '아쉬워요' in again[2] and stars == had,
+        f'why={why!r} after={after} again={again} stars={stars}')
+
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)
     rec('W0', 'no page errors', not errs, '; '.join(errs[:3]))

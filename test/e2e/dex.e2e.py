@@ -13,6 +13,10 @@ def rec(sid, name, ok, detail=''):
 def frames_wait(pg, n=3):
     pg.evaluate(f'new Promise(r => {{ let k = {n}; const f = () => --k <= 0 ? r() : requestAnimationFrame(f); requestAnimationFrame(f); }})')
 
+def decline_continue(pg):
+    # a run that did not clear its level offers a paid continue first; these checks want the plain end screen
+    if pg.is_visible('#cont'): pg.tap('#btn-cont-no'); frames_wait(pg, 4)
+
 def open_page(b, w=390, h=844):
     ctx = b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=2, has_touch=True, is_mobile=True)
     pg = ctx.new_page(); errs = []
@@ -98,6 +102,7 @@ with sync_playwright() as p:
     pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
     pg.evaluate(f'(() => {{ const o = {A}.s.objects.find(o => o.state === 0); o.state = 1; o.ft = 0.99; }})()'); frames_wait(pg, 4)
     pg.evaluate(f'{A}.skipTo(119.99)'); frames_wait(pg, 8)
+    decline_continue(pg)
     note = pg.inner_text('#end-gems'); eaten = wallet(pg)['stats'].get('eaten', 0)
     reload(pg); count = pg.inner_text('#badges-badge'); g0 = wallet(pg)['gems']
     pg.tap('#btn-badges'); frames_wait(pg)
@@ -113,6 +118,7 @@ with sync_playwright() as p:
     pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
     pg.evaluate(f'(() => {{ const o = {A}.s.objects.find(o => o.state === 0); o.state = 1; o.ft = 0.99; }})()'); frames_wait(pg, 4)
     pg.evaluate(f'{A}.skipTo(119.99)'); frames_wait(pg, 8)
+    decline_continue(pg)
     gain = pg.inner_text('#end-xp-gain'); lvl = pg.inner_text('#end-lv'); note = pg.inner_text('#end-gems')
     xp = wallet(pg)['stats']['xp']; g1 = wallet(pg)['gems']
     reload(pg); chip = pg.inner_text('#title-level')

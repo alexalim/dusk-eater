@@ -140,6 +140,14 @@
   }
 
   // A stage opens once the previous one has at least one star.
+  // A run clears its level with one star, two on a hard level, and the boss swallowed on a super-hard one.
+  // `got` is evaluateStars' per-goal list; on a boss level the boss is the third goal.
+  function isCleared(stage, got) {
+    const n = got.filter(Boolean).length;
+    if (stage.hard === 'super') return !!got[2];
+    return n >= (stage.hard === 'hard' ? 2 : 1);
+  }
+
   function isUnlocked(stageIds, index, bestStars) {
     return index === 0 || (bestStars[stageIds[index - 1]] || 0) >= 1;
   }
@@ -148,7 +156,7 @@
     DURATION, NIGHT_START, EAT_RATIO, MAX_SHADOW,
     mulberry32, dayPhase, sunState, shadowLength, convexHull, pointInConvex,
     shadowPolygon, inAnyShadow, inCone, canEat, grow,
-    goalProgress, evaluateStars, isUnlocked,
+    goalProgress, evaluateStars, isUnlocked, isCleared,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DuskCore = api;
