@@ -1,7 +1,8 @@
 // Layer: Unit — the 150-level table from www/stages.js (ids, goal labels, reachable goals, difficulty curve), no DOM.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { STAGES, THEMES, goalLabel, EVENT_LEVELS, activeEvents, REGIONS, REGION_SIZE } = require('../www/stages.js');
+const St = require('../www/stages.js');
+const { STAGES, THEMES, goalLabel, EVENT_LEVELS, activeEvents, REGIONS, REGION_SIZE } = St;
 
 const spawned = (s, what) => (s.small.find(([t]) => t === what) || [0, 0])[1];
 const scoreGoal = s => s.goals[0].n;
@@ -20,7 +21,7 @@ test('every goal has a label and three goals per level', () => {
 
 test('eat goals ask for at most half of what spawns (road vehicles, guards per level)', () => {
   for (const s of STAGES) for (const g of s.goals.filter(g => g.kind === 'eat')) {
-    const cap = g.what === 'guard' ? s.guards : g.what === (s.vehicle || 'car') ? s.carsPerRoad * 4 : spawned(s, g.what) / 2;
+    const cap = g.what === 'boss' ? (s.boss ? 1 : 0) : g.what === 'guard' ? s.guards : g.what === (s.vehicle || 'car') ? s.carsPerRoad * 4 : spawned(s, g.what) / 2;
     assert.ok(g.n >= 1 && g.n <= cap, `${s.id} ${g.what} ${g.n}`);
   }
 });
@@ -75,4 +76,18 @@ test('Christmas event: 10 levels with their own ids, varied targets, rising diff
   const on = d => activeEvents(new Date(d + 'T12:00:00')).map(e => e.id);
   assert.deepEqual(['2026-11-30', '2026-12-01', '2026-12-31', '2027-01-01', '2027-01-06', '2027-01-07'].map(on),
     [[], ['xmas'], ['xmas'], ['xmas'], ['xmas'], []]);
+});
+
+test('every region: level 2 clouds, 5 golden, 8 eclipse, 10 a boss you must swallow; events and other levels have none', () => {
+  for (let r = 0; r < St.REGIONS.length; r++) {
+    const lv = k => St.STAGES[r * St.REGION_SIZE + k - 1];
+    assert.deepEqual([2, 5, 8, 10].map(k => lv(k).twist), ['clouds', 'golden', 'eclipse', 'boss'], `region ${r}`);
+    for (const k of [1, 3, 4, 6, 7, 9]) assert.equal(lv(k).twist, null);
+    assert.deepEqual(lv(10).goals[2], { kind: 'eat', what: 'boss', n: 1 });
+    assert.ok(lv(10).boss.r >= 30);
+  }
+  assert.ok(St.STAGES[149].boss.r > St.STAGES[9].boss.r, 'later bosses are bigger');
+  for (const t of ['clouds', 'golden', 'eclipse', 'boss']) assert.ok(St.TWIST_INFO[t].name && St.TWIST_INFO[t].text);
+  for (const list of Object.values(St.EVENT_LEVELS)) for (const s of list) assert.equal(s.twist, null);
+  assert.equal(St.goalLabel({ kind: 'eat', what: 'boss', n: 1 }), '거대 등불지기 1명 삼키기');
 });

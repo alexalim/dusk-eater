@@ -243,6 +243,14 @@
     { theme: 'farm', score: [800, 1300] },
   ];
   const EVENT_SCORE = { xmas: [700, 16000] }; // events borrow a ladder level's difficulty instead
+  // Twist per position inside a region (0-based): clouds 2, golden 5, eclipse 8, boss 10.
+  const TWISTS = { 1: 'clouds', 4: 'golden', 7: 'eclipse', 9: 'boss' };
+  const TWIST_INFO = {
+    clouds: { name: '떠다니는 구름', text: '구름이 지나가며 움직이는 그늘을 만들어요. 구름 그늘을 타고 다녀요!' },
+    golden: { name: '황금 친구', text: '가끔 반짝이는 황금 친구가 나타나요. 삼키면 점수 5배!' },
+    eclipse: { name: '일식', text: '낮에 잠깐 일식이 와요. 그동안은 온 동네가 그늘이에요!' },
+    boss: { name: '보스: 거대 등불지기', text: '거대 등불지기가 큰 불빛을 비추며 돌아다녀요. 충분히 커진 뒤 그늘에서 삼켜요!' },
+  };
   const regionOf = n => Math.floor((n - 1) / REGION_SIZE);
   const themeOf = n => REGIONS[regionOf(n)].theme;
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -267,8 +275,15 @@
     if (t.theme === 'harbor' && local >= 10 && n % 2 === 0) goals.push({ kind: 'noBeam' });
     else if (guards && n >= 8 && n % 3 === 0) goals.push({ kind: 'eat', what: 'guard', n: Math.min(guards, 1 + Math.floor(d * 3)) });
     else goals.push({ kind: 'score', n: Math.round(score * 1.8 / 100) * 100 });
+    // Twists on the ladder: the 2nd, 5th and 8th level of every region add a new rule, the 10th a boss.
+    const twist = region ? TWISTS[local] || null : null;
+    let boss = null;
+    if (twist === 'boss') {
+      boss = { r: 30 + regionOf(n) * 3 }; // must be outgrown (and caught in shade) to swallow
+      goals[2] = { kind: 'eat', what: 'boss', n: 1 };
+    }
     return Object.assign({}, t, {
-      id: 'L' + n, n, name: `${n}. ${t.name}`, goals, guards,
+      id: 'L' + n, n, name: `${n}. ${t.name}`, goals, guards, twist, boss,
       sunDrain: lerp(0.4, 1.6, ramp), beamDrain: lerp(3, 7, ramp),
       lighthouse: t.theme === 'harbor' ? { x: 0.5, y: 0.87, range: lerp(380, 560, ramp), half: 0.16, speed: lerp(0.35, 0.55, ramp) } : null,
     });
@@ -296,7 +311,7 @@
     foodtruck: ['푸드트럭', '대'], trash: ['쓰레기통', '개'], cone: ['꼬깔콘', '개'], beam: ['철골', '개'], sunbather: ['피서객', '명'],
     sandcastle: ['모래성', '개'], traveler: ['여행자', '명'], pot: ['항아리', '개'], camel: ['낙타', '마리'],
     gift: ['선물 상자', '개'], caroler: ['캐럴 합창단', '명'], reindeer: ['순록', '마리'],
-    guard: ['경비원', '명'],
+    guard: ['경비원', '명'], boss: ['거대 등불지기', '명'],
   };
 
   function goalLabel(g) {
@@ -306,7 +321,7 @@
     return g.kind;
   }
 
-  const api = { THEMES, STAGES, NAMES, goalLabel, themeOf, REGIONS, REGION_SIZE, regionOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
+  const api = { THEMES, STAGES, NAMES, TWISTS, TWIST_INFO, goalLabel, themeOf, REGIONS, REGION_SIZE, regionOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DuskStages = api;
 })(this);

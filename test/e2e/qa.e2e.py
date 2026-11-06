@@ -44,20 +44,26 @@ with sync_playwright() as p:
     rec('S1', 'title->levels, level 2 locked, locked node shows no start', t and 'locked' in locked[1] and 'locked' not in locked[0] and still and go_locked is None and '별 1개' in sheet, str(locked))
     # S2 touch drag moves the player
     pg.query_selector_all('.node')[0].tap(); frames_wait(pg); pg.tap('#btn-go'); frames_wait(pg)
-    x0 = pg.evaluate(f'{A}.s.player.x')
+    # buildings are solid, so drag toward the most open side (the spawn usually hugs a building's shade)
+    way = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player;
+      const free = (dx, dy) => {{ let d = 0; while (d < 400 && !s.buildings.some(b => b.state === 0 && p.x + dx * d > b.x - p.r && p.x + dx * d < b.x + b.w + p.r
+        && p.y + dy * d > b.y - p.r && p.y + dy * d < b.y + b.d + p.r)) d += 5; return d; }};
+      return [[1, 0], [-1, 0], [0, 1], [0, -1]].sort((a, c) => free(...c) - free(...a))[0]; }})()''')
+    pos = lambda: pg.evaluate(f'[{A}.s.player.x, {A}.s.player.y]')
+    p0 = pos()
     cdp = pg.context.new_cdp_session(pg)
     cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': 200, 'y': 500}]})
     for i in range(1, 30):
-        cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': 200 + i * 3, 'y': 500}]})
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': 200 + way[0] * i * 3, 'y': 500 + way[1] * i * 3}]})
         pg.wait_for_timeout(16)
     frames_wait(pg)
-    x1 = pg.evaluate(f'{A}.s.player.x')
+    p1 = pos(); x0, x1 = 0, (p1[0] - p0[0]) * way[0] + (p1[1] - p0[1]) * way[1]  # distance along the drag
     cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
     # release: a short glide (GLIDE_S 0.3 s at start size), then a full stop
     frames_wait(pg, 4); v_glide = pg.evaluate(f'Math.hypot({A}.s.player.vx, {A}.s.player.vy)')
     frames_wait(pg, 40)  # by frames, not wall time: a slow software GPU runs fewer frames (dt is capped at 0.05 s)
     v_after = pg.evaluate(f'Math.hypot({A}.s.player.vx, {A}.s.player.vy)')
-    rec('S2', 'touch drag moves right, release glides then stops', x1 - x0 > 30 and v_glide > 5 and v_after == 0, f'dx={x1-x0:.0f} v_glide={v_glide:.1f} v_after={v_after:.1f}')
+    rec('S2', 'touch drag moves the player, release glides then stops', x1 - x0 > 30 and v_glide > 5 and v_after == 0, f'dx={x1-x0:.0f} v_glide={v_glide:.1f} v_after={v_after:.1f}')
     # S10 spawn state for several rounds of each stage
     lit = []
     for si in (0, HARB):

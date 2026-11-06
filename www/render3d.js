@@ -287,6 +287,21 @@
     };
     scene.add(blob, litRing);
 
+    // Twists: cloud shade drifting on the ground and gold rings under golden friends, instanced; counts set per frame.
+    const MAX_CLOUDS = 12, MAX_GOLD = 6;
+    const cloudGeo = new T.CircleGeometry(1, 36); cloudGeo.rotateX(-Math.PI / 2);
+    const cloudShade = new T.InstancedMesh(cloudGeo, new T.MeshBasicMaterial({ color: 0x120a2a, transparent: true, opacity: 0.45, depthWrite: false }), MAX_CLOUDS);
+    cloudShade.renderOrder = 4; cloudShade.count = 0; cloudShade.frustumCulled = false;
+    const goldGeo = new T.RingGeometry(0.75, 1.15, 28); goldGeo.rotateX(-Math.PI / 2);
+    const goldMat = new T.MeshBasicMaterial({ color: 0xfff1a0, transparent: true, opacity: 0.9, depthWrite: false });
+    const goldRings = new T.InstancedMesh(goldGeo, goldMat, MAX_GOLD);
+    goldRings.renderOrder = 4; goldRings.count = 0; goldRings.frustumCulled = false;
+    // A gold pillar of light rises over each golden friend so it can't be mistaken for an orange hint ring.
+    const goldBeam = new T.InstancedMesh(new T.CylinderGeometry(1, 1, 1, 12, 1, true),
+      new T.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.45, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide }), MAX_GOLD);
+    goldBeam.renderOrder = 8; goldBeam.count = 0; goldBeam.frustumCulled = false;
+    scene.add(cloudShade, goldRings, goldBeam);
+
     // Edible hint rings, instanced; count is set per frame.
     const MAX_HINTS = 400;
     const hintGeo = new T.RingGeometry(1.15, 1.4, 28); hintGeo.rotateX(-Math.PI / 2);
@@ -482,9 +497,11 @@
 
       // Guards: few, so plain meshes.
       const guardMat = lambert('#2f3e66'), skinMat = lambert('#f6d2b0'), lampMat = new T.MeshBasicMaterial({ color: 0xffd23f });
+      const bossMat = lambert('#5a2a6e');
       for (const g of w.guards) {
         const gg = new T.Group();
-        const body = new T.Mesh(unit.cyl, guardMat); body.scale.set(5, 18, 5); body.position.y = 9;
+        g.k = g.boss ? g.r / 9 : 1; // the boss is a guard scaled up to its radius
+        const body = new T.Mesh(unit.cyl, g.boss ? bossMat : guardMat); body.scale.set(5, 18, 5); body.position.y = 9;
         const head = new T.Mesh(unit.sphere, skinMat); head.scale.setScalar(4.5); head.position.y = 22;
         const lamp = new T.Mesh(unit.box, lampMat); lamp.scale.set(6, 3, 3); lamp.position.set(7, 14, 0);
         body.receiveShadow = head.receiveShadow = true;
@@ -663,7 +680,7 @@
         if (g.state === 1) { const p = f.swallowPos(g); x = p.x; y = p.y; s = p.s; lift = p.lift; }
         g.mesh.position.set(x, lift, y);
         g.mesh.rotation.y = -g.dir;
-        g.mesh.scale.setScalar(s);
+        g.mesh.scale.setScalar(s * (g.k || 1));
       }
       for (const { src, mesh } of world.beamMeshes) {
         const alive = src.state === undefined || src.state === 0;
@@ -732,6 +749,27 @@
         m.scale.set(R * 0.05, R * 0.06, R * 0.12);
         m.visible = k < 0.6;
       });
+
+      const clouds = f.clouds || [], golden = f.golden || [];
+      cloudShade.count = Math.min(MAX_CLOUDS, clouds.length);
+      for (let i = 0; i < cloudShade.count; i++) {
+        dummy.position.set(clouds[i].x, 1.1, clouds[i].y); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(clouds[i].r); dummy.updateMatrix();
+        cloudShade.setMatrixAt(i, dummy.matrix);
+      }
+      cloudShade.instanceMatrix.needsUpdate = true;
+      goldRings.count = Math.min(MAX_GOLD, golden.length);
+      for (let i = 0; i < goldRings.count; i++) {
+        dummy.position.set(golden[i].x, 1.3, golden[i].y); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(Math.max(golden[i].r * 1.6, 16) * (1 + Math.sin(t * 8) * 0.12)); // never smaller than a person-sized ring dummy.updateMatrix();
+        goldRings.setMatrixAt(i, dummy.matrix);
+      }
+      goldRings.instanceMatrix.needsUpdate = true;
+      goldBeam.count = goldRings.count;
+      for (let i = 0; i < goldBeam.count; i++) {
+        const w = Math.max(golden[i].r * 0.9, 8);
+        dummy.position.set(golden[i].x, 70, golden[i].y); dummy.rotation.set(0, t * 2, 0); dummy.scale.set(w, 140, w); dummy.updateMatrix();
+        goldBeam.setMatrixAt(i, dummy.matrix);
+      }
+      goldBeam.instanceMatrix.needsUpdate = true;
 
       // Hints: pulse rings under things the player could eat right now.
       let n = 0;

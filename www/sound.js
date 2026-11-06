@@ -64,12 +64,49 @@
   //   arp: a 16th-note pluck with a dotted-8th echo     bass: filtered saw on 8ths
   //   lead: a soft pentatonic line                       drums: synthesized kick and hi-hat
   // mode 'title' keeps it to pad + arp; 'play' brings in bass and drums; 'night' opens the filter and adds sparkle.
-  const BPM = 100, S16 = 60 / BPM / 4;
-  const CHORDS = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]]; // Am F C G (one bar each)
-  const ROOTS = [45, 41, 36, 43];
-  const LEAD = [76, null, null, 74, 72, null, 69, null, 72, null, 74, null, 76, null, 79, null,
-                81, null, 79, null, 76, null, 74, null, 72, null, null, null, 69, null, null, null];
+  // Every region has its own tune: key, tempo, four-chord progression, lead timbre, and a melody grown from
+  // a seed over the key's pentatonic scale (so it stays the same each visit). Chords are triads on scale steps.
+  const DEG = { I: [0, 4, 7], ii: [2, 5, 9], iii: [4, 7, 11], IV: [5, 9, 12], V: [7, 11, 14], vi: [9, 12, 16],
+    i: [0, 3, 7], iv: [5, 8, 12], v: [7, 10, 14], III: [3, 7, 10], VI: [8, 12, 15], VII: [10, 14, 17] };
+  const TUNES = {
+    town: { key: 60, bpm: 96, prog: ['vi', 'IV', 'I', 'V'], lead: 'triangle', seed: 1 },
+    city: { key: 62, bpm: 112, prog: ['i', 'VII', 'VI', 'VII'], lead: 'square', seed: 2, minor: true },
+    oasis: { key: 64, bpm: 90, prog: ['i', 'VI', 'VII', 'i'], lead: 'sine', seed: 3, minor: true },
+    hanok: { key: 55, bpm: 84, prog: ['I', 'vi', 'ii', 'V'], lead: 'sine', seed: 4 },
+    campus: { key: 65, bpm: 104, prog: ['I', 'V', 'vi', 'IV'], lead: 'triangle', seed: 5 },
+    snow: { key: 57, bpm: 88, prog: ['I', 'iii', 'IV', 'V'], lead: 'sine', seed: 6, bells: true },
+    market: { key: 58, bpm: 110, prog: ['I', 'IV', 'V', 'IV'], lead: 'square', seed: 7 },
+    crossing: { key: 61, bpm: 100, prog: ['i', 'VI', 'VII', 'i'], lead: 'triangle', seed: 8, minor: true },
+    stadium: { key: 62, bpm: 122, prog: ['I', 'V', 'IV', 'V'], lead: 'square', seed: 9 },
+    harbor: { key: 52, bpm: 90, prog: ['i', 'VII', 'VI', 'VII'], lead: 'triangle', seed: 10, minor: true },
+    construction: { key: 54, bpm: 108, prog: ['i', 'iv', 'VII', 'i'], lead: 'square', seed: 11, minor: true },
+    park: { key: 55, bpm: 116, prog: ['I', 'vi', 'IV', 'V'], lead: 'square', seed: 12 },
+    beach: { key: 57, bpm: 98, prog: ['I', 'IV', 'ii', 'V'], lead: 'triangle', seed: 13 },
+    desert: { key: 62, bpm: 86, prog: ['i', 'VI', 'VII', 'i'], lead: 'sine', seed: 14, minor: true },
+    farm: { key: 65, bpm: 100, prog: ['I', 'IV', 'I', 'V'], lead: 'triangle', seed: 15 },
+    xmas: { key: 60, bpm: 104, prog: ['I', 'IV', 'V', 'I'], lead: 'sine', seed: 16, bells: true },
+  };
+  function melody(t) {
+    const pent = t.minor ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9];
+    let x = t.seed * 9301 + 49297, at = 2; // tiny LCG: same tune for the same region every time
+    const rnd = () => (x = (x * 9301 + 49297) % 233280) / 233280;
+    return Array.from({ length: 32 }, (_, k) => {
+      if (k % 8 === 7 || rnd() < 0.3) return null; // breathe at phrase ends
+      at = Math.max(0, Math.min(9, at + Math.round((rnd() - 0.5) * 3)));
+      return t.key + 12 + pent[at % 5] + 12 * Math.floor(at / 5);
+    });
+  }
+  let BPM = 100, S16 = 60 / BPM / 4, tune = TUNES.town, CHORDS = [], ROOTS = [], LEAD = [];
+  function setTune(name) {
+    tune = TUNES[name] || TUNES.town;
+    BPM = tune.bpm; S16 = 60 / BPM / 4;
+    CHORDS = tune.prog.map(d => DEG[d].map(o => tune.key + o));
+    ROOTS = tune.prog.map(d => tune.key - 12 + DEG[d][0] - (tune.key >= 60 ? 12 : 0));
+    LEAD = melody(tune);
+    if (fx) fx.echo.delayTime.value = S16 * 3;
+  }
   let timer = null, step = 0, nextT = 0, mode = 'title', fx = null, noise = null;
+  setTune('town');
 
   function buildFx() {
     if (fx) return fx;
@@ -112,7 +149,7 @@
     const { echo, padLp } = buildFx();
     while (nextT < ctx.currentTime + 0.3) {
       const at = Math.max(0, nextT - ctx.currentTime), bar = (step >> 4) % 4, s = step % 16, chord = CHORDS[bar];
-      const play = mode !== 'title', night = mode === 'night';
+      const play = mode !== 'title', night = mode === 'night', boss = mode === 'boss';
       if (s === 0) { // pad: the whole bar, filter breathing with the bar
         padLp.frequency.setTargetAtTime(night ? 2600 : play ? 1400 : 900, ctx.currentTime + at, 0.8);
         for (const n of chord) voice(note(n), at, 16 * S16, { vol: 0.05, detune: [-9, 0, 9], attack: 0.35, release: 16 * S16 + 0.3, to: [padLp] });
@@ -121,10 +158,11 @@
       voice(note(arp), at, S16, { type: 'square', vol: 0.05, release: 0.18, cutoff: night ? 2600 : 1500, to: [musicBus, echo] });
       if (play) {
         if (s % 2 === 0) voice(note(ROOTS[bar] + (s % 8 === 6 ? 12 : 0)), at, 2 * S16, { vol: 0.16, detune: [0, 6], release: 0.22, cutoff: 380 });
-        if (s % 4 === 0) kick(at);
-        if (s % 4 === 2 || (night && s % 2 === 1)) hat(at, s % 4 === 2 ? 0.12 : 0.05);
+        if (s % 4 === 0 || (boss && s % 4 === 2)) kick(at); // the boss doubles the kick
+        if (s % 4 === 2 || ((night || boss) && s % 2 === 1)) hat(at, s % 4 === 2 ? 0.12 : 0.05);
         const m = LEAD[(step >> 1) % LEAD.length];
-        if (s % 2 === 0 && m) voice(note(m), at, 2 * S16, { type: 'triangle', vol: 0.12, attack: 0.02, release: 0.5, to: [musicBus, echo] });
+        if (s % 2 === 0 && m) voice(note(m), at, 2 * S16, { type: tune.lead, vol: tune.lead === 'square' ? 0.06 : 0.12, attack: 0.02, release: 0.5, to: [musicBus, echo] });
+        if (tune.bells && s % 8 === 4) voice(note(chord[1] + 24), at, S16, { type: 'sine', vol: 0.06, release: 0.9, to: [musicBus, echo] });
       }
       if (night && s % 4 === 3) voice(note(chord[2] + 24), at, S16, { type: 'sine', vol: 0.05, release: 0.4, to: [musicBus, echo] });
       nextT += S16; step++;
@@ -138,6 +176,7 @@
     },
     stop() { clearInterval(timer); timer = null; },
     mode(m) { mode = m; },
+    tune(name) { if (TUNES[name] && tune !== TUNES[name]) setTune(name); }, // region name: town, city, ...
   };
 
   function setOn(kind, v) {
