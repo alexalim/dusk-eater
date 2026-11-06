@@ -33,6 +33,11 @@
       dexClaimed: union(aw.dexClaimed, dw.dexClaimed),
       stats: maxEach(aw.stats, dw.stats), // records only grow; max never counts a run twice
       badges: union(aw.badges, dw.badges), // like dex rewards: claimed once per account
+      // tickets are spent and earned like gems; the check-in and today's challenges follow the save that went further
+      tickets: firstLink ? maxEach(aw.tickets, dw.tickets) : newer.tickets,
+      pendingTickets: dw.pendingTickets,
+      daily: (dw.daily.last > aw.daily.last || (dw.daily.last === aw.daily.last && dw.daily.n >= aw.daily.n)) ? dw.daily : aw.daily,
+      challenge: dw.challenge.date !== aw.challenge.date ? (dw.challenge.date > aw.challenge.date ? dw.challenge : aw.challenge) : newer.challenge,
     });
     return {
       stars: maxEach(account.stars, device.stars),

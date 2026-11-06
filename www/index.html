@@ -75,6 +75,7 @@
   #goals span.done { color: #2a1a05; background: var(--star); border-color: #fff; }
   #goals span.done::before { content: ''; display: inline-block; width: 1em; height: 1em; margin-right: 4px; vertical-align: -2px; background: url(img/ui/check.svg) center / contain no-repeat; }
   #cont .btn.off { opacity: .45; pointer-events: none; }
+  #bonus-pill { align-self: center; font-size: 14px; padding: 3px 14px; border-color: #ffd25c; color: #ffe8a0; }
   #rush-pill { align-self: center; font-size: 16px; padding: 4px 16px; color: #2a1a05; background: linear-gradient(#ffe8a0, #ffc94d);
     border-color: #fff; animation: rushpulse .5s ease-in-out infinite alternate; }
   @keyframes rushpulse { to { transform: scale(1.08); } }
@@ -130,7 +131,7 @@
   #title .tagline { margin: 0; color: var(--muted); line-height: 1.55; }
   .btn.hero { width: min(100%, 300px); box-sizing: border-box; padding: 18px 0; font-size: 22px; text-align: center; margin-top: 6px; }
   .btn.hero.wait { opacity: .6; }
-  .menu-row { display: flex; gap: 10px; width: min(100%, 300px); }
+  .menu-row { display: flex; gap: 8px; width: min(100%, 320px); }
   .tile { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 0 8px;
     border-radius: 18px; background: var(--card); border: 2px solid rgba(244,239,230,.18); font-weight: 800; font-size: 14px; cursor: pointer; }
   .tile img { width: 34px; height: 34px; }
@@ -153,6 +154,27 @@
   .twist-body ul { text-align: left; margin: 6px 0 10px; padding-left: 20px; font-size: 14px; line-height: 1.6; color: #3a3360; align-self: stretch; }
   .twist-body .btn { align-self: stretch; text-align: center; }
   #twist-card.boss .dexhead { background: linear-gradient(#a24dff, #5a2a6e); }
+  .daily-body { display: flex; flex-direction: column; gap: 10px; text-align: center; }
+  .days { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .day { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px 6px; border-radius: 14px;
+    background: #fff; box-shadow: 0 2px 0 #c9d3f2; font-size: 12px; font-weight: 800; color: #3a3360; }
+  .day b { font-family: var(--display); font-weight: 400; font-size: 13px; color: #3f5bb8; }
+  .day .ico { width: 30px; height: 30px; margin: 2px 0; }
+  .day.got { background: #dfe6f7; color: #8a8fb0; } .day.got::after { content: ''; position: absolute; inset: 0; margin: auto; width: 34px; height: 34px;
+    background: url(img/ui/check.svg) center / contain no-repeat; }
+  .day.now { background: #ffe39a; box-shadow: 0 0 0 3px #ffc83d inset; animation: wiggle 1.6s ease-in-out infinite; }
+  .day.wide { grid-column: span 2; }
+  .daily-body .day .dayico svg { width: 30px; height: 30px; margin: 2px 0; }
+  .daily-body .gem, .mission .gem, .chestrow .gem { color: inherit; }
+  .daily-body .gem svg, .mission .gem svg, .chestrow .gem svg { width: 1em; height: 1em; vertical-align: -0.12em; }
+  .mission { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 14px; background: #fff; box-shadow: 0 2px 0 #c9d3f2; margin-bottom: 8px; }
+  .mission .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; color: #2a2350; }
+  .mission .bar { height: 10px; border-radius: 999px; background: #dfe6f7; overflow: hidden; }
+  .mission .bar i { display: block; height: 100%; background: linear-gradient(90deg, #b78cff, #ffd25c); }
+  .mission .claim { flex: none; padding: 6px 12px; border-radius: 999px; font-family: var(--display); font-size: 13px; background: #dfe6f7; color: #8a8fb0; }
+  .mission .claim.ready { background: var(--star); color: #2a1a05; cursor: pointer; animation: wiggle 1.6s ease-in-out infinite; }
+  .chestrow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #fff6d6; box-shadow: 0 0 0 2px #ffc83d inset; margin-bottom: 10px; }
+  .chestrow .ico { width: 36px; height: 36px; }
   .info-body h4 { margin: 12px 0 4px; font-size: 16px; }
   .info-body p { margin: 6px 0; max-width: none; font-size: 14px; color: #3a3360; } /* dark text: the window is light */
   .btns { display: flex; flex-direction: column; gap: 10px; align-items: stretch; margin-top: 6px; }
@@ -259,7 +281,7 @@
   #skin-box .btn.off { opacity: .45; pointer-events: none; }
   /* Collection book: a light pop-up window with map sets as tabs along the bottom. Found friends sit on
      yellow tiles, unfound ones are grey silhouettes, and a tile whose reward waits wiggles. */
-  #dex, #badges, #info, #levelinfo, #twist { justify-content: center; background: rgba(8, 6, 24, .78); padding-left: 14px; padding-right: 14px; }
+  #dex, #badges, #info, #levelinfo, #twist, #daily, #missions { justify-content: center; background: rgba(8, 6, 24, .78); padding-left: 14px; padding-right: 14px; }
   .dexwin { box-sizing: border-box; width: min(100%, 400px); max-height: 100%; min-height: 0; flex-shrink: 1; display: flex; flex-direction: column;
     background: #eef2ff; color: #2a2350; border: 3px solid #fff; border-radius: 22px; overflow: hidden;
     box-shadow: 0 10px 40px rgba(0, 0, 0, .45); }
@@ -346,6 +368,7 @@
   <div id="goals"></div>
   <div id="boss-pill" class="pill hidden"></div>
   <div id="rush-pill" class="pill hidden"></div>
+  <div id="bonus-pill" class="pill hidden"></div>
   <div id="warn"><img class="ico face" src="img/ui/face-surprised.svg" alt=""> 앗, 햇빛이에요! 몸이 줄어들어요</div>
   <div id="banner">미션 완료! 밤이 일찍 와요 <img class="ico" src="img/ui/moon.svg" alt=""></div>
   <div id="dex-new"></div>
@@ -361,6 +384,24 @@
     <div class="tile" id="btn-shop-title"><img src="img/ui/bag.svg" alt="">상점</div>
     <div class="tile" id="btn-dex"><img src="img/ui/book.svg" alt="">도감<span class="badge" id="dex-badge"></span></div>
     <div class="tile" id="btn-badges"><img src="img/ui/medal.svg" alt="">배지<span class="badge" id="badges-badge"></span></div>
+    <div class="tile" id="btn-missions"><img src="img/ui/check.svg" alt="">미션<span class="badge" id="missions-badge"></span></div>
+  </div>
+</div>
+<div id="daily" class="overlay hidden">
+  <div class="dexwin">
+    <div class="dexhead"><span>출석 보상</span><span class="x" id="btn-daily-back" aria-label="닫기" style="margin-left: auto">×</span></div>
+    <div class="info-body daily-body">
+      <p>매일 들어오면 선물이 점점 커져요! 하루 빠져도 이어서 받아요.</p>
+      <div class="days" id="daily-days"></div>
+      <div class="btn" id="btn-daily-claim">받기</div>
+      <p id="daily-msg"></p>
+    </div>
+  </div>
+</div>
+<div id="missions" class="overlay hidden">
+  <div class="dexwin">
+    <div class="dexhead"><span>오늘의 미션</span><span class="gem gem-count"></span><span class="x" id="btn-missions-back" aria-label="닫기">×</span></div>
+    <div class="info-body" id="missions-body"></div>
   </div>
 </div>
 <div id="twist" class="overlay hidden">
@@ -480,6 +521,7 @@
 <script src="dex.js"></script>
 <script src="badges.js"></script>
 <script src="level.js"></script>
+<script src="challenge.js"></script>
 <script src="sound.js"></script>
 <script src="vendor/supabase.js"></script>
 <script src="config.js"></script>
@@ -489,7 +531,7 @@
 (() => {
   'use strict';
   const C = window.DuskCore;
-  const { STAGES, THEMES, goalLabel, EVENTS, EVENT_LEVELS, activeEvents, REGIONS, REGION_SIZE, TWIST_INFO } = window.DuskStages;
+  const { STAGES, THEMES, NAMES, goalLabel, EVENTS, EVENT_LEVELS, activeEvents, REGIONS, REGION_SIZE, TWIST_INFO } = window.DuskStages;
   const STAGE_IDS = STAGES.map(s => s.id);
   // The level list being played and picked from: the 150-level ladder ('main') or an event's levels.
   let listKey = 'main', list = STAGES, listIds = STAGE_IDS;
@@ -500,6 +542,7 @@
   // TestFlight builds open every event early so testers can play them before the dates.
   let testBuild = !!(window.__DUSK_TEST__ && window.__DUSK_TEST__.testBuild);
   const liveEvents = () => (testBuild ? EVENTS : activeEvents(today()));
+  const dayKey = () => { const d = today(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const today = () => (window.__DUSK_TEST__ && window.__DUSK_TEST__.today ? new Date(window.__DUSK_TEST__.today + 'T12:00:00') : new Date());
   // Korean object particle: 을 after a final consonant, 를 after a vowel.
   const withObject = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return w + (c >= 0 && c < 11172 && c % 28 ? '을' : '를'); };
@@ -519,7 +562,7 @@
   resize();
 
   // ---------- storage (iOS UserDefaults in the app, localStorage in a browser; loaded at boot) ----------
-  const Shop = window.DuskShop, Store = window.DuskStore, Dex = window.DuskDex, Badges = window.DuskBadges, Level = window.DuskLevel, Sound = window.DuskSound;
+  const Shop = window.DuskShop, Store = window.DuskStore, Dex = window.DuskDex, Badges = window.DuskBadges, Level = window.DuskLevel, Sound = window.DuskSound, Challenge = window.DuskChallenge;
   const save = (key, v) => { Store.kv.set(key, v); };
   let bestStars = {};
   let bestScore = {};
@@ -610,6 +653,17 @@
   let lots = []; // open lots [x0, y0, size]: parks, plazas, fields (the renderer lays lawns on them)
   let score, stats, shadows, sun, phase, rnd, runSun = 1;
   let bannerUntil = 0; // elapsed second until which the banner shows
+  // The bolt mission's target: a kind with plenty left on the map that the player can already swallow.
+  function pickBonus() {
+    const count = {};
+    for (const o of objects) if (o.state === 0 && o.r < player.r * C.EAT_RATIO && NAMES[o.type]) count[o.type] = (count[o.type] || 0) + 1;
+    const kinds = Object.keys(count).filter(k => count[k] >= 8);
+    if (!kinds.length) return { done: 'none' };
+    const type = kinds[Math.floor(rnd() * kinds.length)], n = count[type] >= 20 ? 4 : 3;
+    banner(`${ico('bolt')} 번개 미션! ${BONUS_S}초 안에 ${NAMES[type][0]} ${n}${NAMES[type][1]} 삼키기`, 2.5);
+    Sound.sfx.star();
+    return { type, n, got: 0, until: elapsed + BONUS_S, done: false };
+  }
   function banner(html, secs) { $('banner').innerHTML = html; bannerUntil = elapsed + secs; }
   // Twists (stages.js): drifting cloud shade, golden friends worth 5x, a short eclipse, a boss.
   let clouds = [], eclipse = false, nextGold = 0;
@@ -617,6 +671,9 @@
   // Last-stretch rush: the final RUSH_S seconds of every run score double, with a countdown and faster music.
   const RUSH_S = 10;
   let rush = false, rushTick = 0;
+  // Bolt mission: once a run, 40% in, a short bonus challenge ("15 s: swallow 3 cats"). Gems on success, nothing lost on failure.
+  const BONUS_AT = 0.4, BONUS_S = 15, BONUS_GEMS = 5;
+  let bonus = null; // { type, n, got, until, done }
   const twistIco = { clouds: 'cloud', golden: 'sparkle', eclipse: 'eclipse', boss: 'crown' };
 
   // Level 1 teaches by doing: each step waits for its condition (or a few seconds) before the next.
@@ -802,7 +859,7 @@
   function setupStage(i, boosts = []) {
     stageIndex = i; stage = list[i];
     buildWorld(Date.now() & 0xffff);
-    elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; continued = false; nextGold = 4; rush = false; rushTick = 0; Sound.music.rush(false);
+    elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; continued = false; nextGold = 4; rush = false; rushTick = 0; Sound.music.rush(false); bonus = null;
     clouds = stage.twist === 'clouds' ? Array.from({ length: 7 }, (_, k) => ({ x: rnd() * WORLD, y: rnd() * waterY, r: 70 + rnd() * 50 })) : [];
     tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
@@ -923,6 +980,8 @@
     const CLOUD_V = 8;
     // past the right edge (+100) a cloud comes back in from the left (-100); the span is WORLD + 200
     for (const c of clouds) { c.x = (c.x + 100 + CLOUD_V * dt) % (WORLD + 200) - 100; c.y += Math.sin(elapsed * 0.1 + c.r) * 1.5 * dt; }
+    if (!bonus && !tut && stage.twist !== 'boss' && elapsed >= runDuration * BONUS_AT && !phase.night) bonus = pickBonus();
+    if (bonus && !bonus.done && elapsed >= bonus.until) { bonus.done = 'fail'; banner(`${ico('bolt')} 번개 미션 실패… 다음엔 꼭!`, 1.5); }
     if (stage.twist === 'golden' && elapsed >= nextGold) { // a golden friend near the player, gone again after 8 s
       nextGold = elapsed + 9;
       const near = objects.filter(o => o.state === 0 && !(o.goldUntil > elapsed) && Math.hypot(o.x - player.x, o.y - player.y) < 420);
@@ -997,6 +1056,12 @@
       const gold = o.goldUntil > elapsed;
       score += Math.round(o.r * o.r / 2) * (gold ? 5 : 1) * (rush ? 2 : 1);
       if (gold) { Sound.sfx.coin(); banner(`${ico('sparkle')} 황금 친구! 점수 5배`, 1.5); }
+      if (rush) stats.rushEaten = (stats.rushEaten || 0) + 1;
+      if (bonus && !bonus.done && o.type === bonus.type && ++bonus.got >= bonus.n) {
+        bonus.done = 'win'; stats.bonus = 1; score += 300;
+        Store.update(Shop.grant(Store.wallet, { gems: BONUS_GEMS }));
+        Sound.sfx.coin(); banner(`${ico('bolt')} 번개 미션 성공! 보석 ${BONUS_GEMS}개 · 300점`, 2.5);
+      }
       if (o.boss) { Sound.sfx.level(); banner(`${ico('crown')} 보스를 삼켰어요!`, 3); }
       stats.score = score;
       stats.eaten[o.type] = (stats.eaten[o.type] || 0) + 1;
@@ -1080,6 +1145,9 @@
 
   function renderHud() {
     $('sun').classList.toggle('moon', phase.night || eclipse);
+    const live = bonus && bonus.type && !bonus.done;
+    $('bonus-pill').classList.toggle('hidden', !live);
+    if (live) $('bonus-pill').innerHTML = `${ico('bolt')} ${NAMES[bonus.type][0]} ${bonus.got}/${bonus.n} · ${Math.max(0, Math.ceil(bonus.until - elapsed))}초`;
     $('rush-pill').classList.toggle('hidden', !rush);
     if (rush) $('rush-pill').innerHTML = `${ico('bolt')} 점수 2배 · ${Math.max(0, Math.ceil(runDuration - elapsed))}`;
     $('score').classList.toggle('rush', rush);
@@ -1192,6 +1260,43 @@
       <small>${set.name} ${got ? '모두 채웠어요!' : `${n}/${set.entries.length} 채우면 받아요`}</small></span></div>`;
   }
 
+  // ---------- daily check-in and today's missions ----------
+  const rewardText = r => [r.gems ? `<span class="gem">${GEM}${r.gems}</span>` : '', ...Object.entries(r.tickets || {}).map(([id, n]) =>
+    `${Shop.BOOSTS.find(b => b.id === id).name} ${n}장`)].filter(Boolean).join(' · ');
+  const rewardIco = r => r.gems ? `<span class="gem dayico">${GEM}</span>` : ico(Object.keys(r.tickets)[0] === 'time' ? 'clock' : 'grow');
+  function renderDaily() {
+    const w = Store.wallet, due = Shop.dailyDue(w, dayKey()), at = w.daily.n % Shop.DAILY.length;
+    $('daily-days').innerHTML = Shop.DAILY.map((r, k) => {
+      // squares already taken in this week: before today's when it is still due, up to today's once taken
+      const got = due ? k < at : w.daily.n > 0 && k <= (w.daily.n - 1) % Shop.DAILY.length;
+      const cls = (k === at && due ? ' now' : '') + (got ? ' got' : '') + (k === 6 ? ' wide' : '');
+      const label = r.gems ? `보석 ${r.gems}` : rewardText(r); // the icon above already shows the gem
+      return `<div class="day${cls}"><b>${k + 1}일</b>${rewardIco(r)}<span>${label}</span></div>`;
+    }).join('');
+    $('btn-daily-claim').classList.toggle('off', !due);
+    $('btn-daily-claim').textContent = due ? `${at + 1}일째 선물 받기` : '오늘은 받았어요. 내일 또 만나요!';
+  }
+  function openDaily() { $('daily-msg').textContent = ''; renderDaily(); show('daily'); }
+  function renderMissions() {
+    const w = Store.wallet, day = dayKey(), list = Challenge.status(w, day), all = list.every(m => m.claimed);
+    const chest = w.challenge.date === day && w.challenge.chest;
+    $('missions-body').innerHTML = `<p>판을 끝까지 하면 자동으로 채워져요. 매일 자정에 바뀌어요.</p>
+      <div class="chestrow">${ico('gift')}<span style="flex:1"><b>세 개 모두 받으면 보물 상자</b><br><small>${rewardText(Challenge.CHEST)}</small></span>
+        <span class="mission"><span class="claim${all && !chest ? ' ready' : ''}" id="btn-chest">${chest ? '받음' : all ? '열기' : `${list.filter(m => m.claimed).length}/3`}</span></span></div>` +
+      list.map(m => `<div class="mission"><span class="top"><span>${m.text}</span>
+        <span class="claim${m.done && !m.claimed ? ' ready' : ''}" data-m="${m.id}">${m.claimed ? '받음' : m.done ? '받기' : rewardText(m.reward)}</span></span>
+        <span class="bar"><i style="width:${m.got / m.n * 100}%"></i></span><small>${m.got} / ${m.n}</small></div>`).join('');
+    $('missions-body').querySelectorAll('.claim[data-m]').forEach(el => el.addEventListener('pointerup', () => {
+      const w2 = Challenge.claim(Store.wallet, dayKey(), el.dataset.m, Shop.grant);
+      if (w2 !== Store.wallet) { Store.update(w2); Sound.sfx.coin(); }
+    }));
+    $('btn-chest').addEventListener('pointerup', () => {
+      const w2 = Challenge.openChest(Store.wallet, dayKey(), Shop.grant);
+      if (w2 !== Store.wallet) { Store.update(w2); Sound.sfx.level(); }
+    });
+  }
+  function renderMissionCount() { const n = Challenge.waiting(Store.wallet, dayKey()); $('missions-badge').textContent = n ? n : ''; }
+
   // ---------- player level ----------
   function renderLevel() {
     const L = Level.levelOf(Store.wallet.stats.xp);
@@ -1276,7 +1381,7 @@
 
   function show(id) {
     if (id && id !== 'pause') { Sound.music.mode('title'); Sound.music.rush(false); if (id === 'title') Sound.music.tune('town'); } // menus get the quiet arrangement
-    for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo', 'twist', 'cont']) $(o).classList.toggle('hidden', o !== id);
+    for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo', 'twist', 'cont', 'daily', 'missions']) $(o).classList.toggle('hidden', o !== id);
     $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
     if (id !== null) $('tutorial').classList.add('hidden');
   }
@@ -1343,15 +1448,16 @@
 
   // Boosts picked on the sheet for the next departure only; paid when the run starts.
   const chosen = new Set();
-  const boostCost = () => Shop.BOOSTS.filter(b => chosen.has(b.id)).reduce((a, b) => a + b.cost, 0);
+  const boostCost = () => Shop.BOOSTS.filter(b => chosen.has(b.id) && !(Store.wallet.tickets[b.id] > 0)).reduce((a, b) => a + b.cost, 0); // tickets go first
 
   function renderSheet() {
     const s = list[selected], open = C.isUnlocked(listIds, selected, bestStars);
     const gems = Store.wallet.gems;
     const boosts = Shop.BOOSTS.map(b => {
-      const on = chosen.has(b.id), affordable = on || boostCost() + b.cost <= gems;
+      const t = Store.wallet.tickets[b.id] || 0, on = chosen.has(b.id), affordable = on || t > 0 || boostCost() + b.cost <= gems;
+      const price = t > 0 ? `<span class="gem">이용권 ${t}</span>` : `<span class="gem">${GEM}${b.cost}</span>`;
       return `<div class="boost${on ? ' on' : ''}${affordable ? '' : ' off'}" data-b="${b.id}">
-        <span class="row"><b>${b.name}</b><span class="gem">${GEM}${b.cost}</span></span><small>${b.desc}</small></div>`;
+        <span class="row"><b>${b.name}</b>${price}</span><small>${b.desc}</small></div>`;
     }).join('');
     const rank = open && Account.user ? `<span class="chip" id="btn-rank">${ico('trophy')} 랭킹</span>` : '';
     $('sheet').innerHTML = `<div class="row"><span class="name">${s.name}</span>${rank}<span class="stars">${starText(bestStars[s.id] || 0)}</span></div>
@@ -1444,6 +1550,10 @@
       size: Math.round(stats.maxR / 4 * 10) / 10, night: stats.night, buildings: stats.eaten.building || 0 });
     const xpBefore = w.stats.xp || 0, xp = Level.runXp(stats.total, n), lv = Level.gain(w, xp);
     w = lv.wallet;
+    const doneBefore = Challenge.status(w, dayKey()).filter(m => m.done).length;
+    w = Challenge.record(w, dayKey(), { eaten: stats.total, stars: n, runs: 1, buildings: stats.eaten.building || 0, rushEaten: stats.rushEaten || 0,
+      size: Math.round(stats.maxR / 4 * 10) / 10, clean: stats.lit ? 0 : 1, bonus: stats.bonus || 0 });
+    const missionsDone = Challenge.status(w, dayKey()).filter(m => m.done).length - doneBefore;
     const lvSkins = Level.dueSkins(w, Shop.SKINS);
     w = lvSkins.reduce(Shop.grantReward, w);
     // Event reward: enough stars across the event's levels grants its skin (once).
@@ -1454,6 +1564,7 @@
     const earned = Math.max(0, n - before) * Shop.GEMS_PER_STAR;
     const notes = [];
     if (earned) notes.push(`새 별 보상: 보석 ${earned}개`);
+    if (missionsDone > 0) notes.push(`${ico('check')} 오늘의 미션 ${missionsDone}개 완료! 미션에서 보상 받기`);
     if (lv.to > lv.from) {
       const perks = Level.PERKS.filter(p => p.level > lv.from && p.level <= lv.to).map(p => p.text);
       const title = Level.titleOf(lv.to) !== Level.titleOf(lv.from) ? [`칭호 '${Level.titleOf(lv.to)}'`] : [];
@@ -1620,7 +1731,9 @@
     if (!$('shop').classList.contains('hidden')) renderShop();
     if (!$('dex').classList.contains('hidden')) renderDex();
     if (!$('badges').classList.contains('hidden')) renderBadges();
-    renderDexBadge(); renderBadgeCount(); renderLevel();
+    renderDexBadge(); renderBadgeCount(); renderLevel(); renderMissionCount();
+    if (!$('daily').classList.contains('hidden')) renderDaily();
+    if (!$('missions').classList.contains('hidden')) renderMissions();
   });
 
   // Menus wait until saved progress and the store have loaded.
@@ -1639,13 +1752,27 @@
   const whenReady = f => () => ready.then(f);
   // Saved progress and the store usually load at once; if not, say so instead of a start button that seems dead.
   const slow = setTimeout(() => { $('btn-title').classList.add('wait'); $('btn-title').textContent = '불러오는 중…'; }, 400);
-  ready.then(() => { clearTimeout(slow); $('btn-title').classList.remove('wait'); $('btn-title').textContent = '시작'; });
+  ready.then(() => {
+    clearTimeout(slow); $('btn-title').classList.remove('wait'); $('btn-title').textContent = '시작';
+    // the day's check-in greets you on the title screen, once a day
+    const T = window.__DUSK_TEST__; // automated checks opt in with { daily: true }, so the popup doesn't cover their title screen
+    if (state === 'title' && Shop.dailyDue(Store.wallet, dayKey()) && (!T || T.daily)) openDaily();
+  });
 
   $('btn-shop-title').addEventListener('pointerup', whenReady(() => openShop('title')));
   $('btn-shop-map').addEventListener('pointerup', () => openShop('select'));
   $('btn-select-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
   $('btn-dex').addEventListener('pointerup', whenReady(openDex));
   $('btn-info').addEventListener('pointerup', () => show('info'));
+  $('btn-missions').addEventListener('pointerup', whenReady(() => { renderMissions(); show('missions'); }));
+  $('btn-missions-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
+  $('btn-daily-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
+  $('btn-daily-claim').addEventListener('pointerup', () => {
+    if (!Shop.dailyDue(Store.wallet, dayKey())) return;
+    const r = Shop.DAILY[Store.wallet.daily.n % Shop.DAILY.length];
+    Store.update(Shop.claimDaily(Store.wallet, dayKey())); Sound.sfx.coin();
+    $('daily-msg').innerHTML = `${rewardText(r)} 받았어요!`;
+  });
   $('btn-twist-go').addEventListener('pointerup', () => { const f = twistGo; twistGo = null; if (f) f(); });
   $('btn-twist-back').addEventListener('pointerup', () => { twistGo = null; openSelectAt(selected); });
   $('title-level').addEventListener('pointerup', whenReady(openLevel));

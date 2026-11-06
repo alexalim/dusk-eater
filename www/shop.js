@@ -54,7 +54,8 @@
   const allProducts = () => SKINS.filter(s => s.product).map(s => s.product).concat(GEM_PACKS.map(p => p.product));
 
   function emptyWallet() {
-    return { gems: 0, owned: [], equipped: DEFAULT_SKIN, credited: [], pending: 0, dex: [], dexClaimed: [], stats: {}, badges: [] };
+    return { gems: 0, owned: [], equipped: DEFAULT_SKIN, credited: [], pending: 0, dex: [], dexClaimed: [], stats: {}, badges: [],
+      tickets: {}, pendingTickets: [], daily: { n: 0, last: '' }, challenge: { date: '', progress: {}, claimed: [], chest: false } };
   }
 
   // Accept whatever was saved; anything malformed falls back to an empty field.
@@ -71,7 +72,18 @@
     const stats = {};
     if (w.stats && typeof w.stats === 'object') for (const [k, v] of Object.entries(w.stats)) if (Number.isFinite(v) && v > 0) stats[k] = v;
     const badges = [...new Set(strs(w.badges))];
-    return { gems: int(w.gems), owned, equipped, credited: strs(w.credited).slice(-CREDIT_LOG), pending: int(w.pending), dex, dexClaimed, stats, badges };
+    // Booster tickets (free boosts from daily rewards and challenges), the 7-day check-in, today's challenges.
+    const tickets = {};
+    if (w.tickets && typeof w.tickets === 'object') for (const b of BOOSTS) if (int(w.tickets[b.id])) tickets[b.id] = int(w.tickets[b.id]);
+    const pendingTickets = strs(w.pendingTickets).filter(id => BOOSTS.some(b => b.id === id));
+    const d = w.daily && typeof w.daily === 'object' ? w.daily : {};
+    const daily = { n: int(d.n), last: typeof d.last === 'string' ? d.last : '' };
+    const c = w.challenge && typeof w.challenge === 'object' ? w.challenge : {};
+    const progress = {};
+    if (c.progress && typeof c.progress === 'object') for (const [k, v] of Object.entries(c.progress)) if (Number.isFinite(v) && v > 0) progress[k] = v;
+    const challenge = { date: typeof c.date === 'string' ? c.date : '', progress, claimed: [...new Set(strs(c.claimed))], chest: c.chest === true };
+    return { gems: int(w.gems), owned, equipped, credited: strs(w.credited).slice(-CREDIT_LOG), pending: int(w.pending), dex, dexClaimed, stats, badges,
+      tickets, pendingTickets, daily, challenge };
   }
 
   const skinFor = product => SKINS.find(s => s.product === product);
@@ -116,13 +128,39 @@
   }
 
   // Boost gems are held as `pending` until the run ends, so a run cut short by the app closing is refunded.
+  // A boost with a ticket in the wallet uses the ticket instead of gems (held the same way in `pendingTickets`).
   function startBoosts(w, ids) {
-    const cost = BOOSTS.filter(b => ids.includes(b.id)).reduce((a, b) => a + b.cost, 0);
+    const chosen = BOOSTS.filter(b => ids.includes(b.id));
+    const byTicket = chosen.filter(b => (w.tickets[b.id] || 0) > 0).map(b => b.id);
+    const cost = chosen.filter(b => !byTicket.includes(b.id)).reduce((a, b) => a + b.cost, 0);
     const paid = spend(w, cost);
-    return paid && Object.assign(paid, { pending: cost });
+    if (!paid) return null;
+    const tickets = Object.assign({}, w.tickets);
+    for (const id of byTicket) tickets[id] -= 1;
+    return Object.assign(paid, { pending: cost, tickets, pendingTickets: byTicket });
   }
-  const finishRun = w => Object.assign({}, w, { pending: 0 });
-  const refundPending = w => Object.assign({}, w, { gems: w.gems + w.pending, pending: 0 });
+  const finishRun = w => Object.assign({}, w, { pending: 0, pendingTickets: [] });
+  function refundPending(w) {
+    const tickets = Object.assign({}, w.tickets);
+    for (const id of w.pendingTickets) tickets[id] = (tickets[id] || 0) + 1;
+    return Object.assign({}, w, { gems: w.gems + w.pending, pending: 0, tickets, pendingTickets: [] });
+  }
+
+  // Give gems and/or booster tickets ({ gems, tickets: { time: 1 } }).
+  function grant(w, r) {
+    const tickets = Object.assign({}, w.tickets);
+    for (const [id, n] of Object.entries(r.tickets || {})) tickets[id] = (tickets[id] || 0) + n;
+    return Object.assign({}, w, { gems: w.gems + (r.gems || 0), tickets });
+  }
+
+  // Daily check-in: a 7-day calendar; a missed day just carries on from the next square, and after day 7 it starts over.
+  const DAILY = [{ gems: 10 }, { tickets: { time: 1 } }, { gems: 20 }, { tickets: { size: 1 } }, { gems: 30 }, { tickets: { time: 1, size: 1 } }, { gems: 80 }];
+  const dailyDue = (w, day) => w.daily.last !== day; // `day` is the local date, YYYY-MM-DD
+  function claimDaily(w, day) {
+    if (!dailyDue(w, day)) return w;
+    const next = grant(w, DAILY[w.daily.n % DAILY.length]);
+    return Object.assign(next, { daily: { n: w.daily.n + 1, last: day } });
+  }
 
   function awardStars(w, before, after) {
     const gained = Math.max(0, after - before);
@@ -132,7 +170,7 @@
   const api = {
     PREFIX, DEFAULT_SKIN, GEMS_PER_STAR, CREDIT_LOG, SKINS, GEM_PACKS, BOOSTS, allProducts,
     emptyWallet, normalize, creditTransaction, applyEntitlements, grantReward, equip, spend,
-    startBoosts, finishRun, refundPending, awardStars,
+    startBoosts, finishRun, refundPending, awardStars, grant, DAILY, dailyDue, claimDaily,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DuskShop = api;
