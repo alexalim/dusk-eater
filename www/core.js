@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
 
-  const DURATION = 120;      // seconds per round
+  const DURATION = 90;       // seconds per round (was 120: long runs left too much time to catch up)
   const NIGHT_START = 0.85;  // fraction of the round after which the whole map is shadow
   const MAX_ELEV = 65 * Math.PI / 180;
   // The sun never drops below this, so shadow length stays h / tan(elev) with no

@@ -290,7 +290,8 @@ with sync_playwright() as p:
 
     # S9 rendered shadow vs rule polygons, pixel by pixel
     b, pg, errs = page(p)
-    for si, sec in [(0, 12), (0, 55), (0, 95), (HARB, 30), (HARB, 95), (CITY, 50), (SNOW, 30), (SNOW, 70), (DESERT, 30), (FARM, 50)]:
+    # sample times are 3/4 of the old 120-second marks, so they land at the same point of today's 90-second day
+    for si, sec in [(0, 9), (0, 41), (0, 71), (HARB, 22), (HARB, 71), (CITY, 37), (SNOW, 22), (SNOW, 52), (DESERT, 22), (FARM, 37)]:
         pg.evaluate(f'{A}.start({si}); {A}.skipTo({sec})'); frames_wait(pg, 2); pg.evaluate(f'{A}.freeze()'); frames_wait(pg, 2)
         pts = pg.evaluate('''(() => {
           const A = window.__DUSK_TEST__.api, C = window.DuskCore, s = A.s, T = window.THREE;

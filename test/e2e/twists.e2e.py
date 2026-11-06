@@ -79,7 +79,7 @@ with sync_playwright() as p:
     pg.evaluate(f'{A}.start(9)'); frames_wait(pg, 3)
     boss = pg.evaluate(f'(() => {{ const g = {A}.s.guards.find(g => g.boss); return g && [g.r, g.range, {A}.s.player.r]; }})()')
     pill = pg.inner_text('#boss-pill')
-    pg.evaluate(f'{A}.skipTo(110)'); frames_wait(pg, 3)  # night: everything is shade except the beams
+    pg.evaluate(f'{A}.skipTo({A}.s.runDuration * 0.95)'); frames_wait(pg, 3)  # night: everything is shade except the beams
     pg.evaluate(f'(() => {{ const s = {A}.s, g = s.guards.find(g => g.boss); s.player.r = g.r / 0.8; s.player.x = g.x - 4; s.player.y = g.y; }})()')
     frames_wait(pg, 40)
     eaten = pg.evaluate(f"{A}.s.stats.eaten.boss || 0")

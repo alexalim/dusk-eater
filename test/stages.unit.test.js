@@ -59,8 +59,9 @@ test('the ladder is 15 regions of 10 levels, one map each, in REGIONS order; sno
 test('each region starts its eat goal low again, and the harbor asks to dodge the lighthouse only from its 11th level', () => {
   for (let k = 0; k < REGIONS.length; k++) {
     const first = STAGES[k * REGION_SIZE], g = first.goals[1];
-    assert.equal(g.n, THEMES[first.theme].eat.find(e => e[0] === g.what)[1], `${first.id} starts its eat goal at the low end`);
-    assert.equal(first.goals[0].n, REGIONS[k].score[0], `${first.id} first-star score is the region's opening score`);
+    // targets carry the 90-second scale-down (St.TIME_SCALE) applied to the 120-second tuning
+    assert.equal(g.n, Math.max(1, Math.round(THEMES[first.theme].eat.find(e => e[0] === g.what)[1] * St.TIME_SCALE)), `${first.id} starts its eat goal at the low end`);
+    assert.equal(first.goals[0].n, Math.round(REGIONS[k].score[0] * St.TIME_SCALE / 100) * 100, `${first.id} first-star score is the region's opening score`);
   }
   const harbor = STAGES.filter(s => s.theme === 'harbor');
   harbor.forEach((s, i) => assert.equal(s.goals.some(g => g.kind === 'noBeam'), i >= 10 && s.n % 2 === 0, s.id));

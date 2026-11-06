@@ -519,8 +519,8 @@
 <script src="shop.js"></script>
 <script src="store.js"></script>
 <script src="dex.js"></script>
-<script src="badges.js"></script>
 <script src="level.js"></script>
+<script src="badges.js"></script>
 <script src="challenge.js"></script>
 <script src="sound.js"></script>
 <script src="vendor/supabase.js"></script>
@@ -1055,7 +1055,7 @@
       player.r = C.grow(player.r, o.r);
       const gold = o.goldUntil > elapsed;
       score += Math.round(o.r * o.r / 2) * (gold ? 5 : 1) * (rush ? 2 : 1);
-      if (gold) { Sound.sfx.coin(); banner(`${ico('sparkle')} 황금 친구! 점수 5배`, 1.5); }
+      if (gold) { stats.golds = (stats.golds || 0) + 1; Sound.sfx.coin(); banner(`${ico('sparkle')} 황금 친구! 점수 5배`, 1.5); }
       if (rush) stats.rushEaten = (stats.rushEaten || 0) + 1;
       if (bonus && !bonus.done && o.type === bonus.type && ++bonus.got >= bonus.n) {
         bonus.done = 'win'; stats.bonus = 1; score += 300;
@@ -1118,14 +1118,23 @@
 
   // Eaten things are sucked into the mouth (front of the body, MOUTH_H·r up): slow at first, then a rush,
   // curling a little, lifting to the mouth and shrinking to nothing right as they reach it.
-  const SWALLOW_S = 0.42, MOUTH_H = 0.5;
+  const SWALLOW_S = 0.5, MOUTH_H = 0.5;
   const ACCEL_S = 0.12, GLIDE_S = 0.3; // seconds to full speed / to a stop, before the size factor
+  // Two beats, so it reads as going *into* the mouth: first it flies to the mouth while shrinking to the mouth's
+  // size (small things keep theirs), then it slides in past the lips and shrinks away inside the body.
+  const MOUTH_FIT = 0.45, ARRIVE = 0.8; // open mouth radius as a share of the player's r; share of the time spent arriving
   function swallowPos(o) {
-    const mx = player.x + Math.cos(player.look) * player.r * 0.95, my = player.y + Math.sin(player.look) * player.r * 0.95;
-    const t = o.ft, pull = t * t * t;
-    const dx = o.fx - mx, dy = o.fy - my, curl = Math.sin(t * Math.PI) * 0.6;
-    const k = 1 - pull, c = Math.cos(curl), sn = Math.sin(curl);
-    return { x: mx + (dx * c - dy * sn) * k, y: my + (dx * sn + dy * c) * k, s: Math.pow(1 - t, 1.4), lift: player.r * MOUTH_H * pull };
+    const cx = Math.cos(player.look), cy = Math.sin(player.look);
+    const mx = player.x + cx * player.r * 0.95, my = player.y + cy * player.r * 0.95;
+    const fit = Math.min(1, player.r * MOUTH_FIT / o.r);
+    if (o.ft < ARRIVE) {
+      const t = o.ft / ARRIVE, pull = t * t * t, ease = t * t * (3 - 2 * t);
+      const dx = o.fx - mx, dy = o.fy - my, curl = Math.sin(t * Math.PI) * 0.6;
+      const k = 1 - pull, c = Math.cos(curl), sn = Math.sin(curl);
+      return { x: mx + (dx * c - dy * sn) * k, y: my + (dx * sn + dy * c) * k, s: 1 + (fit - 1) * ease, lift: player.r * MOUTH_H * pull };
+    }
+    const u = (o.ft - ARRIVE) / (1 - ARRIVE); // 0 at the lips .. 1 deep inside
+    return { x: mx - cx * player.r * 0.6 * u, y: my - cy * player.r * 0.6 * u, s: fit * (1 - u * u), lift: player.r * MOUTH_H };
   }
 
   // Score: the number pops and a "+N" floats up whenever it grows.
@@ -1287,8 +1296,10 @@
         <span class="claim${m.done && !m.claimed ? ' ready' : ''}" data-m="${m.id}">${m.claimed ? '받음' : m.done ? '받기' : rewardText(m.reward)}</span></span>
         <span class="bar"><i style="width:${m.got / m.n * 100}%"></i></span><small>${m.got} / ${m.n}</small></div>`).join('');
     $('missions-body').querySelectorAll('.claim[data-m]').forEach(el => el.addEventListener('pointerup', () => {
-      const w2 = Challenge.claim(Store.wallet, dayKey(), el.dataset.m, Shop.grant);
-      if (w2 !== Store.wallet) { Store.update(w2); Sound.sfx.coin(); }
+      let w2 = Challenge.claim(Store.wallet, dayKey(), el.dataset.m, Shop.grant);
+      if (w2 === Store.wallet) return;
+      w2 = Object.assign({}, w2, { stats: Object.assign({}, w2.stats, { missions: (w2.stats.missions || 0) + 1 }) }); // for the badge
+      Store.update(w2); Sound.sfx.coin();
     }));
     $('btn-chest').addEventListener('pointerup', () => {
       const w2 = Challenge.openChest(Store.wallet, dayKey(), Shop.grant);
@@ -1335,9 +1346,11 @@
   }
 
   // ---------- badges ----------
-  let runBadges = [];
+  let runBadges = [], runBoosted = false;
   const totalStars = () => Object.values(bestStars).reduce((a, n) => a + (n || 0), 0);
-  const badgeCtx = () => Badges.context(Store.wallet, totalStars());
+  // regions whose ten ladder levels all have at least one star
+  const regionsCleared = () => REGIONS.filter((r, k) => STAGES.slice(k * REGION_SIZE, (k + 1) * REGION_SIZE).every(s => (bestStars[s.id] || 0) >= 1)).length;
+  const badgeCtx = () => Badges.context(Store.wallet, totalStars(), { regions: regionsCleared() });
 
   function renderBadgeCount() {
     const n = Badges.claimable(Store.wallet, badgeCtx());
@@ -1502,6 +1515,7 @@
     }
     chosen.clear();
     setupStage(i, boosts);
+    runBoosted = boosts.length > 0;
     runBadges = Badges.earned(badgeCtx()); // to name the badges this run earns
     endDrag();
     state = 'play';
@@ -1547,12 +1561,13 @@
     save('dusk-stars', bestStars); save('dusk-best', bestScore); touched();
     let w = Shop.finishRun(Shop.awardStars(Store.wallet, before, n));
     w = Badges.record(w, { eaten: stats.total, guards: stats.eaten.guard || 0, clean: stats.lit ? 0 : 1,
-      size: Math.round(stats.maxR / 4 * 10) / 10, night: stats.night, buildings: stats.eaten.building || 0 });
+      size: Math.round(stats.maxR / 4 * 10) / 10, night: stats.night, buildings: stats.eaten.building || 0,
+      bosses: stats.eaten.boss || 0, golds: stats.golds || 0, bolts: stats.bonus || 0, rush: stats.rushEaten || 0 });
     const xpBefore = w.stats.xp || 0, xp = Level.runXp(stats.total, n), lv = Level.gain(w, xp);
     w = lv.wallet;
     const doneBefore = Challenge.status(w, dayKey()).filter(m => m.done).length;
     w = Challenge.record(w, dayKey(), { eaten: stats.total, stars: n, runs: 1, buildings: stats.eaten.building || 0, rushEaten: stats.rushEaten || 0,
-      size: Math.round(stats.maxR / 4 * 10) / 10, clean: stats.lit ? 0 : 1, bonus: stats.bonus || 0 });
+      size: Math.round(stats.maxR / 4 * 10) / 10, nightEaten: stats.night, boosted: runBoosted ? 1 : 0, bonus: stats.bonus || 0 });
     const missionsDone = Challenge.status(w, dayKey()).filter(m => m.done).length - doneBefore;
     const lvSkins = Level.dueSkins(w, Shop.SKINS);
     w = lvSkins.reduce(Shop.grantReward, w);
@@ -1932,7 +1947,7 @@
 
   // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
   if (window.__DUSK_TEST__) {
-    window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; tut = null; }, view, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
+    window.__DUSK_TEST__.api = { start, openDaily, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; tut = null; }, view, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
       get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase, sun, clouds, eclipse, elapsed, runDuration, rush }; } };

@@ -87,7 +87,7 @@ with sync_playwright() as p:
     pg.tap('#btn-go'); frames_wait(pg)
     st = pg.evaluate(f'[{A}.Store.wallet.gems, {A}.Store.wallet.pending, {A}.runDuration, {A}.s.player.r]')
     reload(pg); after_kill = wallet(pg)
-    rec('H6', 'boosts cost 70, give +20s and r=20, refunded after a mid-run kill', on == 2 and st == [30, 70, 140, 20]
+    rec('H6', 'boosts cost 70, give +20s and r=20, refunded after a mid-run kill', on == 2 and st == [30, 70, 110, 20]
         and after_kill['gems'] == 100 and after_kill['pending'] == 0, f'on={on} [gems,pending,dur,r]={st} after={after_kill["gems"]}/{after_kill["pending"]}')
 
     # H7 a finished boosted run keeps the boost spent; boosts do not carry over to the retry
@@ -99,7 +99,7 @@ with sync_playwright() as p:
     w = wallet(pg); end = pg.is_visible('#end')
     pg.tap('#btn-retry'); frames_wait(pg)
     retry = pg.evaluate(f'[{A}.runDuration, {A}.s.player.r]')
-    rec('H7', 'finished run: boost spent, retry is unboosted', end and w['gems'] == 30 and w['pending'] == 0 and retry == [120, 14], f'gems={w["gems"]} retry={retry}')
+    rec('H7', 'finished run: boost spent, retry is unboosted', end and w['gems'] == 30 and w['pending'] == 0 and retry == [90, 14], f'gems={w["gems"]} retry={retry}')
 
     rec('H0', 'no page errors', not errs, '; '.join(errs[:3]))
 

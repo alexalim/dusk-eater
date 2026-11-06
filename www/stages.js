@@ -255,6 +255,7 @@
     boss: { name: '보스: 거대 등불지기', text: '거대 등불지기가 큰 불빛을 비추며 돌아다녀요. 충분히 커진 뒤 그늘에서 삼켜요!',
       tips: ['불빛이 아주 넓으니 뒤나 옆으로 다가가요.', '화면 위 표시가 금색이 되면 삼킬 수 있는 크기예요.', '삼키면 세 번째 별!'] },
   };
+  const TIME_SCALE = 0.85;
   const regionOf = n => Math.floor((n - 1) / REGION_SIZE);
   const themeOf = n => REGIONS[regionOf(n)].theme;
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -268,12 +269,13 @@
     const local = (n - 1) % REGION_SIZE; // 0..24 inside the region
     const region = REGIONS.find(r => r.theme === t.theme);
     const [s0, s1] = region ? region.score : EVENT_SCORE[t.theme];
-    const score = Math.round(lerp(s0, s1, region ? local / (REGION_SIZE - 1) : d) / 100) * 100;
+    // Targets were tuned for 120-second runs; runs are 90 s now, so they shrink by less than the time (15%) to get harder.
+    const score = Math.round(lerp(s0, s1, region ? local / (REGION_SIZE - 1) : d) * TIME_SCALE / 100) * 100;
     const [what, lo, hi] = t.eat[(pick - 1) % t.eat.length];
     const goals = [
       { kind: 'score', n: score },
       // Ladder: each region restarts the count low and climbs halfway to `hi` by its last level.
-      { kind: 'eat', what, n: Math.round(lerp(lo, hi, region ? 0.5 * local / (REGION_SIZE - 1) : d)) },
+      { kind: 'eat', what, n: Math.max(1, Math.round(lerp(lo, hi, region ? 0.5 * local / (REGION_SIZE - 1) : d) * TIME_SCALE)) },
     ];
     // Third star: a bigger score early on; later a guard to swallow or, in the harbor, staying out of the lighthouse.
     if (t.theme === 'harbor' && local >= 10 && n % 2 === 0) goals.push({ kind: 'noBeam' });
@@ -327,7 +329,7 @@
     return g.kind;
   }
 
-  const api = { THEMES, STAGES, NAMES, TWISTS, TWIST_INFO, goalLabel, themeOf, REGIONS, REGION_SIZE, regionOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
+  const api = { THEMES, STAGES, NAMES, TWISTS, TWIST_INFO, TIME_SCALE, goalLabel, themeOf, REGIONS, REGION_SIZE, regionOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DuskStages = api;
 })(this);

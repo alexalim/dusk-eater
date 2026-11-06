@@ -38,7 +38,7 @@ test('daily challenges: three a day, the same for a given date, filled by runs, 
   assert.equal(new Set(list.map(m => m.id)).size, 3);
   assert.deepEqual(Ch.today(day), list, 'same date, same missions');
   let w = wallet({ gems: 0 });
-  const big = { eaten: 999, stars: 9, runs: 9, buildings: 99, rushEaten: 99, size: 99, clean: 9, bonus: 9 };
+  const big = { eaten: 999, stars: 9, runs: 9, buildings: 99, rushEaten: 99, size: 99, nightEaten: 99, boosted: 9, bonus: 9 };
   w = Ch.record(w, day, big);
   assert.ok(Ch.status(w, day).every(m => m.done));
   assert.equal(Ch.waiting(w, day), 3);
@@ -54,8 +54,8 @@ test('daily challenges: three a day, the same for a given date, filled by runs, 
 });
 
 test('size missions keep the best run; counts add up across runs', () => {
-  const day = '2027-02-14'; // a day whose board has both a size and an eat mission
-  assert.deepEqual(Ch.today(day).map(m => m.id).sort(), ['clean', 'eat', 'size']);
+  const day = '2027-03-23'; // a day whose board has both a size and an eat mission
+  assert.deepEqual(Ch.today(day).map(m => m.id).sort(), ['eat', 'rush', 'size']);
   let w = wallet();
   for (const v of [5, 9, 7]) w = Ch.record(w, day, { size: v, eaten: 10, runs: 1 });
   assert.equal(w.challenge.progress.size, 9);

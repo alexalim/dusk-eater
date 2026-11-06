@@ -11,7 +11,8 @@
     { id: 'buildings', key: 'buildings', n: [3, 5, 8], text: n => `건물 ${n}채 삼키기` },
     { id: 'rush', key: 'rushEaten', n: [10, 15, 25], text: n => `막판 러시 동안 ${n}개 삼키기` },
     { id: 'size', key: 'size', best: true, n: [12, 18, 25], text: n => `한 판에 ${n}m까지 커지기` },
-    { id: 'clean', key: 'clean', n: [1, 1, 2], text: n => `빛에 한 번도 안 닿고 ${n}판 끝내기` },
+    { id: 'night', key: 'nightEaten', n: [15, 25, 40], text: n => `밤 동안 ${n}개 삼키기` },
+    { id: 'boost', key: 'boosted', n: [1, 1, 2], text: n => `부스터 써서 ${n}판 하기` },
     { id: 'bonus', key: 'bonus', n: [1, 2, 3], text: n => `번개 미션 ${n}번 성공하기` },
   ];
   const REWARDS = [{ gems: 15 }, { tickets: { time: 1 } }, { gems: 25 }];
@@ -32,7 +33,7 @@
   // A new day starts a fresh board; an old board is simply replaced.
   const board = (w, day) => (w.challenge.date === day ? w.challenge : { date: day, progress: {}, claimed: [], chest: false });
 
-  // Fold one finished run into today's progress: { eaten, stars, runs: 1, buildings, rushEaten, size, clean, bonus }.
+  // Fold one finished run into today's progress: { eaten, stars, runs: 1, buildings, rushEaten, size, nightEaten, boosted, bonus }.
   function record(w, day, run) {
     const b = board(w, day), progress = Object.assign({}, b.progress);
     for (const m of today(day)) {
