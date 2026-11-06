@@ -48,9 +48,12 @@ with sync_playwright() as p:
     pg.evaluate(f'{A}.start(1)'); pg.evaluate(f'{A}.skipTo(30)'); frames_wait(pg, 3)
     c0 = pg.evaluate(f'{A}.s.clouds.map(c => [c.x, c.y, c.r])')
     shaded = pg.evaluate(f'{A}.s.clouds.every(c => {A}.isShaded({{ x: c.x, y: c.y }}, null) || {A}.s.guards.some(g => Math.hypot(g.x - c.x, g.y - c.y) < g.range))')
-    frames_wait(pg, 20); c1 = pg.evaluate(f'{A}.s.clouds.map(c => c.x)')
-    rec('W2', 'cloud shade counts as shade and clouds drift', len(c0) >= 5 and shaded and c1 != [c[0] for c in c0],
-        f'clouds={len(c0)} shaded={shaded}')
+    t0 = pg.evaluate(f'{A}.s.elapsed'); frames_wait(pg, 20)
+    c1 = pg.evaluate(f'{A}.s.clouds.map(c => c.x)'); gt = pg.evaluate(f'{A}.s.elapsed') - t0
+    # drift is slow and steady: each cloud moves about 8 units per game second (a wrap at the edge excepted)
+    steady = all(abs((x1 - c[0]) - 8 * gt) < 2 or abs(x1 - c[0]) > 1000 for x1, c in zip(c1, c0))
+    rec('W2', 'cloud shade counts as shade and clouds drift slowly and steadily', len(c0) >= 5 and shaded and c1 != [c[0] for c in c0] and steady,
+        f'clouds={len(c0)} shaded={shaded} moved={[round(x1 - c[0], 1) for x1, c in zip(c1, c0)]} in {gt:.2f}s')
 
     # W3 golden friend: one appears near the player, glows, and is worth 5x when swallowed
     pg.evaluate(f'{A}.start(4)'); pg.evaluate(f'{A}.skipTo(5)'); frames_wait(pg, 3)
@@ -82,6 +85,16 @@ with sync_playwright() as p:
     eaten = pg.evaluate(f"{A}.s.stats.eaten.boss || 0")
     rec('W5', 'boss is bigger than a fresh player, says how big to grow, and counts toward its goal when swallowed',
         boss and boss[0] > boss[2] * 0.85 and boss[1] > 150 and 'm 넘게' in pill and eaten == 1, f'boss={boss} pill={pill!r} eaten={eaten}')
+
+    # W8 last-stretch rush: the final 10 s of any run score double, with a countdown pill; not before
+    pg.evaluate(f'{A}.start(2)'); frames_wait(pg, 2)
+    swallow = f'(() => {{ const s = {A}.s, o = s.objects.find(o => o.state === 0 && !(o.goldUntil > s.elapsed)); o.state = 1; o.ft = 0.99; return Math.round(o.r * o.r / 2); }})()'
+    early = pg.evaluate(f'{A}.s.rush')
+    pg.evaluate(f'{A}.skipTo({A}.s.runDuration - 8)'); frames_wait(pg, 3)
+    s0 = pg.evaluate(f'{A}.s.score'); base = pg.evaluate(swallow); frames_wait(pg, 4); s1 = pg.evaluate(f'{A}.s.score')
+    pill = pg.inner_text('#rush-pill') if pg.is_visible('#rush-pill') else ''
+    rec('W8', 'last 10 s: rush on, a swallow scores double, the pill counts down', early is False and pg.evaluate(f'{A}.s.rush') and s1 - s0 == base * 2 and '2배' in pill,
+        f'early={early} gain={s1 - s0} base={base} pill={pill!r}')
 
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)

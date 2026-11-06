@@ -74,6 +74,10 @@
     box-shadow: 0 2px 0 rgba(0,0,0,.3); transition: background .2s; }
   #goals span.done { color: #2a1a05; background: var(--star); border-color: #fff; }
   #goals span.done::before { content: ''; display: inline-block; width: 1em; height: 1em; margin-right: 4px; vertical-align: -2px; background: url(img/ui/check.svg) center / contain no-repeat; }
+  #rush-pill { align-self: center; font-size: 16px; padding: 4px 16px; color: #2a1a05; background: linear-gradient(#ffe8a0, #ffc94d);
+    border-color: #fff; animation: rushpulse .5s ease-in-out infinite alternate; }
+  @keyframes rushpulse { to { transform: scale(1.08); } }
+  #score.rush { color: var(--star); }
   #boss-pill { align-self: center; font-size: 13px; padding: 4px 12px; border-color: #c94dff; }
   #boss-pill.ready { color: #2a1a05; background: var(--star); border-color: #fff; }
   #warn { align-self: center; padding: 4px 14px; border-radius: 999px; background: rgba(18,10,42,.78); /* readable on sunny ground */
@@ -99,7 +103,7 @@
   /* Tall content scrolls instead of squeezing blocks into each other; Korean wraps between words. */
   .overlay > * { flex-shrink: 0; }
   .overlay p { word-break: keep-all; }
-  .overlay .logo { width: 132px; height: 132px; filter: drop-shadow(0 0 24px rgba(201, 77, 255, .45)); }
+  .overlay .logo { width: 132px; height: 132px; } /* the logo has its own halo; no extra glow behind it */
   .overlay h1 { margin: 0; font-size: 38px; letter-spacing: 1px; color: var(--accent); }
   .overlay h2 { margin: 0; font-size: 26px; color: var(--accent); }
   .overlay p { margin: 0; max-width: 320px; line-height: 1.55; font-size: 15px; color: var(--muted); }
@@ -140,11 +144,10 @@
   .lvstep { display: flex; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 14px; background: #fff; box-shadow: 0 2px 0 #c9d3f2; }
   .lvstep.lock { opacity: .55; }
   .lvstep .lvn { flex: none; width: 48px; font-family: var(--display); font-size: 17px; color: #3f5bb8; text-align: center; }
-  .lvstep .swatch { flex: none; width: 34px; height: 34px; border-width: 2px; }
-  .lvstep .swatch i { top: 9px; width: 6px; height: 6px; } .lvstep .swatch i:first-child { left: 7px; } .lvstep .swatch i:last-child { right: 7px; }
+  .lvstep .swatch { flex: none; width: 40px; height: 40px; }
   .lvstep ul { margin: 0; padding-left: 16px; font-size: 13px; color: #3a3360; }
   .twist-body { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 12px; }
-  .twist-body img { width: 88px; height: 88px; filter: drop-shadow(0 6px 12px rgba(63,111,232,.35)); }
+  .twist-body img { width: 88px; height: 88px; }
   #twist .twist-body h4 { font-family: var(--display); font-size: 24px; font-weight: 400; margin: 4px 0 0; }
   .twist-body ul { text-align: left; margin: 6px 0 10px; padding-left: 20px; font-size: 14px; line-height: 1.6; color: #3a3360; align-self: stretch; }
   .twist-body .btn { align-self: stretch; text-align: center; }
@@ -233,10 +236,8 @@
   .item .nm { font-weight: 800; font-size: 14px; }
   .item .pr { font-size: 13px; font-weight: 800; color: var(--accent); }
   .item .pr.own { color: var(--muted); }
-  .swatch { position: relative; width: 52px; height: 52px; border-radius: 50%; border: 3px solid; box-sizing: border-box; }
-  .swatch i { position: absolute; top: 15px; width: 9px; height: 9px; border-radius: 50%; }
-  .swatch i:first-child { left: 11px; } .swatch i:last-child { right: 11px; }
-  .swatch.secret { filter: brightness(0); opacity: .55; }
+  .swatch { display: inline-block; width: 60px; height: 60px; }
+  .swatch svg { display: block; width: 100%; height: 100%; }
   #shop-msg { min-height: 1.4em; }
   /* Skin detail: tapping a skin opens this box; buying or equipping happens only from its button. */
   #skin-box { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px;
@@ -244,9 +245,7 @@
   #skin-box .box { width: min(100%, 320px); display: flex; flex-direction: column; align-items: center; gap: 10px;
     padding: 22px 20px 18px; border-radius: 22px; background: #22163f; border: 2px solid rgba(201,168,255,.35);
     box-shadow: 0 12px 40px rgba(0,0,0,.5); text-align: center; }
-  #skin-box .swatch { width: 104px; height: 104px; border-width: 5px; }
-  #skin-box .swatch i { top: 30px; width: 18px; height: 18px; }
-  #skin-box .swatch i:first-child { left: 22px; } #skin-box .swatch i:last-child { right: 22px; }
+  #skin-box .swatch { width: 120px; height: 120px; }
   #skin-box .nm { font-size: 20px; font-weight: 900; color: var(--text); }
   #skin-box p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--muted); word-break: keep-all; }
   #skin-box .btns { width: 100%; }
@@ -301,9 +300,7 @@
   .dexset { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 8px 12px; border-radius: 14px;
     background: #fff; border: 2px dashed #b9c5e6; text-align: left; }
   .dexset.got { background: #fff6d6; border: 2px solid #ffc83d; }
-  .dexset .swatch { flex: none; width: 44px; height: 44px; }
-  .dexset .swatch i { top: 12px; width: 8px; height: 8px; }
-  .dexset .swatch i:first-child { left: 9px; } .dexset .swatch i:last-child { right: 9px; }
+  .dexset .swatch { flex: none; width: 48px; height: 48px; }
   .dexset span { display: flex; flex-direction: column; } .dexset small { color: #5a5480; font-weight: 800; }
   #dex-msg, #badges-msg { margin: 0 14px; min-height: 1.4em; font-size: 13px; }
   #dex-tabs { display: flex; gap: 6px; padding: 8px; background: #d7e0f7; }
@@ -342,6 +339,7 @@
   <div id="stats"><span id="size" class="pill">크기 0</span><span class="right"><span class="pill" id="score-pill"><span id="score">0</span></span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></span></div>
   <div id="goals"></div>
   <div id="boss-pill" class="pill hidden"></div>
+  <div id="rush-pill" class="pill hidden"></div>
   <div id="warn"><img class="ico face" src="img/ui/face-surprised.svg" alt=""> 앗, 햇빛이에요! 몸이 줄어들어요</div>
   <div id="banner">미션 완료! 밤이 일찍 와요 <img class="ico" src="img/ui/moon.svg" alt=""></div>
   <div id="dex-new"></div>
@@ -456,7 +454,7 @@
   </div>
 </div>
 <div id="skin-box" class="hidden"><div class="box">
-  <span class="swatch" id="skin-box-swatch"><i></i><i></i></span>
+  <span class="swatch" id="skin-box-swatch"></span>
   <div class="nm" id="skin-box-name"></div>
   <p id="skin-box-desc"></p>
   <div class="btns"><div class="btn" id="skin-box-act"></div><div class="btn ghost" id="skin-box-close">닫기</div></div>
@@ -604,6 +602,9 @@
   // Twists (stages.js): drifting cloud shade, golden friends worth 5x, a short eclipse, a boss.
   let clouds = [], eclipse = false, nextGold = 0;
   const ECLIPSE_AT = 0.3, ECLIPSE_S = 6; // starts 30% into the run, lasts 6 s
+  // Last-stretch rush: the final RUSH_S seconds of every run score double, with a countdown and faster music.
+  const RUSH_S = 10;
+  let rush = false, rushTick = 0;
   const twistIco = { clouds: 'cloud', golden: 'sparkle', eclipse: 'eclipse', boss: 'crown' };
 
   // Level 1 teaches by doing: each step waits for its condition (or a few seconds) before the next.
@@ -789,7 +790,7 @@
   function setupStage(i, boosts = []) {
     stageIndex = i; stage = list[i];
     buildWorld(Date.now() & 0xffff);
-    elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; nextGold = 4;
+    elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; nextGold = 4; rush = false; rushTick = 0; Sound.music.rush(false);
     clouds = stage.twist === 'clouds' ? Array.from({ length: 7 }, (_, k) => ({ x: rnd() * WORLD, y: rnd() * waterY, r: 70 + rnd() * 50 })) : [];
     tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
@@ -899,13 +900,17 @@
     const gameT = Math.min(elapsed / runDuration, 1);
     phase = C.dayPhase(gameT);
     sun = C.sunState(phase.dayT, stage.sunMax);
+    const left = runDuration - elapsed;
+    if (!rush && left <= RUSH_S) { rush = true; banner(`${ico('bolt')} 막판 러시! 마지막 ${RUSH_S}초는 점수 2배`, 2.5); Sound.sfx.star(); Sound.music.rush(true); }
+    if (rush && left <= 3 && Math.ceil(left) !== rushTick) { rushTick = Math.ceil(left); Sound.sfx.tick(); } // 3, 2, 1
     const wasEclipse = eclipse;
     eclipse = stage.twist === 'eclipse' && gameT >= ECLIPSE_AT && gameT < ECLIPSE_AT + ECLIPSE_S / runDuration;
     if (eclipse && !wasEclipse) { banner(`${ico('eclipse')} 일식! 지금은 어디든 그늘이에요`, ECLIPSE_S); Sound.sfx.night(); }
     shadows = phase.night || eclipse ? [] : buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun));
     // Clouds drift slowly with the wind (about a third of a map per run), with only a faint sideways sway.
     const CLOUD_V = 8;
-    for (const c of clouds) { c.x = (c.x + CLOUD_V * dt + WORLD + 200) % (WORLD + 200) - 100; c.y += Math.sin(elapsed * 0.1 + c.r) * 1.5 * dt; }
+    // past the right edge (+100) a cloud comes back in from the left (-100); the span is WORLD + 200
+    for (const c of clouds) { c.x = (c.x + 100 + CLOUD_V * dt) % (WORLD + 200) - 100; c.y += Math.sin(elapsed * 0.1 + c.r) * 1.5 * dt; }
     if (stage.twist === 'golden' && elapsed >= nextGold) { // a golden friend near the player, gone again after 8 s
       nextGold = elapsed + 9;
       const near = objects.filter(o => o.state === 0 && !(o.goldUntil > elapsed) && Math.hypot(o.x - player.x, o.y - player.y) < 420);
@@ -978,7 +983,7 @@
       Sound.sfx.gulp(Math.min(1, o.r / player.r));
       player.r = C.grow(player.r, o.r);
       const gold = o.goldUntil > elapsed;
-      score += Math.round(o.r * o.r / 2) * (gold ? 5 : 1);
+      score += Math.round(o.r * o.r / 2) * (gold ? 5 : 1) * (rush ? 2 : 1);
       if (gold) { Sound.sfx.coin(); banner(`${ico('sparkle')} 황금 친구! 점수 5배`, 1.5); }
       if (o.boss) { Sound.sfx.level(); banner(`${ico('crown')} 보스를 삼켰어요!`, 3); }
       stats.score = score;
@@ -1063,6 +1068,9 @@
 
   function renderHud() {
     $('sun').classList.toggle('moon', phase.night || eclipse);
+    $('rush-pill').classList.toggle('hidden', !rush);
+    if (rush) $('rush-pill').innerHTML = `${ico('bolt')} 점수 2배 · ${Math.max(0, Math.ceil(runDuration - elapsed))}`;
+    $('score').classList.toggle('rush', rush);
     // Boss: who it is and how big you must be to swallow it; turns gold once you are big enough.
     const boss = guards.find(g => g.boss);
     $('boss-pill').classList.toggle('hidden', !boss || boss.state !== 0);
@@ -1255,7 +1263,7 @@
   }
 
   function show(id) {
-    if (id && id !== 'pause') { Sound.music.mode('title'); if (id === 'title') Sound.music.tune('town'); } // menus get the quiet arrangement
+    if (id && id !== 'pause') { Sound.music.mode('title'); Sound.music.rush(false); if (id === 'title') Sound.music.tune('town'); } // menus get the quiet arrangement
     for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo', 'twist']) $(o).classList.toggle('hidden', o !== id);
     $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
     if (id !== null) $('tutorial').classList.add('hidden');
@@ -1436,7 +1444,32 @@
   const hex = n => '#' + n.toString(16).padStart(6, '0');
   const skinById = id => Shop.SKINS.find(s => s.id === id) || Shop.SKINS[0];
   // `secret`: a hidden skin not earned yet shows only its outline.
-  const swatch = (s, secret) => `<span class="swatch${secret ? ' secret' : ''}" style="background:${hex(s.body)};border-color:${hex(s.rim)}"><i style="background:${hex(s.eye)}"></i><i style="background:${hex(s.eye)}"></i></span>`;
+  // Skin picture: the mochi character itself in the skin's colors, shaded like the 3D body (lighter top, darker
+  // base, gloss, little arms), standing on a ring in its rim color as in play. A hidden skin is a plain silhouette.
+  const mix = (a, b, t) => '#' + [16, 8, 0].map(k => Math.round(((a >> k) & 255) * (1 - t) + ((b >> k) & 255) * t).toString(16).padStart(2, '0')).join('');
+  let artN = 0;
+  function skinArt(s, secret) {
+    const id = 'sk' + (artN++), body = s.body;
+    const light = ((body >> 16) & 255) + ((body >> 8) & 255) + (body & 255) > 500; // white-ish bodies get pink cheeks
+    // dark bodies catch their rim color along the bottom, so the skin's color reads at a glance
+    const top = mix(body, 0xffffff, light ? 0.45 : 0.3), base = mix(body, s.rim, light ? 0.35 : 0.6), arm = mix(body, light ? 0xffffff : s.rim, light ? 0.2 : 0.35);
+    if (secret) return `<svg viewBox="0 0 64 64"><ellipse cx="32" cy="57" rx="20" ry="3.4" fill="#000" opacity=".25"/>
+      <path d="M32 11C46.5 11 55.5 23 55.5 38C55.5 50.5 49.5 56.5 40 56.5H24C14.5 56.5 8.5 50.5 8.5 38C8.5 23 17.5 11 32 11Z" fill="#241c3a"/>
+      <ellipse cx="12" cy="47" rx="5.2" ry="4.4" fill="#241c3a"/><ellipse cx="52" cy="47" rx="5.2" ry="4.4" fill="#241c3a"/>
+      <text x="32" y="43" text-anchor="middle" font-size="20" font-family="Jua, sans-serif" fill="#6b5f8f">?</text></svg>`;
+    const pupil = s.pupil !== undefined ? hex(s.pupil) : '#ffffff';
+    return `<svg viewBox="0 0 64 64"><defs><radialGradient id="${id}" cx=".36" cy=".28" r=".85"><stop offset="0" stop-color="${top}"/>
+      <stop offset=".55" stop-color="${hex(body)}"/><stop offset="1" stop-color="${base}"/></radialGradient></defs>
+      <ellipse cx="32" cy="57" rx="22" ry="4.2" fill="none" stroke="${hex(s.rim)}" stroke-width="2.4" opacity=".9"/>
+      <path d="M32 11C46.5 11 55.5 23 55.5 38C55.5 50.5 49.5 56.5 40 56.5H24C14.5 56.5 8.5 50.5 8.5 38C8.5 23 17.5 11 32 11Z" fill="url(#${id})"/>
+      <ellipse cx="22" cy="19.5" rx="7" ry="4" fill="#fff" opacity="${light ? .85 : .35}" transform="rotate(-25 22 19.5)"/>
+      <ellipse cx="12" cy="47" rx="5.2" ry="4.4" fill="${arm}"/><ellipse cx="52" cy="47" rx="5.2" ry="4.4" fill="${arm}"/>
+      ${light ? '<ellipse cx="17.5" cy="39" rx="4.6" ry="2.8" fill="#ff8fb8" opacity=".5"/><ellipse cx="46.5" cy="39" rx="4.6" ry="2.8" fill="#ff8fb8" opacity=".5"/>' : ''}
+      <ellipse cx="24.5" cy="31" rx="3.8" ry="5.2" fill="${hex(s.eye)}"/><ellipse cx="39.5" cy="31" rx="3.8" ry="5.2" fill="${hex(s.eye)}"/>
+      <circle cx="25.8" cy="28.8" r="1.5" fill="${pupil}"/><circle cx="40.8" cy="28.8" r="1.5" fill="${pupil}"/>
+      <path d="M28 41Q32 45.5 36 41Z" fill="#d8436a"/></svg>`;
+  }
+  const swatch = (s, secret) => `<span class="swatch">${skinArt(s, secret)}</span>`;
   let shopReturn = 'title', busy = false;
 
   function renderGems() {
@@ -1479,10 +1512,7 @@
     const s = skinById(skinBoxId), w = Store.wallet;
     const own = (!s.product && !s.reward) || w.owned.includes(s.id), on = w.equipped === s.id, price = s.product && Store.price(s.product);
     const ev = s.reward && EVENTS.find(e => e.id === s.reward), set = Dex.setFor(s.id), secret = s.hidden && !own;
-    const sw = $('skin-box-swatch');
-    sw.classList.toggle('secret', secret);
-    sw.style.background = hex(s.body); sw.style.borderColor = hex(s.rim);
-    sw.querySelectorAll('i').forEach(i => { i.style.background = hex(s.eye); });
+    $('skin-box-swatch').innerHTML = skinArt(s, secret);
     $('skin-box-name').textContent = secret ? '히든 스킨 ???' : s.name;
     $('skin-box-desc').textContent = secret ? `도감 '${set.name}'의 친구를 모두 찾으면 모습을 드러내요.` : s.desc;
     const act = $('skin-box-act');
@@ -1734,7 +1764,7 @@
     window.__DUSK_TEST__.api = { start, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; tut = null; }, view, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
-      get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase, sun, clouds, eclipse, elapsed, runDuration }; } };
+      get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase, sun, clouds, eclipse, elapsed, runDuration, rush }; } };
   }
 })();
 </script>

@@ -55,6 +55,7 @@
     level() { [67, 72, 76, 79, 84].forEach((n, i) => tone(note(n), note(n), 0.3, { type: 'triangle', vol: 0.32, at: i * 0.09 })); },
     lit() { tone(260, 180, 0.18, { type: 'sawtooth', vol: 0.07 }); tone(250, 175, 0.18, { type: 'sawtooth', vol: 0.07, at: 0.2 }); },
     night() { [84, 79, 76, 72, 67].forEach((n, i) => tone(note(n), note(n), 0.5, { type: 'sine', vol: 0.25, at: i * 0.12 })); },
+    tick() { tone(1500, 1500, 0.06, { type: 'square', vol: 0.12 }); },
     win() { [60, 64, 67, 72, 76].forEach((n, i) => tone(note(n), note(n), 0.35, { type: 'triangle', vol: 0.3, at: i * 0.1 })); },
     lose() { [67, 64, 60].forEach((n, i) => tone(note(n), note(n), 0.4, { type: 'triangle', vol: 0.25, at: i * 0.16 })); },
   };
@@ -105,7 +106,7 @@
     LEAD = melody(tune);
     if (fx) fx.echo.delayTime.value = S16 * 3;
   }
-  let timer = null, step = 0, nextT = 0, mode = 'title', fx = null, noise = null;
+  let timer = null, step = 0, nextT = 0, mode = 'title', fx = null, noise = null, rushOn = false;
   setTune('town');
 
   function buildFx() {
@@ -165,7 +166,8 @@
         if (tune.bells && s % 8 === 4) voice(note(chord[1] + 24), at, S16, { type: 'sine', vol: 0.06, release: 0.9, to: [musicBus, echo] });
       }
       if (night && s % 4 === 3) voice(note(chord[2] + 24), at, S16, { type: 'sine', vol: 0.05, release: 0.4, to: [musicBus, echo] });
-      nextT += S16; step++;
+      nextT += rushOn ? S16 / 1.2 : S16; step++; // the last-stretch rush plays 20% faster
+      if (rushOn && s % 2 === 1) hat(at, 0.06);
     }
   }
   const music = {
@@ -176,6 +178,7 @@
     },
     stop() { clearInterval(timer); timer = null; },
     mode(m) { mode = m; },
+    rush(v) { rushOn = !!v; },
     tune(name) { if (TUNES[name] && tune !== TUNES[name]) setTune(name); }, // region name: town, city, ...
   };
 
