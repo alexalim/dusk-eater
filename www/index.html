@@ -671,6 +671,30 @@
   // Last-stretch rush: the final RUSH_S seconds of every run score double, with a countdown and faster music.
   const RUSH_S = 10;
   let rush = false, rushTick = 0;
+  // Size tiers: the first time the body is big enough for a new kind of thing on this map ("이제 자동차도 꿀꺽!"),
+  // a banner, a chime, a bulge and a short camera pull-back mark the moment. Seeded with what already fits at the start.
+  let tierDone = new Set(), tierNext = 0, camPulse = 0;
+  const kindName = t => (Dex.ENTRIES.find(e => e.id === t) || {}).name || (NAMES[t] || [t])[0];
+  function tierKinds() {
+    const r = {};
+    for (const o of objects) if (o.state === 0 && NAMES[o.type]) r[o.type] = Math.max(r[o.type] || 0, o.r);
+    const out = Object.entries(r).map(([k, v]) => ({ key: k, r: v, label: kindName(k) }));
+    const bs = buildings.filter(b => b.state === 0).map(b => b.r);
+    if (bs.length) out.push({ key: 'building:small', r: Math.min(...bs), label: '건물' }, { key: 'building:big', r: Math.max(...bs), label: '큰 건물' });
+    return out;
+  }
+  const fits = k => k.r < player.r * C.EAT_RATIO;
+  function checkTiers() {
+    if (tut || elapsed < tierNext) return;
+    const fresh = tierKinds().filter(k => fits(k) && !tierDone.has(k.key));
+    if (!fresh.length) return;
+    const top = fresh.sort((a, b) => b.r - a.r)[0];
+    fresh.forEach(k => tierDone.add(k.key));
+    tierNext = elapsed + 4;
+    camPulse = 1; player.bulge = 1;
+    banner(`${ico('grow')} 쑥쑥 컸다! 이제 ${withObject(top.label)} 꿀꺽!`.replace(/(을|를) 꿀꺽/, '도 꿀꺽'), 2.5);
+    Sound.sfx.grow();
+  }
   // Bolt mission: once a run, 40% in, a short bonus challenge ("15 s: swallow 3 cats"). Gems on success, nothing lost on failure.
   const BONUS_AT = 0.4, BONUS_S = 15, BONUS_GEMS = 5;
   let bonus = null; // { type, n, got, until, done }
@@ -874,6 +898,7 @@
     runSun = perk.sun;
     const r0 = Math.max(14, ...used.map(b => b.startR || 0)) * perk.startR;
     player = { x: spawn.x, y: spawn.y, r: r0, r0, vx: 0, vy: 0, lit: false, face: 0, look: Math.PI / 2, gulp: 0, bulge: 0 };
+    tierDone = new Set(tierKinds().filter(fits).map(k => k.key)); tierNext = 0; camPulse = 0;
     cam.view = targetView(); cam.x = player.x; cam.y = player.y;
     if (R) R.build({ stage, WORLD, CELL, ROAD, waterY, buildings, objects, guards, lighthouse, lots });
   }
@@ -1070,6 +1095,7 @@
       stats.maxR = Math.max(stats.maxR, player.r);
       if (!Store.wallet.dex.includes(o.type)) discoverDex(o.type); // saved now, so a killed app keeps the find
     }
+    if (gulped) checkTiers();
     player.gulp = inFlight ? Math.min(1, player.gulp + dt / 0.08) : gulped ? 0 : Math.max(0, player.gulp - dt / 0.2);
 
     // All three missions done: night falls at once, a short finale where everything is shade.
@@ -1082,7 +1108,8 @@
       banner(`미션 완료! 밤이 일찍 와요 ${ico('moon')}`, 3);
     }
 
-    cam.view += (targetView() - cam.view) * Math.min(1, dt * 2);
+    camPulse = Math.max(0, camPulse - dt / 1.4);
+    cam.view += (targetView() * (1 + Math.sin(camPulse * Math.PI) * 0.22) - cam.view) * Math.min(1, dt * 3);
     cam.x += (player.x - cam.x) * Math.min(1, dt * 6);
     cam.y += (player.y - cam.y) * Math.min(1, dt * 6);
 
@@ -1947,7 +1974,7 @@
 
   // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
   if (window.__DUSK_TEST__) {
-    window.__DUSK_TEST__.api = { start, openDaily, isShaded, centerOf, input, skipTo: sec => { elapsed = sec; tut = null; }, view, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
+    window.__DUSK_TEST__.api = { start, openDaily, isShaded, get tiers() { return [...tierDone]; }, get camPulse() { return camPulse; }, centerOf, input, skipTo: sec => { elapsed = sec; tut = null; }, view, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
       get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase, sun, clouds, eclipse, elapsed, runDuration, rush }; } };

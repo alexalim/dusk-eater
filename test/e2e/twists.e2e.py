@@ -80,7 +80,8 @@ with sync_playwright() as p:
     boss = pg.evaluate(f'(() => {{ const g = {A}.s.guards.find(g => g.boss); return g && [g.r, g.range, {A}.s.player.r]; }})()')
     pill = pg.inner_text('#boss-pill')
     pg.evaluate(f'{A}.skipTo({A}.s.runDuration * 0.95)'); frames_wait(pg, 3)  # night: everything is shade except the beams
-    pg.evaluate(f'(() => {{ const s = {A}.s, g = s.guards.find(g => g.boss); s.player.r = g.r / 0.8; s.player.x = g.x - 4; s.player.y = g.y; }})()')
+    # the boss comes to the player's open spot (buildings are solid now, so a big player dropped beside a road would be pushed off)
+    pg.evaluate(f'(() => {{ const s = {A}.s, g = s.guards.find(g => g.boss); s.player.r = g.r / 0.8; g.x = g.tx = s.player.x + 4; g.y = g.ty = s.player.y; }})()')
     frames_wait(pg, 40)
     eaten = pg.evaluate(f"{A}.s.stats.eaten.boss || 0")
     rec('W5', 'boss is bigger than a fresh player, says how big to grow, and counts toward its goal when swallowed',
@@ -111,6 +112,17 @@ with sync_playwright() as p:
     rec('W9', 'hard level: 1 star does not clear; continue costs 30 gems for +20 s, offered once; no new stars saved',
         why and '별 2개' in why and after == ['play', dur0 + 20, 70] and again[:2] == [False, True] and '아쉬워요' in again[2] and stars == had,
         f'why={why!r} after={after} again={again} stars={stars}')
+
+    # W10 size tiers: growing past a new kind (the car) announces it once, with a camera pull-back
+    pg.evaluate(f'{A}.start(2)'); frames_wait(pg, 3)
+    before = pg.evaluate(f'{A}.tiers')
+    pg.evaluate(f'(() => {{ const s = {A}.s; s.player.r = 16 / 0.85 + 1; const o = s.objects.find(o => o.state === 0 && o.type === "cat"); o.state = 1; o.ft = 0.99; }})()')
+    frames_wait(pg, 5)
+    text = pg.inner_text('#banner'); pulse = pg.evaluate(f'{A}.camPulse'); after = pg.evaluate(f'{A}.tiers')
+    pg.evaluate(f'(() => {{ const o = {A}.s.objects.find(o => o.state === 0 && o.type === "cat"); o.state = 1; o.ft = 0.99; }})()'); frames_wait(pg, 5)
+    rec('W10', 'a new size tier is announced once with the biggest newly edible kind and a camera pulse',
+        'car' not in before and '자동차' in text and '꿀꺽' in text and pulse > 0 and 'car' in after and 'tree' in after,
+        f'text={text!r} pulse={pulse:.2f} new={sorted(set(after) - set(before))}')
 
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)
