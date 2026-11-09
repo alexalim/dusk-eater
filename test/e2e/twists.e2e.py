@@ -61,6 +61,18 @@ with sync_playwright() as p:
     gold = pg.evaluate(f'(() => {{ const s = {A}.s, o = s.objects.find(o => o.goldUntil > s.elapsed); if (!o) return null; o.state = 1; o.ft = 0.99; return [o.type, Math.round(o.r * o.r / 2) * 5]; }})()')
     s0 = pg.evaluate(f'{A}.s.score'); frames_wait(pg, 4); s1 = pg.evaluate(f'{A}.s.score')
     rec('W3', 'a golden friend shows up painted gold and pays 5x', glow and gold is not None and s1 - s0 == gold[1], f'glow={glow} gold={gold} score {s0}->{s1}')
+    # W3b in full sun a golden friend can be swallowed where an ordinary one cannot
+    spot = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player;
+      for (let x = 80; x < 1900; x += 23) for (let y = 80; y < 1900; y += 29)
+        if (!{A}.isShaded({{ x, y }}, null) && !s.buildings.some(b => b.state === 0 && x > b.x - p.r - 12 && x < b.x + b.w + p.r + 12 && y > b.y - p.r - 12 && y < b.y + b.d + p.r + 12)) return [x, y];
+      return null; }})()''')
+    sun = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player; p.x = {spot[0]}; p.y = {spot[1]}; p.vx = p.vy = 0;
+      const small = s.objects.filter(o => o.state === 0 && o.r <= 5 && !(o.goldUntil > s.elapsed));
+      const [g, c] = small; g.goldUntil = s.elapsed + 8; g.x = c.x = p.x + 2; g.y = c.y = p.y; window.__gc = [g, c];
+      return !{A}.isShaded({{ x: p.x + 2, y: p.y }}, null); }})()''')
+    frames_wait(pg, 4)
+    states = pg.evaluate('window.__gc.map(o => o.state)')
+    rec('W3b', 'in sunlight the golden friend is taken, the plain one is not', spot is not None and sun and states[0] >= 1 and states[1] == 0, f'spot={spot} sun={sun} states={states}')
 
     # W4 eclipse: 30% into the run the whole town is shade for 6 s and the screen dims; before and after it is not
     pg.evaluate(f'{A}.start(7)')

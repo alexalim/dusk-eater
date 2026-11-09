@@ -299,6 +299,11 @@ with sync_playwright() as p:
           const sun = s.sun; // the stage's own sun (snow keeps it low)
           const sh = s.buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun));
           const things = s.objects.filter(o => o.state === 0).concat(s.guards);
+          // HUD pieces drawn over the ground (banners, timers, warnings) would read as "bright": skip points under them
+          const covers = ['#banner', '#bonus-pill', '#rush-pill', '#boss-pill', '#warn', '#goals', '#stats', '#sunbar', '#tutorial', '#dex-new']
+            .map(q => document.querySelector(q)).filter(e => e && !e.classList.contains('hidden') && getComputedStyle(e).opacity !== '0')
+            .map(e => e.getBoundingClientRect()).filter(r => r.width && r.height);
+          const covered = (sx, sy) => covers.some(r => sx > r.left - 4 && sx < r.right + 4 && sy > r.top - 4 && sy < r.bottom + 4);
           const ray = new T.Raycaster(), out = [];
           for (let i = 0; i < 4000 && out.length < 500; i++) {
             const x = s.player.x + (Math.random() - .5) * 700, y = s.player.y + (Math.random() - .5) * 1400;
@@ -313,7 +318,7 @@ with sync_playwright() as p:
             if (inBeam) continue; // beams are drawn bright on purpose and the rule treats them as unshaded too
             const p = new T.Vector3(x, 0.5, y).project(camera);
             const sx = (p.x + 1) / 2 * innerWidth, sy = (1 - p.y) / 2 * innerHeight;
-            if (sx < 4 || sx > innerWidth - 4 || sy < 200 || sy > innerHeight - 4) continue;
+            if (sx < 4 || sx > innerWidth - 4 || sy < 200 || sy > innerHeight - 4 || covered(sx, sy)) continue;
             ray.setFromCamera({ x: p.x, y: p.y }, camera);
             const hit = ray.intersectObjects(scene.children, true).find(h => h.object.visible && !h.object.material.transparent);
             if (!hit || !hit.object.userData.ground) continue;

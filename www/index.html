@@ -75,7 +75,26 @@
   #goals span.done { color: #2a1a05; background: var(--star); border-color: #fff; }
   #goals span.done::before { content: ''; display: inline-block; width: 1em; height: 1em; margin-right: 4px; vertical-align: -2px; background: url(img/ui/check.svg) center / contain no-repeat; }
   #cont .btn.off { opacity: .45; pointer-events: none; }
-  #bonus-pill { align-self: center; font-size: 14px; padding: 3px 14px; border-color: #ffd25c; color: #ffe8a0; }
+  #bonus-pill { align-self: center; flex-direction: column; align-items: stretch; gap: 3px; min-width: 190px; font-size: 14px; padding: 4px 14px 6px; border-color: #ffd25c; color: #ffe8a0; }
+  #bonus-pill .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  #bonus-pill b { font-size: 20px; color: #fff; }
+  #bonus-pill .bar { display: block; height: 6px; border-radius: 999px; background: rgba(255,255,255,.18); overflow: hidden; }
+  #bonus-pill .bar i { display: block; height: 100%; background: linear-gradient(90deg, #ffd25c, #ff9f43); transition: width .2s linear; }
+  #bonus-pill.urgent { border-color: var(--danger); animation: rushpulse .4s ease-in-out infinite alternate; }
+  #bonus-pill.urgent b { color: var(--danger); }
+  #bonus-pill.urgent .bar i { background: var(--danger); }
+  /* Impact layer: a brief flash and sparks over the whole screen (pointer-transparent). */
+  #flash { position: fixed; inset: 0; pointer-events: none; background: var(--flash, #fff6d6); opacity: 0; z-index: 4; }
+  #flash.hit { animation: flash .38s ease-out; }
+  @keyframes flash { 0% { opacity: var(--peak, .4); } 100% { opacity: 0; } }
+  #burst { position: fixed; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; z-index: 5; }
+  #burst i { position: absolute; left: 0; top: 0; width: var(--s); height: var(--s); margin: calc(var(--s) / -2); border-radius: 30%; background: var(--c);
+    animation: spark .7s cubic-bezier(.2,.8,.3,1) forwards; }
+  @keyframes spark { 0% { transform: translate(0, 0) scale(1) rotate(0); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(.2) rotate(200deg); opacity: 0; } }
+  #banner.pop { animation: popin .45s cubic-bezier(.2, 1.6, .4, 1); }
+  @keyframes popin { 0% { transform: translateX(-50%) scale(.6); } 100% { transform: translateX(-50%) scale(1); } }
+  #twist-demo { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #3a3360; margin: 2px 0 4px; }
+  #twist-demo img { width: 44px; height: 44px; filter: sepia(1) saturate(5) hue-rotate(-8deg) brightness(1.15) drop-shadow(0 0 6px #ffd25c); }
   #rush-pill { align-self: center; font-size: 16px; padding: 4px 16px; color: #2a1a05; background: linear-gradient(#ffe8a0, #ffc94d);
     border-color: #fff; animation: rushpulse .5s ease-in-out infinite alternate; }
   @keyframes rushpulse { to { transform: scale(1.08); } }
@@ -362,6 +381,8 @@
   <p>브라우저의 그래픽 가속(WebGL)이 꺼져 있거나 그래픽 드라이버가 막혀 있어요.</p>
   <p>휴대폰에서 열거나, 브라우저 설정에서 하드웨어 가속을 켠 뒤 다시 열어 주세요.</p>
 </div>
+<div id="flash"></div>
+<div id="burst"></div>
 <div id="hud">
   <div id="sunbar"><div id="sun"></div></div>
   <div id="stats"><span id="size" class="pill">크기 0</span><span class="right"><span class="pill" id="score-pill"><span id="score">0</span></span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></span></div>
@@ -411,6 +432,7 @@
       <img id="twist-ico" alt="">
       <h4 id="twist-name"></h4>
       <p id="twist-text"></p>
+      <div id="twist-demo" class="hidden"><img src="img/dex/cat.png" alt=""><img src="img/dex/car.png" alt=""><span>이렇게 금빛으로 반짝여요</span></div>
       <ul id="twist-tips"></ul>
       <div class="btn" id="btn-twist-go">알겠어요, 출발!</div>
     </div>
@@ -664,7 +686,30 @@
     Sound.sfx.star();
     return { type, n, got: 0, until: elapsed + BONUS_S, done: false };
   }
-  function banner(html, secs) { $('banner').innerHTML = html; bannerUntil = elapsed + secs; }
+  function banner(html, secs) {
+    const b = $('banner'); b.innerHTML = html; bannerUntil = elapsed + secs;
+    b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); // bounce in every time
+  }
+  // Impact ("타격감"): a flash, a camera shake, a split second of slow motion and a spray of sparks.
+  // level 1 a tap (big swallow, golden friend), 2 a hit (star, size tier, rush), 3 a slam (bolt mission, boss).
+  let shake = 0, hitStop = 0, punches = 0;
+  function punch(level, color) {
+    punches++;
+    shake = Math.max(shake, [0, 0.35, 0.7, 1.1][level]);
+    hitStop = Math.max(hitStop, [0, 0, 0.07, 0.14][level]);
+    const f = $('flash'); f.style.setProperty('--flash', color || '#fff6d6'); f.style.setProperty('--peak', String([0, 0.18, 0.4, 0.6][level]));
+    f.classList.remove('hit'); void f.offsetWidth; f.classList.add('hit');
+    const n = [0, 7, 16, 28][level], host = $('burst');
+    for (let i = 0; i < n; i++) {
+      const sp = document.createElement('i'), a = Math.random() * Math.PI * 2, d = 60 + Math.random() * (80 + level * 50);
+      sp.style.setProperty('--dx', `${Math.cos(a) * d}px`); sp.style.setProperty('--dy', `${Math.sin(a) * d - 30}px`);
+      sp.style.setProperty('--c', color || ['#ffd25c', '#fff6d6', '#b78cff', '#7debff'][i % 4]);
+      sp.style.setProperty('--s', `${6 + Math.random() * 8}px`);
+      sp.addEventListener('animationend', () => sp.remove());
+      host.appendChild(sp);
+    }
+    if (level >= 3) Sound.sfx.hit();
+  }
   // Twists (stages.js): drifting cloud shade, golden friends worth 5x, a short eclipse, a boss.
   let clouds = [], eclipse = false, nextGold = 0;
   const ECLIPSE_AT = 0.3, ECLIPSE_S = 6; // starts 30% into the run, lasts 6 s
@@ -685,19 +730,19 @@
   }
   const fits = k => k.r < player.r * C.EAT_RATIO;
   function checkTiers() {
-    if (tut || elapsed < tierNext) return;
+    if (tut || elapsed < tierNext || bannerUntil - elapsed > 1) return; // never talk over a bigger moment's banner
     const fresh = tierKinds().filter(k => fits(k) && !tierDone.has(k.key));
     if (!fresh.length) return;
     const top = fresh.sort((a, b) => b.r - a.r)[0];
     fresh.forEach(k => tierDone.add(k.key));
     tierNext = elapsed + 4;
-    camPulse = 1; player.bulge = 1;
+    camPulse = 1; player.bulge = 1; punch(2, '#e3b3ff');
     banner(`${ico('grow')} 쑥쑥 컸다! 이제 ${withObject(top.label)} 꿀꺽!`.replace(/(을|를) 꿀꺽/, '도 꿀꺽'), 2.5);
     Sound.sfx.grow();
   }
   // Bolt mission: once a run, 40% in, a short bonus challenge ("15 s: swallow 3 cats"). Gems on success, nothing lost on failure.
   const BONUS_AT = 0.4, BONUS_S = 15, BONUS_GEMS = 5;
-  let bonus = null; // { type, n, got, until, done }
+  let bonus = null, bonusTick = 0; // { type, n, got, until, done }
   const twistIco = { clouds: 'cloud', golden: 'sparkle', eclipse: 'eclipse', boss: 'crown' };
 
   // Level 1 teaches by doing: each step waits for its condition (or a few seconds) before the next.
@@ -995,7 +1040,7 @@
     phase = C.dayPhase(gameT);
     sun = C.sunState(phase.dayT, stage.sunMax);
     const left = runDuration - elapsed;
-    if (!rush && left <= RUSH_S) { rush = true; banner(`${ico('bolt')} 막판 러시! 마지막 ${RUSH_S}초는 점수 2배`, 2.5); Sound.sfx.star(); Sound.music.rush(true); }
+    if (!rush && left <= RUSH_S) { rush = true; banner(`${ico('bolt')} 막판 러시! 마지막 ${RUSH_S}초는 점수 2배`, 2.5); Sound.sfx.star(); Sound.music.rush(true); punch(2); }
     if (rush && left <= 3 && Math.ceil(left) !== rushTick) { rushTick = Math.ceil(left); Sound.sfx.tick(); } // 3, 2, 1
     const wasEclipse = eclipse;
     eclipse = stage.twist === 'eclipse' && gameT >= ECLIPSE_AT && gameT < ECLIPSE_AT + ECLIPSE_S / runDuration;
@@ -1060,7 +1105,8 @@
     const tryEat = (o, ox, oy, exclude) => {
       const dist = Math.hypot(ox - player.x, oy - player.y);
       if (dist > player.r + o.r) return;
-      if (C.canEat(player.r, o.r, isShaded({ x: ox, y: oy }, exclude), dist)) startSwallow(o, ox, oy);
+      const golden = o.goldUntil > elapsed; // golden friends are the one thing you may take in full sun
+      if (C.canEat(player.r, o.r, golden || isShaded({ x: ox, y: oy }, exclude), dist)) startSwallow(o, ox, oy);
     };
     for (const o of objects) if (o.state === 0) tryEat(o, o.x, o.y, null);
     for (const g of guards) if (g.state === 0) tryEat(g, g.x, g.y, g);
@@ -1077,17 +1123,18 @@
       if (o.ft < 1) { inFlight = true; continue; }
       o.state = 2; player.bulge = 1; gulped = true;
       Sound.sfx.gulp(Math.min(1, o.r / player.r));
+      if (o.r > player.r * 0.45 && !o.boss) punch(1);
       player.r = C.grow(player.r, o.r);
       const gold = o.goldUntil > elapsed;
       score += Math.round(o.r * o.r / 2) * (gold ? 5 : 1) * (rush ? 2 : 1);
-      if (gold) { stats.golds = (stats.golds || 0) + 1; Sound.sfx.coin(); banner(`${ico('sparkle')} 황금 친구! 점수 5배`, 1.5); }
+      if (gold) { stats.golds = (stats.golds || 0) + 1; Sound.sfx.coin(); banner(`${ico('sparkle')} 황금 친구! 점수 5배`, 1.5); punch(1, '#ffd25c'); }
       if (rush) stats.rushEaten = (stats.rushEaten || 0) + 1;
       if (bonus && !bonus.done && o.type === bonus.type && ++bonus.got >= bonus.n) {
         bonus.done = 'win'; stats.bonus = 1; score += 300;
         Store.update(Shop.grant(Store.wallet, { gems: BONUS_GEMS }));
-        Sound.sfx.coin(); banner(`${ico('bolt')} 번개 미션 성공! 보석 ${BONUS_GEMS}개 · 300점`, 2.5);
+        Sound.sfx.coin(); banner(`${ico('bolt')} 번개 미션 성공! 보석 ${BONUS_GEMS}개 · 300점`, 2.5); punch(3, '#ffd25c');
       }
-      if (o.boss) { Sound.sfx.level(); banner(`${ico('crown')} 보스를 삼켰어요!`, 3); }
+      if (o.boss) { Sound.sfx.level(); banner(`${ico('crown')} 보스를 삼켰어요!`, 3); punch(3, '#e3b3ff'); }
       stats.score = score;
       stats.eaten[o.type] = (stats.eaten[o.type] || 0) + 1;
       stats.total++;
@@ -1100,7 +1147,11 @@
 
     // All three missions done: night falls at once, a short finale where everything is shade.
     const done = C.evaluateStars(stage.goals, stats).filter(Boolean).length;
-    if (done > (stats.doneSeen || 0)) Sound.sfx.star(); // a mission just completed
+    if (done > (stats.doneSeen || 0)) { // a mission just completed: name it and hit
+      const k = C.evaluateStars(stage.goals, stats).findIndex((v, i) => v && !(stats.doneList || [])[i]);
+      stats.doneList = C.evaluateStars(stage.goals, stats);
+      Sound.sfx.star(); banner(`${ico('star')} 별 획득! ${k >= 0 ? goalLabel(stage.goals[k]) : ''}`, 1.6); punch(2, '#ffd25c');
+    }
     stats.doneSeen = done;
     if (phase.night && !stats.nightSeen) { stats.nightSeen = true; Sound.sfx.night(); Sound.music.mode('night'); }
     if (!phase.night && C.evaluateStars(stage.goals, stats).every(Boolean)) {
@@ -1124,7 +1175,7 @@
     for (const o of objects) {
       if (o.state !== 0 || o.r >= player.r * C.EAT_RATIO) continue;
       if (Math.hypot(o.x - player.x, o.y - player.y) > 260 + player.r) continue;
-      if (isShaded(o, null)) hints.push({ x: o.x, y: o.y, r: o.r + 2 });
+      if (isShaded(o, null) || o.goldUntil > elapsed) hints.push({ x: o.x, y: o.y, r: o.r + 2 });
     }
     for (const g of guards) {
       if (g.state === 0 && g.r < player.r * C.EAT_RATIO && isShaded(g, g)) hints.push({ x: g.x, y: g.y, r: g.r + 3 });
@@ -1136,7 +1187,8 @@
     }
     const golden = stage.twist === 'golden' ? objects.filter(o => o.state === 0 && o.goldUntil > elapsed) : [];
     if (stage.twist === 'golden') for (const o of objects) o.glow = o.state === 0 && o.goldUntil > elapsed; // painted gold by the renderer
-    R.draw({ t, phase, sun, player, view: cam.view, camX: cam.x, camY: cam.y, swallowPos, hints, fp: state === 'title' ? 0 : view.t,
+    const jolt = shake * cam.view * 0.035; shake = Math.max(0, shake - 1 / 20); // about a third of a second
+    R.draw({ t, phase, sun, player, view: cam.view, camX: cam.x + (Math.random() - 0.5) * jolt, camY: cam.y + (Math.random() - 0.5) * jolt, swallowPos, hints, fp: state === 'title' ? 0 : view.t,
       clouds, golden, eclipse });
     $('vignette').classList.toggle('hidden', !phase.night && !eclipse);
     canvas.classList.toggle('eclipse', eclipse);
@@ -1183,7 +1235,12 @@
     $('sun').classList.toggle('moon', phase.night || eclipse);
     const live = bonus && bonus.type && !bonus.done;
     $('bonus-pill').classList.toggle('hidden', !live);
-    if (live) $('bonus-pill').innerHTML = `${ico('bolt')} ${NAMES[bonus.type][0]} ${bonus.got}/${bonus.n} · ${Math.max(0, Math.ceil(bonus.until - elapsed))}초`;
+    if (live) {
+      const left = Math.max(0, bonus.until - elapsed), secs = Math.ceil(left);
+      $('bonus-pill').innerHTML = `<span class="row"><span>${ico('bolt')} ${NAMES[bonus.type][0]} ${bonus.got}/${bonus.n}</span><b>${secs}초</b></span><span class="bar"><i style="width:${left / BONUS_S * 100}%"></i></span>`;
+      $('bonus-pill').classList.toggle('urgent', left <= 5);
+      if (left <= 5 && secs !== bonusTick) { bonusTick = secs; Sound.sfx.tick(); }
+    }
     $('rush-pill').classList.toggle('hidden', !rush);
     if (rush) $('rush-pill').innerHTML = `${ico('bolt')} 점수 2배 · ${Math.max(0, Math.ceil(runDuration - elapsed))}`;
     $('score').classList.toggle('rush', rush);
@@ -1532,6 +1589,7 @@
     const tips = tw.tips.slice();
     if (boss) tips.splice(1, 0, `크기가 ${(s.boss.r / C.EAT_RATIO / 4).toFixed(1)}m를 넘으면 삼킬 수 있어요.`);
     $('twist-tips').innerHTML = tips.map(t => `<li>${t}</li>`).join('');
+    $('twist-demo').classList.toggle('hidden', s.twist !== 'golden');
     show('twist');
   }
 
@@ -1929,7 +1987,8 @@
     const dt = Math.min(0.05, t - last || 0);
     last = t;
     if (!$('fps').classList.contains('hidden') && (fpsN++, t - fpsT >= 0.5)) { $('fps').textContent = Math.round(fpsN / (t - fpsT)) + ' fps' + (R ? ' · 화질 ' + (3 - R.quality) : ''); fpsN = 0; fpsT = t; }
-    if (state === 'play') { update(dt); watchFrames(dt); }
+    if (hitStop > 0) hitStop -= dt; // slow motion for a split second after a big hit
+    if (state === 'play') { update(hitStop > 0 ? dt * 0.2 : dt); watchFrames(dt); }
     // Commits swoop over SWOOP_S; the pinch preview follows the fingers quickly.
     const rate = view.target === 0 || view.target === 1 ? dt / SWOOP_S : dt * 8;
     view.t += Math.max(-rate, Math.min(rate, view.target - view.t));
@@ -1974,7 +2033,7 @@
 
   // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
   if (window.__DUSK_TEST__) {
-    window.__DUSK_TEST__.api = { start, openDaily, isShaded, get tiers() { return [...tierDone]; }, get camPulse() { return camPulse; }, centerOf, input, skipTo: sec => { elapsed = sec; tut = null; }, view, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
+    window.__DUSK_TEST__.api = { start, openDaily, isShaded, get punches() { return punches; }, get tiers() { return [...tierDone]; }, get camPulse() { return camPulse; }, centerOf, input, skipTo: sec => { elapsed = sec; tut = null; }, view, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
       get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase, sun, clouds, eclipse, elapsed, runDuration, rush }; } };

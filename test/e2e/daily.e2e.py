@@ -53,13 +53,16 @@ with sync_playwright() as p:
     # C3 the bolt mission: 40% into a run a short target appears; meeting it pays 5 gems
     pg.evaluate(f'{A}.start(2)'); pg.evaluate(f'{A}.skipTo({A}.s.runDuration * 0.41)'); frames_wait(pg, 4)
     pill = pg.inner_text('#bonus-pill') if pg.is_visible('#bonus-pill') else ''
-    g0 = wallet(pg)['gems']
+    g0 = wallet(pg)['gems']; p0 = pg.evaluate(f'{A}.punches')
+    timer = pg.evaluate("(() => { const b = document.querySelector('#bonus-pill'); return [!!b.querySelector('.bar i'), b.querySelector('b') && b.querySelector('b').textContent]; })()")
     pg.evaluate(f'''(() => {{ const s = {A}.s, m = document.querySelector('#bonus-pill').textContent;
       const want = Object.entries(window.DuskStages.NAMES).find(([k, v]) => m.includes(v[0]))[0];
       s.objects.filter(o => o.state === 0 && o.type === want).slice(0, 4).forEach(o => {{ o.state = 1; o.ft = 0.99; }}); }})()''')
     frames_wait(pg, 6)
     g1 = wallet(pg)['gems']; done = pg.evaluate(f'{A}.s.stats.bonus')
-    rec('C3', 'bolt mission appears mid-run and pays 5 gems when met', '/' in pill and '초' in pill and g1 == g0 + 5 and done == 1, f'pill={pill!r} gems {g0}->{g1}')
+    p1 = pg.evaluate(f'{A}.punches')
+    rec('C3', 'bolt mission shows a draining timer, pays 5 gems when met, and lands with impact', '/' in pill and '초' in pill and timer[0] and timer[1].endswith('초')
+        and g1 == g0 + 5 and done == 1 and p1 > p0, f'pill={pill!r} timer={timer} gems {g0}->{g1} punches {p0}->{p1}')
 
     # C4 finishing runs fills today's missions; a finished one can be claimed once from the missions screen
     pg.evaluate(f"{A}.Store.update(window.DuskChallenge.record({A}.Store.wallet, '2026-11-08', {{ eaten: 999, stars: 9, runs: 9, buildings: 99, rushEaten: 99, size: 99, nightEaten: 99, boosted: 9, bonus: 9 }}))")
