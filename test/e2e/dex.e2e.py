@@ -59,8 +59,11 @@ with sync_playwright() as p:
     revealed = not pg.query_selector(f'.card[data-dex={kind}]').evaluate("e => e.classList.contains('hide')")
     pg.tap(f'.card[data-dex={kind}]'); frames_wait(pg)
     pg.tap(f'.card[data-dex={kind}]'); frames_wait(pg)
-    g1 = wallet(pg)['gems']; reload(pg); g2 = wallet(pg)['gems']
-    rec('X4', 'reward paid exactly once and kept', revealed and g1 == g0 + pg.evaluate('window.DuskDex.REWARD') and g2 == g1 and pg.inner_text('#dex-badge') == '', f'{g0} -> {g1} -> {g2}')
+    g1 = wallet(pg)['gems']
+    # the line above the tabs names the friend for a moment, then clears (TestFlight: an icon used to stay there)
+    said = pg.inner_html('#dex-msg'); pg.wait_for_function("document.querySelector('#dex-msg').innerHTML === ''", timeout=4000)
+    reload(pg); g2 = wallet(pg)['gems']
+    rec('X4', 'reward paid exactly once and kept; the message line clears by itself', revealed and g1 == g0 + pg.evaluate('window.DuskDex.REWARD') and g2 == g1 and pg.inner_text('#dex-badge') == '' and 'ico dex' in said, f'{g0} -> {g1} -> {g2} said={said[:60]!r}')
 
     # X5 tapping a silhouette pays nothing and gives a hint instead
     pg.tap('#btn-dex'); frames_wait(pg)

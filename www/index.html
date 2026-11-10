@@ -350,6 +350,9 @@
   .dexset .swatch { flex: none; width: 48px; height: 48px; }
   .dexset span { display: flex; flex-direction: column; } .dexset small { color: #5a5480; font-weight: 800; }
   #dex-msg, #badges-msg { margin: 0 14px; min-height: 1.4em; font-size: 13px; }
+  /* a short-lived line above the tabs; the icon is boxed so nothing pokes out of the row (TestFlight: "이모지 잔류") */
+  #dex-msg { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 4px 0; min-height: 2em; color: #2a2350; font-weight: 800; }
+  #dex-msg .ico.dex { width: 22px; height: 22px; margin: 0; }
   #dex-tabs { display: flex; gap: 6px; padding: 8px; background: #d7e0f7; }
   .dextab { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0 5px;
     border-radius: 12px; background: #fff; border: 2px solid transparent; font-size: 11px; font-weight: 800; color: #5a5480; cursor: pointer; }
@@ -627,7 +630,8 @@
     jangdok:   { r: 5,  color: '#5a3a2a' },
     persimmon: { r: 12, color: '#3f7d3f' },
     pagoda:    { r: 12, color: '#b8b2a6' },
-    fence:     { r: 8,  color: '#ddd2bd' },
+    fence:     { r: 9,  color: '#e3d5b8' }, // the book entry; in the world it is a thin wall building (compound)
+    ginkgo:    { r: 30, color: '#f2c230', canopy: [2.0, 1.0] }, // canopy [height, radius] in r: its crown casts shade (core canopyShadow)
     student:   { r: 5,  color: '#2f3e66', colors: ['#2f3e66', '#c0392b', '#3f9b4f', '#f2c14e'] },
     bicycle:   { r: 6,  color: '#e5533d', colors: ['#e5533d', '#2f6fd6', '#2a2a2a'] },
     statue:    { r: 14, color: '#9aa5a8' },
@@ -674,6 +678,7 @@
 
   let stage, stageIndex, waterY, buildings, objects, guards, lighthouse, player, state, elapsed;
   let lots = []; // open lots [x0, y0, size]: parks, plazas, fields (the renderer lays lawns on them)
+  let casters = []; // objects whose crown casts shade (TYPES[].canopy)
   let score, stats, shadows, sun, phase, rnd, runSun = 1;
   let bannerUntil = 0; // elapsed second until which the banner shows
   // The bolt mission's target: a kind with plenty left on the map that the player can already swallow.
@@ -801,13 +806,18 @@
     const sw = R(24, 30), sd = R(0.42, 0.58) * (inner - md - pad * 2), left = rnd() < 0.5;
     wing(left ? mx : mx + mw - sw, my + md, sw, sd); // one side wing makes ㄱ
     if (rnd() < 0.5) wing(left ? mx + mw - sw : mx, my + md, sw, sd * R(0.7, 1)); // the other makes ㄷ
-    // the wall: 16-unit spans around the lot, a gate gap centered on the house in the front edge
-    const e = 4, L = x0 + e, Rr = x0 + inner - e, Tp = y0 + e, Bt = y0 + inner - e, gate = mx + mw / 2;
-    for (let x = L + 8; x < Rr; x += 16) {
-      addObj('fence', x, Tp, { rot: 0 });
-      if (Math.abs(x - gate) > 17) addObj('fence', x, Bt, { rot: 0 });
-    }
-    for (let y = Tp + 16; y < Bt - 8; y += 16) { addObj('fence', L, y, { rot: Math.PI / 2 }); addObj('fence', Rr, y, { rot: Math.PI / 2 }); }
+    // the wall: a low mud wall in spans of up to 48, each a thin building (so it shades, blocks and is swallowed
+    // like one, with the 'fence' book entry); a gate gap centered on the house in the front edge
+    const e = 4, L = x0 + e, Rr = x0 + inner - e, Tp = y0 + e, Bt = y0 + inner - e, gate = mx + mw / 2, TH = 4, WH = 7;
+    const run = (a, b, horiz, at) => {
+      const n = Math.max(1, Math.ceil((b - a) / 48)), len = (b - a) / n;
+      for (let i = 0; i < n; i++) {
+        const s = a + i * len, seg = horiz ? { x: s, y: at - TH / 2, w: len, d: TH } : { x: at - TH / 2, y: s, w: TH, d: len };
+        buildings.push(Object.assign(seg, { h: WH, r: 9, roof, wall: true, state: 0, ft: 0, type: 'fence' }));
+      }
+    };
+    run(L, Rr, true, Tp); run(L, gate - 20, true, Bt); run(gate + 20, Rr, true, Bt);
+    run(Tp + TH, Bt - TH, false, L); run(Tp + TH, Bt - TH, false, Rr);
   }
 
   function buildWorld(seed) {
@@ -821,6 +831,9 @@
       for (let gx = 0; gx < cells; gx++) {
         const x0 = gx * CELL + ROAD / 2, y0 = gy * CELL + ROAD / 2, inner = CELL - ROAD;
         if (y0 + inner > waterY - 40) continue; // keep the quay clear
+        if (stage.landmark && gx === (cells >> 1) && gy === (cells >> 1)) { // the village square and its great tree
+          parks.push([x0, y0, inner]); addObj(stage.landmark, x0 + inner / 2, y0 + inner / 2); continue;
+        }
         if (rnd() < stage.parkChance) { parks.push([x0, y0, inner]); continue; }
         if (stage.compound) { compound(x0, y0, inner, R); continue; }
         const split = rnd() < stage.splitChance;
@@ -895,7 +908,11 @@
     }
     const L = stage.lighthouse;
     lighthouse = L ? { x: WORLD * L.x, y: WORLD * L.y, range: L.range, half: L.half, speed: L.speed, dir: 0 } : null;
+    casters = objects.filter(o => TYPES[o.type].canopy);
   }
+  // Everything that throws shade right now: standing buildings (walls included) and big trees' crowns.
+  const shadeCasts = () => buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun))
+    .concat(casters.filter(o => o.state === 0).map(o => C.canopyShadow(o, TYPES[o.type].canopy, sun)));
 
   // Buildings are solid unless they are food right now (small enough and in shade, the same rule as eating):
   // the body is pushed back out to its edge and bounces off instead of sliding through the walls.
@@ -959,7 +976,7 @@
     stats = { score: 0, eaten: {}, beamHit: false, total: 0, lit: false, night: 0, maxR: 0 };
     Sound.music.tune(stage.theme); Sound.music.mode(stage.boss ? 'boss' : 'play'); // every region has its own tune
     phase = C.dayPhase(0); sun = C.sunState(phase.dayT, stage.sunMax);
-    shadows = buildings.map(b => C.shadowPolygon(b, sun));
+    shadows = shadeCasts();
     const spawn = pickSpawn();
     // Level perks (level.js): a bigger start and less shrinking in sunlight, fixed for the whole run.
     const perk = Level.perksOf(Level.levelOf(Store.wallet.stats.xp).level);
@@ -1069,7 +1086,7 @@
     const wasEclipse = eclipse;
     eclipse = stage.twist === 'eclipse' && gameT >= ECLIPSE_AT && gameT < ECLIPSE_AT + ECLIPSE_S / runDuration;
     if (eclipse && !wasEclipse) { banner(`${ico('eclipse')} 일식! 지금은 어디든 그늘이에요`, ECLIPSE_S); Sound.sfx.night(); }
-    shadows = phase.night || eclipse ? [] : buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun));
+    shadows = phase.night || eclipse ? [] : shadeCasts();
     // Clouds drift slowly with the wind (about a third of a map per run), with only a faint sideways sway.
     const CLOUD_V = 8;
     // past the right edge (+100) a cloud comes back in from the left (-100); the span is WORLD + 200
@@ -1207,7 +1224,9 @@
     for (const b of buildings) {
       if (b.state !== 0 || b.r >= player.r * C.EAT_RATIO) continue;
       const c = centerOf(b);
-      if (isShaded(c, b)) hints.push({ x: c.x, y: c.y, r: Math.hypot(b.w, b.d) / 2 });
+      // a courtyard wall gets a small ring, and only close by: hundreds of segments all ringed at once is noise
+      if (b.wall && Math.hypot(c.x - player.x, c.y - player.y) > 110 + player.r) continue;
+      if (isShaded(c, b)) hints.push({ x: c.x, y: c.y, r: b.wall ? b.r + 2 : Math.hypot(b.w, b.d) / 2 });
     }
     const golden = stage.twist === 'golden' ? objects.filter(o => o.state === 0 && o.goldUntil > elapsed) : [];
     if (stage.twist === 'golden') for (const o of objects) o.glow = o.state === 0 && o.goldUntil > elapsed; // painted gold by the renderer
@@ -1297,7 +1316,12 @@
 
   // ---------- screens ----------
   // ---------- collection book ----------
-  let dexToastTimer = 0;
+  let dexToastTimer = 0, dexMsgTimer = 0;
+  // The line above the book's tabs: says something for a moment, then clears, so no icon is left behind.
+  function dexSay(html, ms = 2200) {
+    const m = $('dex-msg'); m.innerHTML = html;
+    clearTimeout(dexMsgTimer); dexMsgTimer = setTimeout(() => { m.innerHTML = ''; }, ms);
+  }
   function discoverDex(id) {
     const w = Dex.discover(Store.wallet, id);
     if (w === Store.wallet) return;
@@ -1343,9 +1367,9 @@
     }));
     $('dex-list').querySelectorAll('.card').forEach(el => el.addEventListener('pointerup', () => {
       const id = el.dataset.dex, e = Dex.ENTRIES.find(x => x.id === id);
-      if (!Store.wallet.dex.includes(id)) { $('dex-msg').textContent = `${THEMES[e.theme].name}에서 그늘에 숨은 걸 찾아 꿀꺽해 봐요.`; return; }
+      if (!Store.wallet.dex.includes(id)) { dexSay(`${THEMES[e.theme].name}에서 그늘에 숨은 걸 찾아 꿀꺽해 봐요.`, 3200); return; }
       const w2 = Dex.claim(Store.wallet, id);
-      $('dex-msg').innerHTML = w2 === Store.wallet ? `${dexIco(e)} ${e.name}` : `보석 ${Dex.REWARD}개를 받았어요! ${dexIco(e)} ${e.name}`;
+      dexSay(w2 === Store.wallet ? `${dexIco(e)} ${e.name}` : `보석 ${Dex.REWARD}개를 받았어요! ${dexIco(e)} ${e.name}`, w2 === Store.wallet ? 1500 : 2200);
       if (w2 !== Store.wallet) Sound.sfx.coin();
       if (w2 !== Store.wallet) Store.update(w2);
     }));

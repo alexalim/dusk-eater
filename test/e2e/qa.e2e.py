@@ -261,7 +261,7 @@ with sync_playwright() as p:
         ft = sorted(pg.evaluate('window.__ft'))
         pg.evaluate(f'(() => {{ const r = {A}.R.debug.renderer; r.render = r.__render; }})()')
         return calls, tris, statistics.median(ft), ft[int(len(ft) * .95)]
-    for si in (0, HARB, CITY, HANOK, CROSS, PARK, SNOW, FARM):  # hanok: walled compounds add many fence props
+    for si in (0, HARB, CITY, HANOK, CROSS, PARK, SNOW, FARM):  # hanok: hundreds of wall segments that cast shadows
         e = stats(f'{A}.start({si}); {A}.skipTo(10)')
         l = stats(f'{A}.s.player.r = 110; {A}.skipTo(90)')
         rec('S7', f'stage{si} draw calls / triangles / JS ms (median,p95)', e[0] < 300 and l[0] < 300 and l[3] < 8,

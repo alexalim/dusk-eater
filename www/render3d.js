@@ -29,6 +29,7 @@
   // own color; glow parts ignore lighting (headlights).
   const P = (geo, s, y, color, o, glow) => ({ geo, s, y, color, o, glow });
   const HAIR = '#4a3426', SKIN = '#f6d2b0';
+  const CASTERS = new Set(['ginkgo']); // prop types whose parts cast shadows (their TYPES entry has a canopy for the rule)
   // A person: body in the instance color, head, hair or hat, plus any extra parts.
   const human = (hat = HAIR, extra = []) => [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN),
     P('sphere', [0.58, 0.32, 0.58], 2.7, hat)].concat(extra);
@@ -86,6 +87,8 @@
     persimmon: [P('cyl', [0.22, 1.4, 0.22], 0.7, '#6b4228'), P('blob', [1.0, 0.8, 1.0], 1.8, 'inst'),
                 P('sphere', [0.14, 0.14, 0.14], 2.2, '#ff8a2a', [0.6, 0.3]), P('sphere', [0.14, 0.14, 0.14], 2.0, '#ff8a2a', [-0.4, -0.5]),
                 P('sphere', [0.14, 0.14, 0.14], 2.4, '#ff8a2a', [0.1, 0.65])],
+    ginkgo:    [P('cyl', [0.3, 1.3, 0.3], 0.65, '#6b4a2e'), P('blob', [1.0, 0.8, 1.0], 2.0, 'inst'), P('blob', [0.7, 0.6, 0.7], 2.5, '#f7d24a'),
+                P('blob', [0.45, 0.4, 0.45], 1.75, '#e8b422', [0.7, 0.3]), P('blob', [0.45, 0.4, 0.45], 1.8, '#e8b422', [-0.6, -0.4])],
     pagoda:    [P('box', [1.0, 0.4, 1.0], 0.2, 'inst'), P('box', [0.8, 0.5, 0.8], 0.65, 'inst'), P('box', [1.1, 0.12, 1.1], 0.95, 'inst'),
                 P('box', [0.6, 0.45, 0.6], 1.25, 'inst'), P('box', [0.85, 0.12, 0.85], 1.5, 'inst'), P('cone', [0.2, 0.5, 0.2], 1.85, 'inst')],
     student:   human(HAIR, [P('box', [0.5, 0.65, 0.3], 1.3, '#5a3d2b', [-0.55, 0])]),
@@ -426,7 +429,8 @@
         group.add(quay);
       }
 
-      w.roadMat = lambert('#b9b4a8');
+      const alley = !!stage.alley; // earthen lanes: no lane paint, no crosswalks, low stone edges
+      w.roadMat = lambert(alley ? '#cdb892' : '#b9b4a8');
       for (let k = 0; k <= WORLD / CELL; k++) {
         const v = new T.Mesh(unit.box, w.roadMat);
         v.scale.set(ROAD, 0.4, waterY - 6); v.position.set(k * CELL, 0.2, (waterY - 6) / 2);
@@ -446,14 +450,14 @@
       for (let k = 0; k <= cells; k++) {
         const c = k * CELL;
         for (let a = 15; a < WORLD; a += 30) {
-          if (nearCross(a)) continue;
+          if (alley || nearCross(a)) continue;
           if (a < waterY - 12) dashes.push([c, a, 1.6, 12]);
           if (c < waterY - 12) dashes.push([a, c, 12, 1.6]);
         }
         for (let m = 0; m <= cells; m++) {
           const r = m * CELL;
           if (r > land && c > land) continue;
-          for (let i = -2; i <= 2; i++) {
+          for (let i = -2; i <= 2 && !alley; i++) {
             const off = ROAD / 2 + 7;
             if (r <= land) { stripes.push([c - off, r + i * 8, 10, 4.5]); stripes.push([c + off, r + i * 8, 10, 4.5]); }
             if (c <= land) { stripes.push([c + i * 8, r - off, 4.5, 10]); stripes.push([c + i * 8, r + off, 4.5, 10]); }
@@ -477,7 +481,7 @@
         return im;
       };
       w.paintMat = lambert('#f4efe2');
-      w.curbMat = lambert('#d9d2c2');
+      w.curbMat = lambert(alley ? '#b8aa90' : '#d9d2c2');
       slabs(dashes, w.paintMat, 0.55, 0.3);
       slabs(stripes, w.paintMat, 0.55, 0.3);
       slabs(curbs, w.curbMat, 0.45, 0.9);
@@ -514,6 +518,7 @@
       const wallKindOf = b => b.plain && !look.wall ? 'planks' : look.wall || 'windows';
       const litAtNight = k => k === 'windows' || k === 'glass';
       for (const b of w.buildings) {
+        if (b.wall) continue; // courtyard walls are instanced below
         const kind = wallKindOf(b);
         const key = b.crane ? 'crane' : b.roof + '/' + kind;
         if (!mats[key]) {
@@ -552,11 +557,22 @@
       }
       w.roofMats = Object.values(mats).map(m => m.roof);
 
+      // Courtyard walls (hanok): thin 'buildings' drawn as one instanced mud wall plus a tile cap. The wall casts
+      // real shadows, so the rule, the shadow map, the bounce and the swallow all see the same thing.
+      w.wallIM = w.capIM = null;
+      const walls = w.buildings.filter(b => b.wall);
+      if (walls.length) {
+        const im = new T.InstancedMesh(unit.box, lambert('#e3d5b8'), walls.length), cim = new T.InstancedMesh(unit.box, lambert('#5a5e6a'), walls.length);
+        im.castShadow = im.receiveShadow = cim.receiveShadow = true; im.frustumCulled = cim.frustumCulled = false;
+        walls.forEach((b, i) => { b.wallIM = im; b.capIM = cim; b.wallIdx = i; placeBuilding(b, b.x + b.w / 2, b.y + b.d / 2, 1, 0); });
+        group.add(im, cim); w.wallIM = im; w.capIM = cim;
+      }
+
       // Shaped roofs (gable / hip): one instanced mesh for the whole map, colored per building, no gameplay shadow
       // (the rule and the shadow map use the wall box only). placeBuilding keeps each instance over its building.
       w.roofIM = null;
       if (ROOFS[look.roof]) {
-        const list = w.buildings.filter(b => !b.crane);
+        const list = w.buildings.filter(b => !b.crane && !b.wall);
         const roofMat = lambert('#ffffff', { map: look.snow ? TEX.snowroof : look.roof === 'flat' ? TEX.roof : look.roof === 'gable' ? TEX.shingles : TEX.tiles });
         const capMat = lambert('#e6e4e0'); // pale ridge cap, hip lines and eave edges of a hanok roof; the second geometry group
         const im = new T.InstancedMesh(ROOFS[look.roof], look.roof === 'hanok' ? [roofMat, capMat] : roofMat, list.length);
@@ -583,6 +599,7 @@
           const mat = part.glow ? new T.MeshBasicMaterial({ color: col(c) }) : lambert(c);
           const im = new T.InstancedMesh(low[part.geo], mat, list.length);
           im.receiveShadow = true;
+          if (CASTERS.has(type)) im.castShadow = true; // a great tree's crown shades the ground, as the rule says
           // Every part gets an instance color up front (white = the material's own color), so turning an object
           // golden later is just a color write, never a shader recompile.
           list.forEach((o, i) => im.setColorAt(i, tmpCol.set(part.color === 'inst' ? o.color : '#ffffff')));
@@ -633,6 +650,16 @@
 
     // While swallowed, `lift` raises it toward the player's mouth.
     function placeBuilding(b, cx, cy, s, lift) {
+      if (b.wall) { // instanced wall body, and its tile cap a little wider than the wall
+        const across = b.w > b.d;
+        dummy.position.set(cx, b.h * s / 2 + lift, cy); dummy.rotation.set(0, 0, 0);
+        dummy.scale.set(b.w * s || 1e-6, b.h * s || 1e-6, b.d * s || 1e-6);
+        dummy.updateMatrix(); b.wallIM.setMatrixAt(b.wallIdx, dummy.matrix); b.wallIM.instanceMatrix.needsUpdate = true;
+        dummy.position.set(cx, (b.h + 0.6) * s + lift, cy);
+        dummy.scale.set((b.w + (across ? 0 : 2)) * s || 1e-6, 1.2 * s || 1e-6, (b.d + (across ? 2 : 0)) * s || 1e-6);
+        dummy.updateMatrix(); b.capIM.setMatrixAt(b.wallIdx, dummy.matrix); b.capIM.instanceMatrix.needsUpdate = true;
+        return;
+      }
       b.mesh.visible = s > 0.01;
       b.mesh.scale.set(b.w * s, b.h * s, b.d * s);
       b.mesh.position.set(cx, b.h * s / 2 + lift, cy);
@@ -758,7 +785,7 @@
       // Buildings (including ones mid-swallow).
       for (const b of world.buildings) {
         if (b.state === 0) continue;
-        if (b.state === 2) { b.mesh.visible = false; continue; }
+        if (b.state === 2) { if (!b.gone) { b.gone = true; if (b.wall) placeBuilding(b, 0, 0, 0, 0); else b.mesh.visible = false; } continue; }
         const p = f.swallowPos(b);
         placeBuilding(b, p.x, p.y, p.s, p.lift);
       }

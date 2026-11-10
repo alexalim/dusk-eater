@@ -140,7 +140,7 @@
     town: { key: 60, bpm: 96, prog: ['vi', 'IV', 'I', 'V'], lead: 'triangle', seed: 1 },
     city: { key: 62, bpm: 112, prog: ['i', 'VII', 'VI', 'VII'], lead: 'square', seed: 2, minor: true },
     oasis: { key: 64, bpm: 90, prog: ['i', 'VI', 'VII', 'i'], lead: 'sine', seed: 3, minor: true },
-    hanok: { key: 57, bpm: 66, prog: ['I', 'I', 'I', 'I'], lead: 'sine', seed: 4, korean: true, steps: 12 }, // 굿거리 feel: 12 pulses a bar, 계면조 scale, drone + janggu
+    hanok: { key: 55, bpm: 50, prog: ['I', 'I', 'I', 'I'], lead: 'sine', seed: 4, korean: true }, // 아리랑 over 세마치 장단 (scheduleKorean); a pulse (S16) is 0.3 s
     campus: { key: 65, bpm: 104, prog: ['I', 'V', 'vi', 'IV'], lead: 'triangle', seed: 5 },
     snow: { key: 57, bpm: 88, prog: ['I', 'iii', 'IV', 'V'], lead: 'sine', seed: 6, bells: true },
     market: { key: 58, bpm: 110, prog: ['I', 'IV', 'V', 'IV'], lead: 'square', seed: 7 },
@@ -155,7 +155,7 @@
     xmas: { key: 60, bpm: 104, prog: ['I', 'IV', 'V', 'I'], lead: 'sine', seed: 16, bells: true },
   };
   function melody(t) {
-    const pent = t.korean ? [0, 3, 5, 7, 10] : t.minor ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9];
+    const pent = t.minor ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9];
     let x = t.seed * 9301 + 49297, at = 2; // tiny LCG: same tune for the same region every time
     const rnd = () => (x = (x * 9301 + 49297) % 233280) / 233280;
     return Array.from({ length: 32 }, (_, k) => {
@@ -221,12 +221,35 @@
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
     o.connect(lp).connect(g).connect(musicBus); o.start(t); o.stop(t + 0.72);
   }
-  function flute(freq, at, dur, vol = 0.1) {
-    const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
-    o.type = 'sine'; o.frequency.value = freq; lfo.frequency.value = 5.5; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(freq * 0.025, t + dur * 0.5);
-    lfo.connect(lg).connect(o.frequency);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.12); g.gain.setValueAtTime(vol, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(musicBus); o.start(t); lfo.start(t); o.stop(t + dur + 0.02); lfo.stop(t + dur + 0.02);
+  function buk(at) { // the barrel drum under the janggu on the boss level
+    const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.15);
+    g.gain.setValueAtTime(0.8, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    o.connect(g).connect(musicBus); o.start(t); o.stop(t + 0.42);
+  }
+  // 대금: a breathy sine with its octave, and the 시김새 that make a line sound Korean rather than merely pentatonic:
+  // 농현 (the note starts straight, then a slow, wide waver grows on it), 추성 (slides up into the note) and
+  // 퇴성 (the end falls away). `mark` is 'chu' or 'toe' from the tune table.
+  function daegeum(freq, at, dur, vol = 0.12, mark) {
+    const t = ctx.currentTime + at, g = ctx.createGain(), g2 = ctx.createGain(), o = ctx.createOscillator(), o2 = ctx.createOscillator();
+    o.type = o2.type = 'sine'; g2.gain.value = 0.35;
+    const f0 = mark === 'chu' ? freq * 0.94 : freq;
+    for (const [osc, k] of [[o, 1], [o2, 2]]) {
+      osc.frequency.setValueAtTime(f0 * k, t);
+      if (mark === 'chu') osc.frequency.exponentialRampToValueAtTime(freq * k, t + 0.12);
+      if (mark === 'toe') { osc.frequency.setValueAtTime(freq * k, t + dur * 0.8); osc.frequency.exponentialRampToValueAtTime(freq * k * 0.9, t + dur); }
+    }
+    const lfo = ctx.createOscillator(), lg = ctx.createGain();
+    lfo.frequency.value = 4.2; lg.gain.setValueAtTime(0, t); lg.gain.setValueAtTime(0, t + Math.min(0.35, dur * 0.3));
+    lg.gain.linearRampToValueAtTime(freq * (dur > 1 ? 0.03 : 0.012), t + dur * 0.75);
+    lfo.connect(lg); lg.connect(o.frequency); lg.connect(o2.frequency);
+    const br = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), bg = ctx.createGain(); // breath around the note
+    br.buffer = noise; br.loop = true; bp.type = 'bandpass'; bp.frequency.value = freq * 2; bp.Q.value = 5;
+    bg.gain.setValueAtTime(0.0001, t); bg.gain.exponentialRampToValueAtTime(vol * 0.35, t + 0.06); bg.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.08); g.gain.setValueAtTime(vol, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); o2.connect(g2).connect(g); g.connect(musicBus); br.connect(bp).connect(bg).connect(musicBus);
+    const end = t + dur + 0.05;
+    o.start(t); o2.start(t); lfo.start(t); br.start(t); o.stop(end); o2.stop(end); lfo.stop(end); br.stop(end);
   }
   function kick(at) {
     const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain();
@@ -245,7 +268,7 @@
     const { echo, padLp } = buildFx();
     while (nextT < ctx.currentTime + 0.3) {
       const at = Math.max(0, nextT - ctx.currentTime), play = mode !== 'title', night = mode === 'night', boss = mode === 'boss';
-      if (tune.korean) { scheduleKorean(at, play, night, echo); nextT += rushOn ? S16 / 1.2 : S16; step++; continue; }
+      if (tune.korean) { scheduleKorean(at, play, night, boss); nextT += rushOn ? S16 / 1.2 : S16; step++; continue; }
       const bar = (step >> 4) % 4, s = step % 16, chord = CHORDS[bar];
       if (s === 0) { // pad: the whole bar, filter breathing with the bar
         padLp.frequency.setTargetAtTime(night ? 2600 : play ? 1400 : 900, ctx.currentTime + at, 0.8);
@@ -266,22 +289,34 @@
       if (rushOn && s % 2 === 1) hat(at, 0.06);
     }
   }
-  // A bar of 12 pulses (굿거리 장단): drone on the root and fifth, janggu strokes, a plucked line on the menus,
-  // the flute joining in play, both at night.
-  function scheduleKorean(at, play, night, echo) {
-    const s = step % 12, bar = Math.floor(step / 12), root = tune.key - 12;
-    if (s === 0) { voice(note(root), at, 12 * S16, { type: 'sine', vol: 0.12, attack: 0.3, release: 12 * S16 + 0.4 }); voice(note(root + 7), at, 12 * S16, { type: 'triangle', vol: 0.05, attack: 0.5, release: 12 * S16 + 0.4 }); }
-    if (play) { // 덩 기덕 쿵 더러러러 쿵 기덕 쿵 더러러러
-      if ([0, 4, 8, 10].includes(s)) kung(at);
-      if ([0, 3, 6, 7, 9].includes(s)) deok(at, s === 0 ? 0.22 : 0.14);
-      if (s === 6 || s === 7) deok(at + S16 * 0.5, 0.08);
+  // 본조 아리랑 (a traditional folk song) over 세마치 장단: a bar is 9 pulses, three beats of three. A note is
+  // [semitones from the tonic, start pulse, pulses, mark]; the tune uses 솔₋ 라₋ 도 레 미 솔 (-5 -3 0 2 4 7).
+  const AR = {
+    a1: [[-5, 0, 2], [-3, 2, 1], [0, 3, 6]],                        // 아리랑
+    a2: [[-5, 0, 2], [-3, 2, 1], [0, 3, 4], [2, 7, 2, 'chu']],       // 아리랑 (the second 랑 lifts)
+    a3: [[2, 0, 2], [0, 2, 1], [2, 3, 3], [4, 6, 2], [2, 8, 1]],     // 아라리
+    a4: [[0, 0, 2], [-3, 2, 1], [-5, 3, 6, 'toe']],                  // 요
+    b2: [[2, 0, 2], [0, 2, 1], [-3, 3, 6]],                          // 고개로
+    b3: [[-5, 0, 2], [-3, 2, 1], [0, 3, 6]],                         // 넘어간
+    b4: [[0, 0, 6, 'toe']],                                          // 다
+    c1: [[7, 0, 2], [7, 2, 1], [4, 3, 2], [2, 5, 1], [0, 6, 3]],     // 나를 버리고
+    c2: [[0, 0, 5]],
+  };
+  const ARIRANG = ['a1', 'a2', 'a3', 'a4', 'a1', 'b2', 'b3', 'b4', 'c1', 'c2', 'a3', 'a4', 'a1', 'b2', 'b3', 'b4'].map(k => AR[k]);
+  // No drone (국악 has none): janggu keeps the 장단 in play (덩 - - 덩 - - 덕 쿵 덕), the 대금 carries the tune by
+  // day with a 가야금 pluck under each downbeat, the 가야금 alone takes it at night and on the menus.
+  function scheduleKorean(at, play, night, boss) {
+    const s = step % 9, bar = Math.floor(step / 9) % ARIRANG.length, tonic = tune.key + 12;
+    if (play) {
+      if (s === 0 || s === 3) { kung(at); deok(at, s === 0 ? 0.22 : 0.16); if (boss) buk(at); }
+      if (s === 6 || s === 8) deok(at, 0.14);
+      if (s === 7) { kung(at); if (boss) buk(at); }
     }
-    const m = LEAD[(step >> 1) % LEAD.length];
-    if (s % 2 === 0 && m) {
-      const grace = bar % 2 === 1 && s % 4 === 0; // 시김새: a quick slide in from a step above
-      if (!play || bar % 4 < 2) { if (grace) pluck(note(m + 2), at, 0.06); pluck(note(m), at + (grace ? 0.07 : 0)); }
-      else flute(note(m), at, 2 * S16 * 1.6, night ? 0.14 : 0.1);
-      if (night && s % 6 === 0) voice(note(m + 12), at, S16, { type: 'sine', vol: 0.05, release: 0.6, to: [musicBus, echo] });
+    for (const [deg, start, len, mark] of ARIRANG[bar]) {
+      if (start !== s) continue;
+      const dur = len * S16 * 0.95, f = note(tonic + deg);
+      if (play && !night) { daegeum(f, at, dur, 0.12, mark); if (start === 0) pluck(note(tonic + deg - 12), at, 0.1); }
+      else { pluck(note(tonic + deg - (play ? 0 : 12)), at, play ? 0.16 : 0.12); if (night && len >= 6) daegeum(f * 2, at + 0.1, dur, 0.04, mark); }
     }
   }
 

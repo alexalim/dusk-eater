@@ -78,18 +78,29 @@
   }
 
   // Building footprint {x, y, w, d, h} -> shadow polygon with bbox for cheap rejection.
-  function shadowPolygon(b, sun) {
-    const len = shadowLength(b.h, sun.elev);
-    const ox = sun.sx * len, oy = sun.sy * len;
-    const corners = [[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.d], [b.x, b.y + b.d]];
-    const pts = corners.concat(corners.map(c => [c[0] + ox, c[1] + oy]));
-    const poly = convexHull(pts);
+  function boxed(poly, owner) {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const p of poly) {
       if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
       if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1];
     }
-    return { poly, minX, minY, maxX, maxY, owner: b };
+    return { poly, minX, minY, maxX, maxY, owner };
+  }
+  function shadowPolygon(b, sun) {
+    const len = shadowLength(b.h, sun.elev);
+    const ox = sun.sx * len, oy = sun.sy * len;
+    const corners = [[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.d], [b.x, b.y + b.d]];
+    return boxed(convexHull(corners.concat(corners.map(c => [c[0] + ox, c[1] + oy]))), b);
+  }
+  // The shade of a round canopy (a big tree): the hull of its disc cast from the lower and upper halves of the
+  // crown, close to what the shadow map draws for the rendered blob. canopy = [crown height, crown radius] in o.r units.
+  function canopyShadow(o, canopy, sun) {
+    const H = canopy[0] * o.r, R = canopy[1] * o.r, pts = [];
+    for (const h of [H - R * 0.5, H + R * 0.5]) {
+      const len = shadowLength(h, sun.elev), cx = o.x + sun.sx * len, cy = o.y + sun.sy * len;
+      for (let i = 0; i < 8; i++) pts.push([cx + R * Math.cos(i * Math.PI / 4), cy + R * Math.sin(i * Math.PI / 4)]);
+    }
+    return boxed(convexHull(pts), o);
   }
 
   // A point inside a building's own footprint is not in that building's shadow
@@ -155,7 +166,7 @@
   const api = {
     DURATION, NIGHT_START, EAT_RATIO, MAX_SHADOW,
     mulberry32, dayPhase, sunState, shadowLength, convexHull, pointInConvex,
-    shadowPolygon, inAnyShadow, inCone, canEat, grow,
+    shadowPolygon, canopyShadow, inAnyShadow, inCone, canEat, grow,
     goalProgress, evaluateStars, isUnlocked, isCleared,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

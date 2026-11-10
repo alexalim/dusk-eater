@@ -146,13 +146,26 @@ with sync_playwright() as p:
     heard = pg.evaluate('window.DuskSound.sfx.lastVoices')
     rec('W11', 'each kind sucked in is voiced by type', all(k in heard for k in ['cat', 'person', 'car', 'tree']) and 'building' in heard, f'heard={heard}')
 
-    # W12 hanok lots are walled compounds: a main wing with a side wing touching it (ㄱ/ㄷ), fences around, a gate gap
+    # W12 hanok lots are walled compounds: a main wing with a side wing touching it (ㄱ/ㄷ) inside a ring of low wall
+    # segments (thin buildings typed 'fence', so they shade, block and go in the book), with a gate gap in front
     pg.evaluate(f'{A}.start(30)'); frames_wait(pg, 2)
-    shape = pg.evaluate(f'''(() => {{ const s = {A}.s, bs = s.buildings, f = s.objects.filter(o => o.type === 'fence');
+    shape = pg.evaluate(f'''(() => {{ const s = {A}.s, bs = s.buildings.filter(b => !b.wall), f = s.buildings.filter(b => b.wall);
       const touching = bs.filter(a => bs.some(b => b !== a && Math.abs(b.y - (a.y + a.d)) < 0.5 && b.x >= a.x - 0.5 && b.x + b.w <= a.x + a.w + 0.5)).length;
-      return [bs.length, touching, f.length, f.filter(o => o.rot !== 0).length, Math.max(...bs.map(b => b.h))]; }})()''')
-    rec('W12', 'hanok: ㄱ/ㄷ houses (side wings touching the main wing) inside fence rings', shape[0] >= 20 and shape[1] >= 8 and shape[2] >= 150 and shape[3] >= 50 and shape[4] <= 48,
-        f'buildings={shape[0]} wings-touching={shape[1]} fences={shape[2]} (vertical {shape[3]}) max-h={shape[4]}')
+      return [bs.length, touching, f.length, f.filter(b => b.d > b.w).length, Math.max(...bs.map(b => b.h)), Math.max(...f.map(b => b.h)), f.every(b => b.type === 'fence')]; }})()''')
+    rec('W12', 'hanok: ㄱ/ㄷ houses (side wings touching the main wing) inside low wall rings', shape[0] >= 20 and shape[1] >= 8 and shape[2] >= 120 and shape[3] >= 50 and shape[4] <= 48 and shape[5] <= 8 and shape[6],
+        f'houses={shape[0]} wings-touching={shape[1]} walls={shape[2]} (along y {shape[3]}) max-h={shape[4]} wall-h={shape[5]} typed-fence={shape[6]}')
+    # W13 the village square: one ginkgo in the middle cell whose crown shades the ground (a point down-sun of it at
+    # noon), and with the low sun plus walls the map keeps real shade at noon (a 20-unit grid, lanes and yards only)
+    pg.evaluate(f'{A}.skipTo(40)'); frames_wait(pg, 3)
+    sq = pg.evaluate(f'''(() => {{ const s = {A}.s, g = s.objects.filter(o => o.type === 'ginkgo'), t = g[0], sun = s.sun;
+      const len = 60 / Math.tan(sun.elev), under = t && {A}.isShaded({{ x: t.x + sun.sx * len, y: t.y + sun.sy * len }}, null);
+      let n = 0, k = 0;
+      for (let x = 40; x < 1760; x += 20) for (let y = 40; y < 1760; y += 20) {{
+        if (s.buildings.some(b => b.state === 0 && x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.d)) continue;
+        n++; if ({A}.isShaded({{ x, y }}, null)) k++; }}
+      return [g.length, t && Math.hypot(t.x - 900, t.y - 900) < 250, under, k / n]; }})()''')
+    rec('W13', 'hanok: one ginkgo on the central square shades down-sun of its crown; the map is at least 8% shade at noon',
+        sq[0] == 1 and sq[1] and sq[2] and sq[3] >= 0.08, f'ginkgos={sq[0]} central={sq[1]} shade-under-crown={sq[2]} noon-shade={sq[3]:.3f}')
 
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune

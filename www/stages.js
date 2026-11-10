@@ -102,15 +102,18 @@
     },
     hanok: {
       look: { wall: 'hanok', roof: 'hanok', rise: 0.55, eave: 0.3, base: true }, // curved tiled roof on a stone platform (render3d.js)
-      compound: true, extras: ['fence'], // lots become walled compounds of ㄱ/ㄷ-shaped houses (index.html buildWorld); fences are a book entry
+      compound: true, extras: ['fence', 'ginkgo'], // lots become walled compounds of ㄱ/ㄷ-shaped houses (index.html buildWorld); walls and the village tree are book entries
+      landmark: 'ginkgo', // the middle cell is the village square with one great ginkgo (당산나무) whose crown throws a round shade
+      alley: true, // earthen lanes: no lane paint or crosswalks (render3d.js)
+      sunMax: 45 * Math.PI / 180, // a low autumn sun: the houses are a quarter the height of a city block, so the day's shade would be all but gone
       theme: 'hanok',
       name: '한옥 마을',
-      desc: '낮은 기와집 골목이에요. 그늘이 짧아서 처마 밑으로 살금살금 다녀요.',
+      desc: '낮은 기와집과 흙담 골목이에요. 담장 밑 그늘과 마을 한가운데 은행나무 아래가 쉼터예요.',
       ground: ['#e6d6b8', '#ece2cc', '#e2ad7c'], groundNight: '#2a2740', lawn: '#d2bc92', // earthen courtyards, not lawns
       roofs: ['#5a5e6a', '#50545f', '#646876'], plainWalls: true, // charcoal tiles, light enough to show the ribs
       parkChance: 0.25, splitChance: 0.75, height: [24, 48],
       small: [['hanbok', 200], ['jangdok', 120], ['persimmon', 50]],
-      parkItems: [['pagoda', 0.5, 'center'], ['jangdok', 6], ['persimmon', 3]], carsPerRoad: 1,
+      parkItems: [['pagoda', 0.5], ['jangdok', 6], ['persimmon', 3]], carsPerRoad: 1,
       waterFrom: null, cranes: 0,
       eat: [['hanbok', 10, 60], ['jangdok', 6, 40], ['persimmon', 2, 14]],
     },
