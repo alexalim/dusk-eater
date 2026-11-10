@@ -62,6 +62,7 @@
     snow: {
       look: { wall: 'planks', roof: 'gable', rise: 0.55, snow: true }, // building walls and roofs (render3d.js)
       theme: 'snow',
+      streetTree: 'pine',
       name: '눈 덮인 산마을',
       desc: '겨울 해는 낮아서 하루 종일 그늘이 길어요. 그 대신 눈밭은 눈부시게 밝아요.',
       ground: ['#eef3f8', '#f6f8fb', '#f1d9cf'], groundNight: '#2a3150',
@@ -186,6 +187,7 @@
     beach: {
       look: { wall: 'pastel', roof: 'gable', rise: 0.3 }, // building walls and roofs (render3d.js)
       theme: 'beach',
+      streetTree: 'palm',
       name: '해변 리조트',
       desc: '한여름 해가 높아서 그늘이 아주 짧아요. 파라솔 그늘을 콩콩 건너가요.',
       ground: ['#f2dfb0', '#f6e8c4', '#efb98a'], groundNight: '#2a2a48',
@@ -202,6 +204,7 @@
     desert: {
       look: { wall: 'adobe', roof: 'flat' }, // building walls and roofs (render3d.js)
       theme: 'desert',
+      streetTree: 'palm', // trees along the curbs of built lots (index.html buildWorld)
       name: '사막 오아시스',
       desc: '해가 머리 위에 있어서 그늘이 거의 없어요. 흙집과 야자수 그늘이 소중해요.',
       ground: ['#ecd3a0', '#f2ddb2', '#eaa874'], groundNight: '#2c2742',
@@ -217,6 +220,7 @@
     xmas: {
       look: { wall: 'planks', roof: 'gable', rise: 0.55, snow: true }, // building walls and roofs (render3d.js)
       theme: 'xmas', event: true,
+      streetTree: 'pine',
       name: '크리스마스 마을',
       desc: '눈 내린 광장에 큰 트리랑 선물이 가득해요. 겨울 해라 그늘이 길어요.',
       ground: ['#eef3f8', '#f6f8fb', '#f6d9cf'], groundNight: '#1f2a4a',

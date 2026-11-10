@@ -57,10 +57,10 @@
   #sun.moon { background: radial-gradient(circle at 40% 35%, #ffffff, #d9ccff 70%); box-shadow: 0 0 14px #b78cff, 0 2px 0 rgba(0,0,0,.3); }
   #stats { display: flex; justify-content: space-between; align-items: center; font-weight: 900;
     font-variant-numeric: tabular-nums; }
-  .pill { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 3px 12px; border-radius: 999px;
+  .pill { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: 999px;
     background: rgba(18,10,42,.72); border: 2px solid rgba(255,255,255,.22); box-shadow: 0 3px 0 rgba(0,0,0,.3); }
-  #size { font-size: 14px; }
-  #score { font-size: 20px; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
+  #size { font-size: 12px; }
+  #score { font-size: 18px; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
   #score::before { content: ''; display: inline-block; width: 18px; height: 18px; margin-right: 4px; vertical-align: -2px; background: url(img/ui/star.svg) center / contain no-repeat; }
   #score.pop { animation: pop .28s ease-out; }
   @keyframes pop { 40% { transform: scale(1.22); } 100% { transform: scale(1); } }
@@ -68,8 +68,8 @@
     text-shadow: 0 2px 0 rgba(0,0,0,.4); pointer-events: none; animation: gain .8s ease-out forwards; }
   @keyframes gain { from { opacity: 1; transform: translateY(0) scale(1.1); } to { opacity: 0; transform: translateY(-34px) scale(.9); } }
   /* Each mission chip fills like a progress bar (--p) and turns gold with a check when done. */
-  #goals { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; font-weight: 800; }
-  #goals span { padding: 4px 10px; border-radius: 999px; border: 2px solid rgba(255,255,255,.22);
+  #goals { display: flex; flex-wrap: wrap; gap: 5px; font-size: 11px; font-weight: 800; }
+  #goals span { padding: 2px 9px; border-radius: 999px; border: 2px solid rgba(255,255,255,.22);
     background: linear-gradient(90deg, rgba(183,140,255,.85) var(--p, 0%), rgba(18,10,42,.72) var(--p, 0%));
     box-shadow: 0 2px 0 rgba(0,0,0,.3); transition: background .2s; }
   #goals span.done { color: #2a1a05; background: var(--star); border-color: #fff; }
@@ -785,9 +785,11 @@
     objects.push(Object.assign({ type, x, y, r: t.r, color, state: 0, ft: 0, rot: 0 }, extra));
   }
 
+  const DENSITY = 1.5; // streets are busy: every theme's scatter counts, times this
   function scatter(list, zoneTop, zoneBottom) {
     const R = (a, b) => a + rnd() * (b - a);
-    for (const [type, n] of list) {
+    for (const [type, n0] of list) {
+      const n = Math.round(n0 * DENSITY);
       let placed = 0, tries = 0;
       while (placed < n && tries++ < n * 20) {
         const x = R(10, WORLD - 10), y = R(zoneTop + 10, zoneBottom - 10);
@@ -838,7 +840,7 @@
     buildings = []; objects = []; guards = [];
     waterY = stage.waterFrom ? WORLD * stage.waterFrom : WORLD;
     const cells = WORLD / CELL;
-    const parks = lots = [];
+    const parks = lots = [], blocks = []; // built lots get street trees along their curbs
     for (let gy = 0; gy < cells; gy++) {
       for (let gx = 0; gx < cells; gx++) {
         const x0 = gx * CELL + ROAD / 2, y0 = gy * CELL + ROAD / 2, inner = CELL - ROAD;
@@ -848,6 +850,7 @@
         }
         if (rnd() < stage.parkChance) { parks.push([x0, y0, inner]); continue; }
         if (stage.compound) { compound(x0, y0, inner, R); continue; }
+        blocks.push([x0, y0, inner]);
         const split = rnd() < stage.splitChance;
         const count = split ? 2 : 1;
         for (let i = 0; i < count; i++) {
@@ -879,6 +882,18 @@
                   state: 0, ft: 0, type: 'building' };
       b.r = T_.w * 0.6;
       buildings.push(b); i++;
+    }
+    // Street trees: the theme's tree along the curb of each built lot, about every 60 units, wherever the lot has room.
+    const streetTree = stage.streetTree || 'tree';
+    for (const [x0, y0, inner] of blocks) {
+      for (let k = 0; k < 4; k++) {
+        const horiz = k < 2, at = k % 2 ? inner - 7 : 7;
+        for (let s = 22; s < inner - 14; s += 60) {
+          if (rnd() > 0.55) continue;
+          const x = horiz ? x0 + s : x0 + at, y = horiz ? y0 + at : y0 + s;
+          if (y < waterY - 20 && !insideAnyBuilding(x, y, 10)) addObj(streetTree, x, y);
+        }
+      }
     }
     // Open lots get the theme's props: [type, count (a fraction is a chance), 'center' to place it mid-lot].
     for (const [x0, y0, inner] of parks) {
@@ -1056,7 +1071,7 @@
   // ---------- update ----------
   // `view` = world units across the shorter screen side; grows with the player.
   const cam = { x: 0, y: 0, view: 400 };
-  const targetView = () => (300 + player.r * 7) * view.zoom;
+  const targetView = () => (250 + player.r * 6.2) * view.zoom; // closer than before: the street fills the screen
 
   function beams() {
     const list = guards.filter(g => g.state === 0);
@@ -1133,7 +1148,9 @@
     }
     const ml = Math.hypot(mx, my);
     if (ml > 1) { mx /= ml; my /= ml; }
-    const speed = 150 + player.r * 1.6;
+    // Small is nimble, big is ponderous: 225 at the starting size, easing down to 190 for a huge body (the camera
+    // also pulls back as you grow, so on screen a big body crawls at under half the speed of a small one).
+    const speed = 225 - Math.min(35, Math.max(0, player.r - 14) * 0.45);
     // Velocity moves toward the target at a fixed rate: a quick start (ACCEL_S to full speed) and a short
     // glide when the finger lifts (GLIDE_S to a stop). A grown body is heavier, so both stretch with size.
     const heavy = 1 + Math.min(1, (player.r / player.r0 - 1) / 6) * 0.8;
@@ -1339,7 +1356,7 @@
       const p = C.goalProgress(g, stats);
       const count = g.kind === 'eat' ? ` ${Math.min(p.cur, p.n)}/${p.n}` : '';
       const pct = Math.round(Math.min(1, p.cur / p.n) * 100);
-      return `<span class="${p.done ? 'done' : ''}" style="--p:${pct}%">${goalLabel(g)}${count}</span>`;
+      return `<span class="${p.done ? 'done' : ''}" style="--p:${pct}%">${hudGoal(g)}${count}</span>`;
     }).join('');
     if ($('goals').innerHTML !== chips) $('goals').innerHTML = chips;
   }
@@ -1563,6 +1580,8 @@
 
   // Every icon is a picture (img/): UI marks are SVG, maps and collection-book kinds are 3D renders.
   const ico = name => `<img class="ico" src="img/ui/${name}.svg" alt="">`;
+  // HUD chips stay short ("900점", "고양이 0/3", "불빛 피하기"); the full wording lives on the level card and the end screen.
+  const hudGoal = g => g.kind === 'score' ? `${g.n.toLocaleString()}점` : g.kind === 'eat' ? NAMES[g.what][0] : g.kind === 'noBeam' ? '불빛 피하기' : goalLabel(g);
   const face = name => `<img class="ico face" src="img/ui/face-${name}.svg" alt="">`;
   const dexIco = e => `<img class="ico dex" src="${e.img}" alt="">`;
   const mapIco = theme => `<img class="ico map" src="img/map/${theme}.png" alt="">`;

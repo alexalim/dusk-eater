@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
   const T = root.THREE;
-  const TILT = 55 * Math.PI / 180;
+  const TILT = 62 * Math.PI / 180; // steeper than before: more top-down, a little less wall
 
   const col = c => new T.Color(c);
   const unit = {
@@ -324,15 +324,17 @@
     const body = new T.Mesh(bodyGeo, bodyMat);
     const armMat = new T.MeshBasicMaterial({ color: 0xf1e8ff }); // the shared sphere has no vertex colors
     const arms = [0, 1].map(() => new T.Mesh(unit.sphere, armMat));
-    // Mouth: a crimson lip with a dark throat just in front of it, so an open mouth reads as a hole.
-    const mouth = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0xd8436a }));
-    const throat = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x3a0e2a }));
+    // Mouth: a small dark void (deep violet rim, near-black throat) — it eats darkness, so the mouth is a hole, not a red lip.
+    const mouth = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x2a0b55 }));
+    const throat = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x06030f }));
     const eyeMat = new T.MeshBasicMaterial({ color: 0x241640 });
     const pupilMat = new T.MeshBasicMaterial({ color: 0xffffff });
+    // Eyes: wide, half-lidded (a body-colored lid covers the top of each eye) with one small glint — a sleepy dusk
+    // look, deliberately unlike tall glossy cartoon ovals.
     const eyes = [0, 1].map(() => {
-      const e = new T.Mesh(unit.sphere, eyeMat), p = new T.Mesh(unit.sphere, pupilMat);
-      scene.add(e, p);
-      return { e, p };
+      const e = new T.Mesh(unit.sphere, eyeMat), p = new T.Mesh(unit.sphere, pupilMat), lid = new T.Mesh(unit.sphere, armMat);
+      scene.add(e, p, lid);
+      return { e, p, lid };
     });
     // Growth glow: a swirl of violet darkness shows through the body as it grows (a translucent shell over it).
     const swirl = (() => {
@@ -348,7 +350,7 @@
     const auraMat = new T.MeshBasicMaterial({ map: swirl, color: 0xb78cff, transparent: true, opacity: 0, depthWrite: false });
     const aura = new T.Mesh(bodyGeo, auraMat);
     aura.renderOrder = 7;
-    const cheekMat = new T.MeshBasicMaterial({ color: 0xff9fc0, transparent: true, opacity: 0.55, depthWrite: false });
+    const cheekMat = new T.MeshBasicMaterial({ color: 0xb78cff, transparent: true, opacity: 0.22, depthWrite: false }); // a faint violet glow, not pink blush
     const cheeks = [0, 1].map(() => new T.Mesh(unit.sphere, cheekMat));
     scene.add(body, aura, mouth, throat, ...arms, ...cheeks);
     // A point on the body's surface: horizontal angle a, elevation el (radians), pushed out by `out`·r.
@@ -385,7 +387,7 @@
     const TEX = makeTextures();
     const NIGHT_WINDOWS = col('#ffc46b');
     const dummy = new T.Object3D();
-    const tmpCol = new T.Color();
+    const tmpCol = new T.Color(), tmpAxis = new T.Vector3();
     let world = null, group = null, vw = 1, vh = 1;
 
     function disposeGroup() {
@@ -430,7 +432,9 @@
       }
 
       const alley = !!stage.alley; // earthen lanes: no lane paint, no crosswalks, low stone edges
-      w.roadMat = lambert(alley ? '#cdb892' : '#b9b4a8');
+      // Day colors of the street (the frame loop restores them after night): a cool mid gray so paint and curbs pop.
+      w.roadDay = alley ? '#cdb892' : '#9a96a4'; w.curbDay = alley ? '#b8aa90' : '#e6e0d4';
+      w.roadMat = lambert(w.roadDay);
       for (let k = 0; k <= WORLD / CELL; k++) {
         const v = new T.Mesh(unit.box, w.roadMat);
         v.scale.set(ROAD, 0.4, waterY - 6); v.position.set(k * CELL, 0.2, (waterY - 6) / 2);
@@ -481,7 +485,7 @@
         return im;
       };
       w.paintMat = lambert('#f4efe2');
-      w.curbMat = lambert(alley ? '#b8aa90' : '#d9d2c2');
+      w.curbMat = lambert(w.curbDay);
       slabs(dashes, w.paintMat, 0.55, 0.3);
       slabs(stripes, w.paintMat, 0.55, 0.3);
       slabs(curbs, w.curbMat, 0.45, 0.9);
@@ -522,8 +526,9 @@
         const kind = wallKindOf(b);
         const key = b.crane ? 'crane' : b.roof + '/' + kind;
         if (!mats[key]) {
-          const wallCol = WALL_BASE[kind] ? col(WALL_BASE[kind]).lerp(col(b.roof), kind === 'glass' ? 0.25 : 0.1)
-            : col(b.roof).lerp(col('#ffffff'), kind === 'pastel' ? 0.55 : 0.35);
+          // walls take more of the roof's color than before: saturated blocks, each building its own hue
+          const wallCol = WALL_BASE[kind] ? col(WALL_BASE[kind]).lerp(col(b.roof), kind === 'glass' ? 0.3 : 0.3)
+            : col(b.roof).lerp(col('#ffffff'), kind === 'pastel' ? 0.4 : 0.25);
           const glow = wallCol.clone().multiplyScalar(0.35);
           const map = { windows: TEX.windows, planks: TEX.planks, pastel: TEX.planks, glass: TEX.glass, brick: TEX.brick, adobe: TEX.adobe,
             hanok: TEX.hanok, corrugated: TEX.corrugated, concrete: TEX.concrete }[kind] || TEX.windows;
@@ -768,8 +773,8 @@
         sunLight.intensity = Math.min(1.8, (1 - HEMI) / Math.sin(sun.elev));
         sunLight.color.set(0xfff4dd).lerp(col('#ff9a5a'), lowSun); // deeper orange toward dusk
         hemi.color.set(0xffffff); hemi.groundColor.set(0x8a7f70); hemi.intensity = HEMI;
-        world.roadMat.color.set('#b9b4a8');
-        world.paintMat.color.set('#f4efe2'); world.curbMat.color.set('#d9d2c2');
+        world.roadMat.color.set(world.roadDay);
+        world.paintMat.color.set('#faf6ee'); world.curbMat.color.set(world.curbDay);
         if (world.lawnMat) world.lawnMat.color.set(world.stage.lawn);
         for (const m of world.roofMats) m.emissive.set(0x000000);
         for (const m of world.wallMats) { m.emissiveMap = TEX.plain; m.emissive.copy(m.userData.day); }
@@ -788,6 +793,11 @@
         if (b.state === 2) { if (!b.gone) { b.gone = true; if (b.wall) placeBuilding(b, 0, 0, 0, 0); else b.mesh.visible = false; } continue; }
         const p = f.swallowPos(b);
         placeBuilding(b, p.x, p.y, p.s, p.lift);
+        if (!b.wall) { // it keels over toward the mouth as it goes down
+          const dx = f.player.x - p.x, dy = f.player.y - p.y, d = Math.hypot(dx, dy) || 1;
+          b.mesh.rotation.set(0, 0, 0);
+          b.mesh.rotateOnWorldAxis(tmpAxis.set(dy / d, 0, -dx / d), Math.min(1, b.ft) * 0.9);
+        }
       }
 
       // Instanced objects: rewrite matrices only for objects that changed this frame. A golden friend (o.glow)
@@ -868,7 +878,7 @@
       swirl.offset.set(t * 0.05, 0); swirl.rotation = t * 0.4;
       armMat.color.copy(bodyMat.color).multiplyScalar(0.94);
       // First person looks over the top of the head; the eyes high on its front would peek over it.
-      eyes.forEach(o => { o.e.visible = o.p.visible = k < 0.6; });
+      eyes.forEach(o => { o.e.visible = o.p.visible = o.lid.visible = k < 0.6; });
       arms.forEach((m, k) => {
         onBody(player, L + (k ? 1 : -1) * (1.05 - gulp * 0.45), -0.28, 0.06, m.position);
         m.scale.set(R * 0.3, R * 0.24, R * 0.3);
@@ -880,14 +890,18 @@
       onBody(player, L, MOUTH_EL, 0.08, throat.position);
       throat.rotation.copy(mouth.rotation);
       throat.scale.set(R * 0.06, mouth.scale.y * (0.45 + gulp * 0.35), mouth.scale.z * (0.5 + gulp * 0.3));
-      // Eyes: big glossy ovals that squeeze shut happily (^^) for a moment after each gulp.
+      // Eyes: wide half-lidded ovals with a glint; they squeeze shut happily (^^) for a moment after each gulp.
       const happy = Math.min(1, bulge * 1.6);
-      eyes.forEach(({ e, p }, k) => {
-        onBody(player, L + (k ? 1 : -1) * 0.4, 0.7 + gulp * 0.1, 0.0, e.position);
+      eyes.forEach(({ e, p, lid }, k) => {
+        onBody(player, L + (k ? 1 : -1) * 0.4, 0.66 + gulp * 0.1, 0.0, e.position);
         e.rotation.set(0, -L, 0);
-        e.scale.set(R * 0.1, R * (0.22 - happy * 0.17), R * 0.16);
-        onBody(player, L + (k ? 1 : -1) * 0.35, 0.8 + gulp * 0.1, 0.09, p.position);
-        p.scale.setScalar(R * 0.06 * (1 - happy));
+        e.scale.set(R * 0.1, R * (0.14 - happy * 0.1), R * 0.19);
+        // the lid: a body-colored cap over the upper part of the eye, so the eye reads as a flat-topped half-moon
+        onBody(player, L + (k ? 1 : -1) * 0.4, 0.78 + gulp * 0.1, 0.03, lid.position);
+        lid.rotation.set(0, -L, 0);
+        lid.scale.set(R * 0.11, R * 0.09, R * 0.22);
+        onBody(player, L + (k ? 1 : -1) * 0.36, 0.64 + gulp * 0.1, 0.09, p.position);
+        p.scale.setScalar(R * 0.045 * (1 - happy));
       });
       cheeks.forEach((m, i) => {
         onBody(player, L + (i ? 1 : -1) * 0.66, 0.5, 0.0, m.position);
