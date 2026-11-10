@@ -140,7 +140,7 @@
     town: { key: 60, bpm: 96, prog: ['vi', 'IV', 'I', 'V'], lead: 'triangle', seed: 1 },
     city: { key: 62, bpm: 112, prog: ['i', 'VII', 'VI', 'VII'], lead: 'square', seed: 2, minor: true },
     oasis: { key: 64, bpm: 90, prog: ['i', 'VI', 'VII', 'i'], lead: 'sine', seed: 3, minor: true },
-    hanok: { key: 55, bpm: 84, prog: ['I', 'vi', 'ii', 'V'], lead: 'sine', seed: 4 },
+    hanok: { key: 57, bpm: 66, prog: ['I', 'I', 'I', 'I'], lead: 'sine', seed: 4, korean: true, steps: 12 }, // 굿거리 feel: 12 pulses a bar, 계면조 scale, drone + janggu
     campus: { key: 65, bpm: 104, prog: ['I', 'V', 'vi', 'IV'], lead: 'triangle', seed: 5 },
     snow: { key: 57, bpm: 88, prog: ['I', 'iii', 'IV', 'V'], lead: 'sine', seed: 6, bells: true },
     market: { key: 58, bpm: 110, prog: ['I', 'IV', 'V', 'IV'], lead: 'square', seed: 7 },
@@ -155,7 +155,7 @@
     xmas: { key: 60, bpm: 104, prog: ['I', 'IV', 'V', 'I'], lead: 'sine', seed: 16, bells: true },
   };
   function melody(t) {
-    const pent = t.minor ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9];
+    const pent = t.korean ? [0, 3, 5, 7, 10] : t.minor ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9];
     let x = t.seed * 9301 + 49297, at = 2; // tiny LCG: same tune for the same region every time
     const rnd = () => (x = (x * 9301 + 49297) % 233280) / 233280;
     return Array.from({ length: 32 }, (_, k) => {
@@ -200,6 +200,34 @@
     for (const dt of detune) { const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq; o.detune.value = dt; o.connect(head); o.start(t); o.stop(t + release + 0.05); }
     for (const d of to) g.connect(d);
   }
+  // Korean kit: janggu strokes (a low 'kung' from the drum head, a high 'deok' from the stick), a gayageum-like
+  // pluck with a quick bend, and a daegeum-like breathy flute with wide vibrato.
+  function kung(at) {
+    const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.1);
+    g.gain.setValueAtTime(0.6, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+    o.connect(g).connect(musicBus); o.start(t); o.stop(t + 0.27);
+  }
+  function deok(at, vol = 0.18) {
+    const t = ctx.currentTime + at, src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = noise; f.type = 'bandpass'; f.frequency.value = 2600; f.Q.value = 2.5;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    src.connect(f).connect(g).connect(musicBus); src.start(t); src.stop(t + 0.08);
+  }
+  function pluck(freq, at, vol = 0.16) {
+    const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
+    o.type = 'triangle'; o.frequency.setValueAtTime(freq * 1.04, t); o.frequency.exponentialRampToValueAtTime(freq, t + 0.06);
+    lp.type = 'lowpass'; lp.frequency.setValueAtTime(2400, t); lp.frequency.exponentialRampToValueAtTime(600, t + 0.5);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    o.connect(lp).connect(g).connect(musicBus); o.start(t); o.stop(t + 0.72);
+  }
+  function flute(freq, at, dur, vol = 0.1) {
+    const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = freq; lfo.frequency.value = 5.5; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(freq * 0.025, t + dur * 0.5);
+    lfo.connect(lg).connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.12); g.gain.setValueAtTime(vol, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(musicBus); o.start(t); lfo.start(t); o.stop(t + dur + 0.02); lfo.stop(t + dur + 0.02);
+  }
   function kick(at) {
     const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain();
     o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
@@ -216,8 +244,9 @@
   function schedule() {
     const { echo, padLp } = buildFx();
     while (nextT < ctx.currentTime + 0.3) {
-      const at = Math.max(0, nextT - ctx.currentTime), bar = (step >> 4) % 4, s = step % 16, chord = CHORDS[bar];
-      const play = mode !== 'title', night = mode === 'night', boss = mode === 'boss';
+      const at = Math.max(0, nextT - ctx.currentTime), play = mode !== 'title', night = mode === 'night', boss = mode === 'boss';
+      if (tune.korean) { scheduleKorean(at, play, night, echo); nextT += rushOn ? S16 / 1.2 : S16; step++; continue; }
+      const bar = (step >> 4) % 4, s = step % 16, chord = CHORDS[bar];
       if (s === 0) { // pad: the whole bar, filter breathing with the bar
         padLp.frequency.setTargetAtTime(night ? 2600 : play ? 1400 : 900, ctx.currentTime + at, 0.8);
         for (const n of chord) voice(note(n), at, 16 * S16, { vol: 0.05, detune: [-9, 0, 9], attack: 0.35, release: 16 * S16 + 0.3, to: [padLp] });
@@ -237,6 +266,25 @@
       if (rushOn && s % 2 === 1) hat(at, 0.06);
     }
   }
+  // A bar of 12 pulses (굿거리 장단): drone on the root and fifth, janggu strokes, a plucked line on the menus,
+  // the flute joining in play, both at night.
+  function scheduleKorean(at, play, night, echo) {
+    const s = step % 12, bar = Math.floor(step / 12), root = tune.key - 12;
+    if (s === 0) { voice(note(root), at, 12 * S16, { type: 'sine', vol: 0.12, attack: 0.3, release: 12 * S16 + 0.4 }); voice(note(root + 7), at, 12 * S16, { type: 'triangle', vol: 0.05, attack: 0.5, release: 12 * S16 + 0.4 }); }
+    if (play) { // 덩 기덕 쿵 더러러러 쿵 기덕 쿵 더러러러
+      if ([0, 4, 8, 10].includes(s)) kung(at);
+      if ([0, 3, 6, 7, 9].includes(s)) deok(at, s === 0 ? 0.22 : 0.14);
+      if (s === 6 || s === 7) deok(at + S16 * 0.5, 0.08);
+    }
+    const m = LEAD[(step >> 1) % LEAD.length];
+    if (s % 2 === 0 && m) {
+      const grace = bar % 2 === 1 && s % 4 === 0; // 시김새: a quick slide in from a step above
+      if (!play || bar % 4 < 2) { if (grace) pluck(note(m + 2), at, 0.06); pluck(note(m), at + (grace ? 0.07 : 0)); }
+      else flute(note(m), at, 2 * S16 * 1.6, night ? 0.14 : 0.1);
+      if (night && s % 6 === 0) voice(note(m + 12), at, S16, { type: 'sine', vol: 0.05, release: 0.6, to: [musicBus, echo] });
+    }
+  }
+
   const music = {
     start() {
       if (!init() || timer) return;

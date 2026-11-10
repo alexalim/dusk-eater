@@ -147,7 +147,7 @@ with sync_playwright() as p:
     rec('W11', 'each kind sucked in is voiced by type', all(k in heard for k in ['cat', 'person', 'car', 'tree']) and 'building' in heard, f'heard={heard}')
 
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
-    for i in (0, 10, 20, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)
+    for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune
     rec('W0', 'no page errors', not errs, '; '.join(errs[:3]))
     b.close()
 
