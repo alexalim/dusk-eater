@@ -28,7 +28,7 @@ def page(p, w=390, h=844, storage=None):
 
 A = 'window.__DUSK_TEST__.api'
 # First level of some regions (index into STAGES; regions are 10 levels): town 0
-CITY, SNOW, CROSS, HARB, PARK, DESERT, FARM = 10, 50, 70, 90, 110, 130, 140
+CITY, HANOK, SNOW, CROSS, HARB, PARK, DESERT, FARM = 10, 30, 50, 70, 90, 110, 130, 140
 def frames_wait(pg, n=3):
     pg.evaluate(f'new Promise(r => {{ let k = {n}; const f = () => --k <= 0 ? r() : requestAnimationFrame(f); requestAnimationFrame(f); }})')
 def decline_continue(pg):
@@ -261,7 +261,7 @@ with sync_playwright() as p:
         ft = sorted(pg.evaluate('window.__ft'))
         pg.evaluate(f'(() => {{ const r = {A}.R.debug.renderer; r.render = r.__render; }})()')
         return calls, tris, statistics.median(ft), ft[int(len(ft) * .95)]
-    for si in (0, HARB, CITY, CROSS, PARK, SNOW, FARM):
+    for si in (0, HARB, CITY, HANOK, CROSS, PARK, SNOW, FARM):  # hanok: walled compounds add many fence props
         e = stats(f'{A}.start({si}); {A}.skipTo(10)')
         l = stats(f'{A}.s.player.r = 110; {A}.skipTo(90)')
         rec('S7', f'stage{si} draw calls / triangles / JS ms (median,p95)', e[0] < 300 and l[0] < 300 and l[3] < 8,

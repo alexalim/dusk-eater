@@ -12,7 +12,7 @@
     building: '건물', kiosk: '매점', carousel: '회전목마', fountain: '분수', pagoda: '석탑', statue: '동상',
     scooter: '스쿠터', boat: '보트', buoy: '부표', pipe: '파이프', excavator: '굴착기', towel: '비치 타월',
     tube: '튜브', surfer: '서퍼', palm: '야자수', tent: '천막', haystack: '건초더미', tractor: '트랙터',
-    xtree: '크리스마스 트리', sleigh: '산타 썰매',
+    xtree: '크리스마스 트리', sleigh: '산타 썰매', fence: '담장',
   };
 
   // What a map can actually put in the world (index.html buildWorld spawns from these same fields).
@@ -20,6 +20,7 @@
     const out = ['building', 'guard'];
     for (const list of [t.small, t.waterSmall, t.parkItems]) for (const [type] of list || []) out.push(type);
     if (t.carsPerRoad > 0) out.push(t.vehicle || 'car');
+    for (const id of t.extras || []) out.push(id); // placed by hand rather than scattered (hanok courtyard walls)
     return out;
   }
 

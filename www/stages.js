@@ -102,6 +102,7 @@
     },
     hanok: {
       look: { wall: 'hanok', roof: 'hanok', rise: 0.55, eave: 0.3, base: true }, // curved tiled roof on a stone platform (render3d.js)
+      compound: true, extras: ['fence'], // lots become walled compounds of ㄱ/ㄷ-shaped houses (index.html buildWorld); fences are a book entry
       theme: 'hanok',
       name: '한옥 마을',
       desc: '낮은 기와집 골목이에요. 그늘이 짧아서 처마 밑으로 살금살금 다녀요.',

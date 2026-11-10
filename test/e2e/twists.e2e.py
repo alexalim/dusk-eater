@@ -146,6 +146,14 @@ with sync_playwright() as p:
     heard = pg.evaluate('window.DuskSound.sfx.lastVoices')
     rec('W11', 'each kind sucked in is voiced by type', all(k in heard for k in ['cat', 'person', 'car', 'tree']) and 'building' in heard, f'heard={heard}')
 
+    # W12 hanok lots are walled compounds: a main wing with a side wing touching it (ㄱ/ㄷ), fences around, a gate gap
+    pg.evaluate(f'{A}.start(30)'); frames_wait(pg, 2)
+    shape = pg.evaluate(f'''(() => {{ const s = {A}.s, bs = s.buildings, f = s.objects.filter(o => o.type === 'fence');
+      const touching = bs.filter(a => bs.some(b => b !== a && Math.abs(b.y - (a.y + a.d)) < 0.5 && b.x >= a.x - 0.5 && b.x + b.w <= a.x + a.w + 0.5)).length;
+      return [bs.length, touching, f.length, f.filter(o => o.rot !== 0).length, Math.max(...bs.map(b => b.h))]; }})()''')
+    rec('W12', 'hanok: ㄱ/ㄷ houses (side wings touching the main wing) inside fence rings', shape[0] >= 20 and shape[1] >= 8 and shape[2] >= 150 and shape[3] >= 50 and shape[4] <= 48,
+        f'buildings={shape[0]} wings-touching={shape[1]} fences={shape[2]} (vertical {shape[3]}) max-h={shape[4]}')
+
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune
     rec('W0', 'no page errors', not errs, '; '.join(errs[:3]))

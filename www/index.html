@@ -627,6 +627,7 @@
     jangdok:   { r: 5,  color: '#5a3a2a' },
     persimmon: { r: 12, color: '#3f7d3f' },
     pagoda:    { r: 12, color: '#b8b2a6' },
+    fence:     { r: 8,  color: '#ddd2bd' },
     student:   { r: 5,  color: '#2f3e66', colors: ['#2f3e66', '#c0392b', '#3f9b4f', '#f2c14e'] },
     bicycle:   { r: 6,  color: '#e5533d', colors: ['#e5533d', '#2f6fd6', '#2a2a2a'] },
     statue:    { r: 14, color: '#9aa5a8' },
@@ -788,6 +789,27 @@
     }
   }
 
+  // A hanok compound: an ㄱ- or ㄷ-shaped house (a main wing across the back, one or two side wings) inside a
+  // low courtyard wall with a gate in front. Wings are ordinary buildings (shadows, swallowing); the wall is a
+  // row of short 'fence' props, so a big enough body can eat its way through it.
+  function compound(x0, y0, inner, R) {
+    const roof = stage.roofs[(rnd() * stage.roofs.length) | 0], h = () => R(stage.height[0], stage.height[1]);
+    const wing = (x, y, w, d) => { const b = { x, y, w, d, h: h(), roof, state: 0, ft: 0, type: 'building' }; b.r = Math.hypot(w, d) / 2 * 0.75; buildings.push(b); };
+    const pad = 16, mw = R(0.6, 0.72) * inner, md = R(26, 34);
+    const mx = x0 + pad + R(0, inner - mw - pad * 2), my = y0 + pad;
+    wing(mx, my, mw, md); // 안채 across the back
+    const sw = R(24, 30), sd = R(0.42, 0.58) * (inner - md - pad * 2), left = rnd() < 0.5;
+    wing(left ? mx : mx + mw - sw, my + md, sw, sd); // one side wing makes ㄱ
+    if (rnd() < 0.5) wing(left ? mx + mw - sw : mx, my + md, sw, sd * R(0.7, 1)); // the other makes ㄷ
+    // the wall: 16-unit spans around the lot, a gate gap centered on the house in the front edge
+    const e = 4, L = x0 + e, Rr = x0 + inner - e, Tp = y0 + e, Bt = y0 + inner - e, gate = mx + mw / 2;
+    for (let x = L + 8; x < Rr; x += 16) {
+      addObj('fence', x, Tp, { rot: 0 });
+      if (Math.abs(x - gate) > 17) addObj('fence', x, Bt, { rot: 0 });
+    }
+    for (let y = Tp + 16; y < Bt - 8; y += 16) { addObj('fence', L, y, { rot: Math.PI / 2 }); addObj('fence', Rr, y, { rot: Math.PI / 2 }); }
+  }
+
   function buildWorld(seed) {
     rnd = C.mulberry32(seed);
     const R = (a, b) => a + rnd() * (b - a);
@@ -800,6 +822,7 @@
         const x0 = gx * CELL + ROAD / 2, y0 = gy * CELL + ROAD / 2, inner = CELL - ROAD;
         if (y0 + inner > waterY - 40) continue; // keep the quay clear
         if (rnd() < stage.parkChance) { parks.push([x0, y0, inner]); continue; }
+        if (stage.compound) { compound(x0, y0, inner, R); continue; }
         const split = rnd() < stage.splitChance;
         const count = split ? 2 : 1;
         for (let i = 0; i < count; i++) {
