@@ -169,9 +169,54 @@
       dark: mk(g => { g.fillStyle = '#121212'; g.fillRect(0, 0, 256, 256); }),
       planks: mk(g => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#d6d6d6'; for (let x = 0; x < 256; x += 32) g.fillRect(x, 0, 3, 256); }),
       roof: mk(g => { g.fillStyle = '#c8c8c8'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#ffffff'; g.fillRect(12, 12, 232, 232); }),
+      // Per-theme walls (multiplied by the wall color) and roof shapes (multiplied by the roof color).
+      glass: mk(g => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#9cc0e6'; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) g.fillRect(i * 64 + 4, j * 64 + 4, 56, 56); }),
+      brick: mk(g => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#d2c4bc';
+        for (let y = 0; y < 256; y += 16) { g.fillRect(0, y, 256, 3); for (let x = (y / 16) % 2 ? 0 : 16; x < 256; x += 32) g.fillRect(x, y, 3, 16); } }),
+      adobe: mk(g => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 256);
+        for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) if ((i * 7 + j * 3) % 3 !== 1) { g.fillStyle = '#5a4634'; g.fillRect(i * 64 + 22, j * 64 + 18, 20, 26); g.fillStyle = '#e4d6bd'; g.fillRect(i * 64 + 18, j * 64 + 14, 28, 4); } }),
+      hanok: mk(g => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 256);
+        for (let j = 0; j < 4; j++) { g.fillStyle = '#7a5433'; g.fillRect(0, j * 64, 256, 7); // lintel beam
+          for (let i = 0; i < 4; i++) { g.fillStyle = '#6b4a2b'; g.fillRect(i * 64, j * 64, 9, 64); // post
+            g.fillStyle = '#8a6a3a'; g.fillRect(i * 64 + 18, j * 64 + 16, 34, 44); g.fillStyle = '#e9d9b8'; g.fillRect(i * 64 + 21, j * 64 + 19, 28, 38); // lattice door
+            g.fillStyle = '#8a6a3a'; for (let k = 0; k < 3; k++) { g.fillRect(i * 64 + 21 + k * 10 + 7, j * 64 + 19, 2, 38); g.fillRect(i * 64 + 21, j * 64 + 19 + k * 12 + 10, 28, 2); } } } }),
+      corrugated: mk(g => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#cfcfcf'; for (let x = 0; x < 256; x += 10) g.fillRect(x, 0, 3, 256); g.fillStyle = '#b89a7a'; g.fillRect(0, 118, 256, 6); }),
+      concrete: mk(g => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 256); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { g.fillStyle = '#3a3a3a'; g.fillRect(i * 64 + 7, j * 64 + 8, 50, 40); g.fillStyle = '#d6d2c8'; g.fillRect(i * 64 + 7, j * 64 + 48, 50, 4); } }),
+      shingles: mk(g => { g.fillStyle = '#f2f2f2'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#d6d6d6'; for (let y = 0; y < 256; y += 24) g.fillRect(0, y, 256, 4); }),
+      tiles: mk(g => { g.fillStyle = '#ececf0'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#b4b6be'; for (let x = 0; x < 256; x += 14) g.fillRect(x, 0, 4, 256); g.fillStyle = '#c8cad2'; for (let y = 0; y < 256; y += 28) g.fillRect(0, y, 256, 3); }),
+      snowroof: mk(g => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#e4ebf3'; for (let y = 20; y < 256; y += 40) g.fillRect(0, y, 256, 5); }),
     };
   }
   const WIN_W = 14, WIN_H = 12; // world units per window cell
+
+  // Roof shapes in unit space: footprint ±0.5 at y 0, apex at y 1. Faces wound outward; UVs planar.
+  function roofGeometry(kind) {
+    const pos = [], nor = [], uv = [], ctr = [0, 0.35, 0];
+    const tri = (a, b, c) => {
+      const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+      let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+      const m = Math.hypot(...n) || 1; n = n.map(x => x / m);
+      const out = (a[0] + b[0] + c[0]) / 3 - ctr[0], outy = (a[1] + b[1] + c[1]) / 3 - ctr[1], outz = (a[2] + b[2] + c[2]) / 3 - ctr[2];
+      const pts = n[0] * out + n[1] * outy + n[2] * outz < 0 ? [a, c, b] : [a, b, c];
+      if (n[0] * out + n[1] * outy + n[2] * outz < 0) n = n.map(x => -x);
+      for (const p of pts) { pos.push(...p); nor.push(...n); uv.push((p[0] + 0.5) * 4, (p[2] + 0.5) * 4); }
+    };
+    const quad = (a, b, c, d) => { tri(a, b, c); tri(a, c, d); };
+    const A = [-.5, 0, -.5], B = [.5, 0, -.5], C = [.5, 0, .5], D = [-.5, 0, .5];
+    if (kind === 'gable') { // ridge along x
+      const E = [-.5, 1, 0], F = [.5, 1, 0];
+      quad(A, B, F, E); quad(D, C, F, E); tri(A, E, D); tri(B, F, C);
+    } else { // hip: a flattened pyramid with a small flat top
+      const k = 0.22, a = [-k, 1, -k], b = [k, 1, -k], c = [k, 1, k], d = [-k, 1, k];
+      quad(A, B, b, a); quad(B, C, c, b); quad(C, D, d, c); quad(D, A, a, d); quad(a, b, c, d);
+    }
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+    g.setAttribute('normal', new T.Float32BufferAttribute(nor, 3));
+    g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
+    return g;
+  }
+  const ROOFS = { gable: roofGeometry('gable'), hip: roofGeometry('hip') };
 
   // A unit box whose wall UVs count windows in world units, so every building gets the same window size.
   function buildingGeometry(b, shift) {
@@ -439,14 +484,22 @@
       const mats = {};
       w.wallMats = [];
       const propMat = lambert('#a19d94');
+      // The theme's look: which wall texture, and what color the walls take (default: the roof color lightened).
+      const look = w.stage.look || {};
+      const WALL_BASE = { glass: '#cfe3f5', brick: '#b86a4e', adobe: '#e9d3a8', hanok: '#f3e7cf', concrete: '#b9b7b0' };
+      const wallKindOf = b => b.plain && !look.wall ? 'planks' : look.wall || 'windows';
+      const litAtNight = k => k === 'windows' || k === 'glass';
       for (const b of w.buildings) {
-        const key = b.crane ? 'crane' : b.roof + (b.plain ? '/plain' : '');
+        const kind = wallKindOf(b);
+        const key = b.crane ? 'crane' : b.roof + '/' + kind;
         if (!mats[key]) {
-          const wallCol = col(b.roof).lerp(col('#ffffff'), 0.35), glow = wallCol.clone().multiplyScalar(0.35);
-          // Plain walls (barns, silos, ride towers) get boards instead of windows and stay dark at night.
-          const wall = b.crane ? lambert(wallCol, { emissive: glow })
-            : lambert(wallCol, { map: b.plain ? TEX.planks : TEX.windows, emissive: glow, emissiveMap: TEX.plain });
-          wall.userData.day = glow; wall.userData.night = b.plain ? TEX.dark : TEX.lit;
+          const wallCol = WALL_BASE[kind] ? col(WALL_BASE[kind]).lerp(col(b.roof), kind === 'glass' ? 0.25 : 0.1)
+            : col(b.roof).lerp(col('#ffffff'), kind === 'pastel' ? 0.55 : 0.35);
+          const glow = wallCol.clone().multiplyScalar(0.35);
+          const map = { windows: TEX.windows, planks: TEX.planks, pastel: TEX.planks, glass: TEX.glass, brick: TEX.brick, adobe: TEX.adobe,
+            hanok: TEX.hanok, corrugated: TEX.corrugated, concrete: TEX.concrete }[kind] || TEX.windows;
+          const wall = b.crane ? lambert(wallCol, { emissive: glow }) : lambert(wallCol, { map, emissive: glow, emissiveMap: TEX.plain });
+          wall.userData.day = glow; wall.userData.night = litAtNight(kind) ? TEX.lit : TEX.dark;
           if (!b.crane) w.wallMats.push(wall);
           const roof = lambert(b.roof, b.crane ? {} : { map: TEX.roof });
           // Cranes use the shared six-face box (+x -x +y -y +z -z); other buildings their own two-group box.
@@ -474,6 +527,20 @@
         placeBuilding(b, b.x + b.w / 2, b.y + b.d / 2, 1, 0);
       }
       w.roofMats = Object.values(mats).map(m => m.roof);
+
+      // Shaped roofs (gable / hip): one instanced mesh for the whole map, colored per building, no gameplay shadow
+      // (the rule and the shadow map use the wall box only). placeBuilding keeps each instance over its building.
+      w.roofIM = null;
+      if (ROOFS[look.roof]) {
+        const list = w.buildings.filter(b => !b.crane);
+        const roofMat = lambert('#ffffff', { map: look.snow ? TEX.snowroof : look.roof === 'hip' ? TEX.tiles : TEX.shingles });
+        const im = new T.InstancedMesh(ROOFS[look.roof], roofMat, list.length);
+        im.receiveShadow = true; im.frustumCulled = false;
+        list.forEach((b, i) => { b.roofIM = im; b.roofIdx = i; im.setColorAt(i, look.snow ? col('#f7f9fc').lerp(col(b.roof), 0.15) : col(b.roof)); });
+        im.instanceColor.needsUpdate = true;
+        group.add(im); w.roofIM = im; w.roofMats.push(roofMat);
+        for (const b of list) placeBuilding(b, b.x + b.w / 2, b.y + b.d / 2, 1, 0);
+      }
 
       // Small objects: one InstancedMesh per (type, part).
       const byType = {};
@@ -538,6 +605,15 @@
       b.mesh.visible = s > 0.01;
       b.mesh.scale.set(b.w * s, b.h * s, b.d * s);
       b.mesh.position.set(cx, b.h * s / 2 + lift, cy);
+      if (b.roofIM) { // the shaped roof sits on the wall box, ridge along the longer side, overhanging by `eave`
+        const look = world.stage.look, e = 1 + (look.eave || 0.1), along = b.w >= b.d;
+        // houses get the shaped roof; a tall block (over gableMax) keeps its flat top, like an apartment building
+        const tall = look.roof === 'gable' && b.h > (look.gableMax || 80);
+        const rise = tall ? 0 : Math.min((look.rise || 0.35) * b.h, 0.6 * Math.min(b.w, b.d));
+        dummy.position.set(cx, b.h * s + lift, cy); dummy.rotation.set(0, along ? 0 : Math.PI / 2, 0);
+        dummy.scale.set((along ? b.w : b.d) * s * e || 1e-6, rise * s || 1e-6, (along ? b.d : b.w) * s * e || 1e-6);
+        dummy.updateMatrix(); b.roofIM.setMatrixAt(b.roofIdx, dummy.matrix); b.roofIM.instanceMatrix.needsUpdate = true;
+      }
     }
 
     // Quality steps, lowered by the game when frames run slow: 0 full, 1 lower resolution,

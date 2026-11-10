@@ -4,6 +4,7 @@
 
   const THEMES = {
     town: {
+      look: { wall: 'windows', roof: 'gable', rise: 0.35 }, // building walls and roofs (render3d.js)
       theme: 'town',
       name: '조용한 마을',
       desc: '낮은 지붕과 공원이 있는 동네예요. 처음 연습하기 딱 좋아요.',
@@ -17,6 +18,7 @@
       eat: [['person', 12, 80], ['cat', 4, 14], ['tree', 4, 30], ['car', 2, 8]],
     },
     harbor: {
+      look: { wall: 'corrugated', roof: 'gable', rise: 0.25 }, // building walls and roofs (render3d.js)
       theme: 'harbor',
       name: '안개 항구',
       desc: '크레인의 긴 그림자가 다리가 돼요. 등대 불빛은 밤에도 안 꺼지니 조심!',
@@ -31,6 +33,7 @@
       eat: [['worker', 10, 60], ['crate', 4, 30], ['container', 3, 26], ['gull', 3, 20]],
     },
     city: {
+      look: { wall: 'glass', roof: 'flat' }, // building walls and roofs (render3d.js)
       theme: 'city',
       name: '도심 빌딩숲',
       desc: '높은 빌딩이 길쭉한 그늘 다리를 만들어 줘요. 그늘에서 그늘로 건너가요.',
@@ -43,6 +46,7 @@
       eat: [['officer', 12, 70], ['vending', 3, 20], ['taxi', 2, 16]],
     },
     park: {
+      look: { wall: 'pastel', roof: 'gable', rise: 0.4 }, // building walls and roofs (render3d.js)
       theme: 'park',
       name: '놀이공원',
       desc: '매점과 놀이기구가 그늘을 만들어요. 풍선이랑 솜사탕이 가득한 광장이 목표예요.',
@@ -56,6 +60,7 @@
       eat: [['visitor', 10, 70], ['balloon', 4, 26], ['candy', 1, 6]],
     },
     snow: {
+      look: { wall: 'planks', roof: 'gable', rise: 0.55, snow: true }, // building walls and roofs (render3d.js)
       theme: 'snow',
       name: '눈 덮인 산마을',
       desc: '겨울 해는 낮아서 하루 종일 그늘이 길어요. 그 대신 눈밭은 눈부시게 밝아요.',
@@ -69,6 +74,7 @@
       eat: [['skier', 8, 50], ['snowman', 3, 18], ['pine', 3, 25], ['sled', 3, 22]],
     },
     farm: {
+      look: { wall: 'planks', roof: 'gable', rise: 0.45 }, // building walls and roofs (render3d.js)
       theme: 'farm',
       name: '시골 농장',
       desc: '넓은 밭에 그늘은 헛간이랑 사일로뿐이에요. 그늘이 귀하니 길을 잘 골라요.',
@@ -82,6 +88,7 @@
       eat: [['chicken', 8, 45], ['sheep', 4, 25], ['cow', 2, 14]],
     },
     oasis: {
+      look: { wall: 'adobe', roof: 'flat' }, // building walls and roofs (render3d.js)
       theme: 'oasis',
       name: '어반 오아시스',
       desc: '빌딩 숲 한가운데 잔디 정원이에요. 오후엔 빌딩 그늘이 정원까지 들어와요.',
@@ -94,6 +101,7 @@
       eat: [['person', 12, 70], ['planter', 3, 24], ['parasol', 2, 14]],
     },
     hanok: {
+      look: { wall: 'hanok', roof: 'hip', rise: 0.5, eave: 0.24 }, // building walls and roofs (render3d.js)
       theme: 'hanok',
       name: '한옥 마을',
       desc: '낮은 기와집 골목이에요. 그늘이 짧아서 처마 밑으로 살금살금 다녀요.',
@@ -106,6 +114,7 @@
       eat: [['hanbok', 10, 60], ['jangdok', 6, 40], ['persimmon', 2, 14]],
     },
     campus: {
+      look: { wall: 'brick', roof: 'flat' }, // building walls and roofs (render3d.js)
       theme: 'campus',
       name: '대학 캠퍼스',
       desc: '큰 강의동 사이에 잔디밭이 넓어요. 수업이 끝나면 학생들이 우르르 나와요.',
@@ -118,6 +127,7 @@
       eat: [['student', 12, 70], ['bicycle', 3, 22], ['bench', 2, 14]],
     },
     market: {
+      look: { wall: 'pastel', roof: 'gable', rise: 0.35 }, // building walls and roofs (render3d.js)
       theme: 'market',
       name: '전통시장',
       desc: '다닥다닥 붙은 가게 사이 좁은 그늘을 누벼요. 스쿠터 조심!',
@@ -130,6 +140,7 @@
       eat: [['grandma', 10, 60], ['fruit', 6, 40], ['stall', 2, 16]],
     },
     crossing: {
+      look: { wall: 'glass', roof: 'flat' }, // building walls and roofs (render3d.js)
       theme: 'crossing',
       name: '스크램블 교차로',
       desc: '사방으로 사람들이 건너는 큰 교차로예요. 비 오는 날엔 우산도 냠냠.',
@@ -142,6 +153,7 @@
       eat: [['commuter', 14, 80], ['umbrella', 3, 24], ['car', 2, 8]],
     },
     stadium: {
+      look: { wall: 'windows', roof: 'flat' }, // building walls and roofs (render3d.js)
       theme: 'stadium',
       name: '경기장 앞 광장',
       desc: '커다란 경기장이 넓은 그늘을 만들어요. 경기가 끝나면 팬들이 광장을 꽉 채워요.',
@@ -154,6 +166,7 @@
       eat: [['fan', 14, 80], ['ball', 4, 26], ['trash', 2, 14]],
     },
     construction: {
+      look: { wall: 'concrete', roof: 'flat' }, // building walls and roofs (render3d.js)
       theme: 'construction',
       name: '공사장',
       desc: '타워크레인이 길고 가는 그늘 다리를 만들어요. 짓고 있는 건물 사이를 오가요.',
@@ -167,6 +180,7 @@
       eat: [['worker', 10, 60], ['cone', 6, 40], ['beam', 2, 16]],
     },
     beach: {
+      look: { wall: 'pastel', roof: 'gable', rise: 0.3 }, // building walls and roofs (render3d.js)
       theme: 'beach',
       name: '해변 리조트',
       desc: '한여름 해가 높아서 그늘이 아주 짧아요. 파라솔 그늘을 콩콩 건너가요.',
@@ -182,6 +196,7 @@
       eat: [['sunbather', 10, 60], ['parasol', 3, 26], ['sandcastle', 2, 14]],
     },
     desert: {
+      look: { wall: 'adobe', roof: 'flat' }, // building walls and roofs (render3d.js)
       theme: 'desert',
       name: '사막 오아시스',
       desc: '해가 머리 위에 있어서 그늘이 거의 없어요. 흙집과 야자수 그늘이 소중해요.',
@@ -196,6 +211,7 @@
     },
     // Seasonal: only played through EVENTS below, never in the 150-level ladder.
     xmas: {
+      look: { wall: 'planks', roof: 'gable', rise: 0.55, snow: true }, // building walls and roofs (render3d.js)
       theme: 'xmas', event: true,
       name: '크리스마스 마을',
       desc: '눈 내린 광장에 큰 트리랑 선물이 가득해요. 겨울 해라 그늘이 길어요.',
