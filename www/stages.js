@@ -108,7 +108,7 @@
       sunMax: 45 * Math.PI / 180, // a low autumn sun: the houses are a quarter the height of a city block, so the day's shade would be all but gone
       theme: 'hanok',
       name: '한옥 마을',
-      desc: '낮은 기와집과 흙담 골목이에요. 담장 밑 그늘과 마을 한가운데 은행나무 아래가 쉼터예요.',
+      desc: '낮은 기와집과 흙담 골목이에요. 담장 밑 그늘과 은행나무 아래가 쉼터고, 몸이 커지면 담장은 그냥 밀고 지나가요.',
       ground: ['#e6d6b8', '#ece2cc', '#e2ad7c'], groundNight: '#2a2740', lawn: '#d2bc92', // earthen courtyards, not lawns
       roofs: ['#5a5e6a', '#50545f', '#646876'], plainWalls: true, // charcoal tiles, light enough to show the ribs
       parkChance: 0.25, splitChance: 0.75, height: [24, 48],

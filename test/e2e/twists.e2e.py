@@ -167,6 +167,41 @@ with sync_playwright() as p:
     rec('W13', 'hanok: one ginkgo on the central square shades down-sun of its crown; the map is at least 8% shade at noon',
         sq[0] == 1 and sq[1] and sq[2] and sq[3] >= 0.08, f'ginkgos={sq[0]} central={sq[1]} shade-under-crown={sq[2]} noon-shade={sq[3]:.3f}')
 
+    # W14 hanok is passable: a body of r 16 (below the wall-crossing size) reaches most of the map from the middle
+    # crossing through 66-wide lanes, gates and side doors; a body of r 18 takes a sunlit wall as food (walls are low)
+    pg.evaluate(f'{A}.start(30)'); frames_wait(pg, 2)
+    reach = pg.evaluate(f'''(() => {{ const s = {A}.s, R = 16, G = 10, N = 180, free = new Uint8Array(N * N);
+      for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {{ const x = i * G + 5, y = j * G + 5;
+        if (!s.buildings.some(b => b.state === 0 && x > b.x - R && x < b.x + b.w + R && y > b.y - R && y < b.y + b.d + R)) free[i * N + j] = 1; }}
+      const seen = new Uint8Array(N * N), st = [[90, 90]]; seen[90 * N + 90] = 1; let nr = 0;
+      while (st.length) {{ const [i, j] = st.pop(); nr++;
+        for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {{ const a = i + di, c = j + dj; if (a < 0 || c < 0 || a >= N || c >= N) continue;
+          const k = a * N + c; if (free[k] && !seen[k]) {{ seen[k] = 1; st.push([a, c]); }} }} }}
+      return nr / (N * N); }})()''')
+    pg.evaluate(f'{A}.skipTo(40)'); frames_wait(pg, 2)
+    pick = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player, w = s.buildings.find(b => b.wall && b.state === 0 && !{A}.isShaded({A}.centerOf(b), b));
+      p.r = 22; p.x = w.x + w.w / 2; p.y = w.y + w.d / 2; return [w.x, w.y, w.worth]; }})()''')  # 22: sunlight shaves a little off each frame
+    frames_wait(pg, 4)
+    ate = pg.evaluate(f"{A}.s.buildings.find(b => b.x === {pick[0]} && b.y === {pick[1]}).state")
+    rec('W14', 'hanok: r 16 reaches 40%+ of the map; r 18 swallows a sunlit wall; walls are worth little', reach >= 0.4 and ate != 0 and pick[2] == 4,
+        f'reach={reach:.2f} wall-state={ate} worth={pick[2]}')
+
+    # W15 hunger: nothing swallowed for a while brings a countdown pill, then the body shrinks; a body kept at its
+    # smallest long enough ends the run with the continue offer saying why (so waiting for night is no plan)
+    pg.evaluate(f'{A}.start(0)'); pg.evaluate(f'{A}.skipTo(20)'); frames_wait(pg, 2)
+    pg.evaluate(f'(() => {{ const s = {A}.s; for (const o of s.objects) o.state = 2; for (const g of s.guards) g.state = 2; s.player.x = 900; s.player.y = 900; }})()')
+    pg.evaluate(f'{A}.hungerSet(8)'); frames_wait(pg, 2)
+    count = [pg.is_visible('#hunger-pill'), pg.inner_text('#hunger-pill'), pg.evaluate(f'{A}.hunger.phase')]
+    r0 = pg.evaluate(f'{A}.s.player.r')
+    pg.evaluate(f'{A}.hungerSet(12)'); frames_wait(pg, 6)
+    r1 = pg.evaluate(f'{A}.s.player.r'); starve = pg.evaluate(f'{A}.hunger.phase')
+    pg.evaluate(f'(() => {{ {A}.s.player.r = 10; {A}.hungerSet(14, 9.95); }})()'); frames_wait(pg, 6)
+    over = [pg.evaluate(f'{A}.s.state'), pg.is_visible('#cont') and pg.inner_text('#cont-why')]
+    rec('W15', 'hunger: countdown pill, then shrinking, then the run ends with a continue offer that says why',
+        count[0] and '배고파요' in count[1] and count[2] == 'count' and starve == 'starve' and r1 < r0 and over[0] == 'cont' and '굶' in (over[1] or ''),
+        f'count={count} r {r0:.1f}->{r1:.1f} phase={starve} over={over}')
+    if pg.is_visible('#cont'): pg.tap('#btn-cont-no'); frames_wait(pg, 4)
+
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune
     rec('W0', 'no page errors', not errs, '; '.join(errs[:3]))

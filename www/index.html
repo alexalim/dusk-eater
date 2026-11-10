@@ -98,6 +98,9 @@
   #rush-pill { align-self: center; font-size: 16px; padding: 4px 16px; color: #2a1a05; background: linear-gradient(#ffe8a0, #ffc94d);
     border-color: #fff; animation: rushpulse .5s ease-in-out infinite alternate; }
   @keyframes rushpulse { to { transform: scale(1.08); } }
+  #hunger-pill { align-self: center; font-size: 14px; padding: 4px 14px; border-color: #ff9f9f; color: #ffe0e0; }
+  #hunger-pill b { font-size: 20px; color: #fff; margin-left: 4px; }
+  #hunger-pill.starve { background: #c0392b; border-color: #fff; color: #fff; animation: rushpulse .4s ease-in-out infinite alternate; }
   #score.rush { color: var(--star); }
   #boss-pill { align-self: center; font-size: 13px; padding: 4px 12px; border-color: #c94dff; }
   #boss-pill.ready { color: #2a1a05; background: var(--star); border-color: #fff; }
@@ -392,6 +395,7 @@
   <div id="goals"></div>
   <div id="boss-pill" class="pill hidden"></div>
   <div id="rush-pill" class="pill hidden"></div>
+  <div id="hunger-pill" class="pill hidden"></div>
   <div id="bonus-pill" class="pill hidden"></div>
   <div id="warn"><img class="ico face" src="img/ui/face-surprised.svg" alt=""> 앗, 햇빛이에요! 몸이 줄어들어요</div>
   <div id="banner">미션 완료! 밤이 일찍 와요 <img class="ico" src="img/ui/moon.svg" alt=""></div>
@@ -722,6 +726,9 @@
   // Last-stretch rush: the final RUSH_S seconds of every run score double, with a countdown and faster music.
   const RUSH_S = 10;
   let rush = false, rushTick = 0;
+  const WALL_OVER = 18; // a body this big goes through a courtyard wall even in sunlight (the walls are low)
+  // Hunger (core HUNGER): time of the last swallow, the current state for the HUD, and how long the body has sat at its smallest
+  let lastEat = 0, hunger = null, hungerTick = 0, starving = false, starveT = 0, endedBy = null;
   // Size tiers: the first time the body is big enough for a new kind of thing on this map ("이제 자동차도 꿀꺽!"),
   // a banner, a chime, a bulge and a short camera pull-back mark the moment. Seeded with what already fits at the start.
   let tierDone = new Set(), tierNext = 0, camPulse = 0;
@@ -807,17 +814,22 @@
     wing(left ? mx : mx + mw - sw, my + md, sw, sd); // one side wing makes ㄱ
     if (rnd() < 0.5) wing(left ? mx + mw - sw : mx, my + md, sw, sd * R(0.7, 1)); // the other makes ㄷ
     // the wall: a low mud wall in spans of up to 48, each a thin building (so it shades, blocks and is swallowed
-    // like one, with the 'fence' book entry); a gate gap centered on the house in the front edge
-    const e = 4, L = x0 + e, Rr = x0 + inner - e, Tp = y0 + e, Bt = y0 + inner - e, gate = mx + mw / 2, TH = 4, WH = 7;
+    // like one, with the 'fence' book entry) but worth little. Set back 10 so the lanes stay 66 wide like other
+    // maps; a 56-wide gate centered on the house in front and a 36-wide side door in one side wall, so a body
+    // below WALL_OVER still gets around. Bigger bodies go straight through walls (tryEat / bumpBuildings).
+    const e = 10, L = x0 + e, Rr = x0 + inner - e, Tp = y0 + e, Bt = y0 + inner - e, gate = mx + mw / 2, TH = 4, WH = 7;
     const run = (a, b, horiz, at) => {
+      if (b - a < 6) return;
       const n = Math.max(1, Math.ceil((b - a) / 48)), len = (b - a) / n;
       for (let i = 0; i < n; i++) {
         const s = a + i * len, seg = horiz ? { x: s, y: at - TH / 2, w: len, d: TH } : { x: at - TH / 2, y: s, w: TH, d: len };
-        buildings.push(Object.assign(seg, { h: WH, r: 9, roof, wall: true, state: 0, ft: 0, type: 'fence' }));
+        buildings.push(Object.assign(seg, { h: WH, r: 9, worth: 4, roof, wall: true, state: 0, ft: 0, type: 'fence' }));
       }
     };
-    run(L, Rr, true, Tp); run(L, gate - 20, true, Bt); run(gate + 20, Rr, true, Bt);
-    run(Tp + TH, Bt - TH, false, L); run(Tp + TH, Bt - TH, false, Rr);
+    const door = (Tp + Bt) / 2 + R(-30, 30), doorSide = rnd() < 0.5 ? L : Rr, other = doorSide === L ? Rr : L;
+    run(L, Rr, true, Tp); run(L, gate - 28, true, Bt); run(gate + 28, Rr, true, Bt);
+    run(Tp + TH, Bt - TH, false, other);
+    run(Tp + TH, door - 18, false, doorSide); run(door + 18, Bt - TH, false, doorSide);
   }
 
   function buildWorld(seed) {
@@ -924,7 +936,7 @@
       const px = Math.max(b.x, Math.min(b.x + b.w, player.x)), py = Math.max(b.y, Math.min(b.y + b.d, player.y));
       let nx = player.x - px, ny = player.y - py, d = Math.hypot(nx, ny);
       if (d >= R) continue;
-      if (b.r < player.r * C.EAT_RATIO && isShaded(centerOf(b), b)) continue;
+      if (b.r < player.r * C.EAT_RATIO && ((b.wall && player.r >= WALL_OVER) || isShaded(centerOf(b), b))) continue;
       if (d < 1e-6) { // center already inside: leave by the nearest wall
         const out = [[player.x - b.x, -1, 0], [b.x + b.w - player.x, 1, 0], [player.y - b.y, 0, -1], [b.y + b.d - player.y, 0, 1]]
           .sort((a, c) => a[0] - c[0])[0];
@@ -969,6 +981,7 @@
     stageIndex = i; stage = list[i];
     buildWorld(Date.now() & 0xffff);
     elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; continued = false; nextGold = 4; rush = false; rushTick = 0; Sound.music.rush(false); bonus = null;
+    lastEat = 0; hunger = null; hungerTick = 0; starving = false; starveT = 0; endedBy = null;
     clouds = stage.twist === 'clouds' ? Array.from({ length: 7 }, (_, k) => ({ x: rnd() * WORLD, y: rnd() * waterY, r: 70 + rnd() * 50 })) : [];
     tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
@@ -1083,6 +1096,14 @@
     const left = runDuration - elapsed;
     if (!rush && left <= RUSH_S) { rush = true; banner(`${ico('bolt')} 막판 러시! 마지막 ${RUSH_S}초는 점수 2배`, 2.5); Sound.sfx.star(); Sound.music.rush(true); punch(2); }
     if (rush && left <= 3 && Math.ceil(left) !== rushTick) { rushTick = Math.ceil(left); Sound.sfx.tick(); } // 3, 2, 1
+    // Hunger: waiting for night (or hiding in shade) is not a plan. See core HUNGER for the timeline.
+    hunger = tut ? null : C.hungerState(elapsed - Math.max(lastEat, C.HUNGER.grace));
+    if (hunger && hunger.phase === 'count' && Math.ceil(hunger.left) !== hungerTick) { hungerTick = Math.ceil(hunger.left); Sound.sfx.tick(); }
+    if (hunger && hunger.phase === 'starve') {
+      if (!starving) { starving = true; stats.hungry = 1; banner(`${face('surprised')} 너무 배고파요! 몸이 줄어들어요`, 2.5); punch(1, '#ff8a8a'); }
+      player.r = Math.max(10, player.r - C.HUNGER.shrink * dt);
+      if (player.r <= 10.001 && (starveT += dt) >= C.HUNGER.end) { endedBy = 'hunger'; return finish(); }
+    }
     const wasEclipse = eclipse;
     eclipse = stage.twist === 'eclipse' && gameT >= ECLIPSE_AT && gameT < ECLIPSE_AT + ECLIPSE_S / runDuration;
     if (eclipse && !wasEclipse) { banner(`${ico('eclipse')} 일식! 지금은 어디든 그늘이에요`, ECLIPSE_S); Sound.sfx.night(); }
@@ -1146,8 +1167,9 @@
     const tryEat = (o, ox, oy, exclude) => {
       const dist = Math.hypot(ox - player.x, oy - player.y);
       if (dist > player.r + o.r) return;
-      const golden = o.goldUntil > elapsed; // golden friends are the one thing you may take in full sun
-      if (C.canEat(player.r, o.r, golden || isShaded({ x: ox, y: oy }, exclude), dist)) startSwallow(o, ox, oy);
+      const golden = o.goldUntil > elapsed; // golden friends may be taken in full sun; so may a low wall, by a big enough body
+      const over = o.wall && player.r >= WALL_OVER;
+      if (C.canEat(player.r, o.r, golden || over || isShaded({ x: ox, y: oy }, exclude), dist)) startSwallow(o, ox, oy);
     };
     for (const o of objects) if (o.state === 0) tryEat(o, o.x, o.y, null);
     for (const g of guards) if (g.state === 0) tryEat(g, g.x, g.y, g);
@@ -1163,11 +1185,13 @@
       o.ft += dt / SWALLOW_S;
       if (o.ft < 1) { inFlight = true; continue; }
       o.state = 2; player.bulge = 1; gulped = true;
+      lastEat = elapsed; starving = false; starveT = 0; hungerTick = 0; // fed again
+      const v = o.worth || o.r; // a courtyard wall is swallowed at its size but grows and scores little (worth)
       Sound.sfx.gulp(Math.min(1, o.r / player.r));
-      if (o.r > player.r * 0.45 && !o.boss) punch(1);
-      player.r = C.grow(player.r, o.r);
+      if (v > player.r * 0.45 && !o.boss) punch(1);
+      player.r = C.grow(player.r, v);
       const gold = o.goldUntil > elapsed;
-      score += Math.round(o.r * o.r / 2) * (gold ? 5 : 1) * (rush ? 2 : 1);
+      score += Math.round(v * v / 2) * (gold ? 5 : 1) * (rush ? 2 : 1);
       if (gold) { stats.golds = (stats.golds || 0) + 1; Sound.sfx.coin(); banner(`${ico('sparkle')} 황금 친구! 점수 5배`, 1.5); punch(1, '#ffd25c'); }
       if (rush) stats.rushEaten = (stats.rushEaten || 0) + 1;
       if (bonus && !bonus.done && o.type === bonus.type && ++bonus.got >= bonus.n) {
@@ -1226,7 +1250,7 @@
       const c = centerOf(b);
       // a courtyard wall gets a small ring, and only close by: hundreds of segments all ringed at once is noise
       if (b.wall && Math.hypot(c.x - player.x, c.y - player.y) > 110 + player.r) continue;
-      if (isShaded(c, b)) hints.push({ x: c.x, y: c.y, r: b.wall ? b.r + 2 : Math.hypot(b.w, b.d) / 2 });
+      if ((b.wall && player.r >= WALL_OVER) || isShaded(c, b)) hints.push({ x: c.x, y: c.y, r: b.wall ? b.r + 2 : Math.hypot(b.w, b.d) / 2 });
     }
     const golden = stage.twist === 'golden' ? objects.filter(o => o.state === 0 && o.goldUntil > elapsed) : [];
     if (stage.twist === 'golden') for (const o of objects) o.glow = o.state === 0 && o.goldUntil > elapsed; // painted gold by the renderer
@@ -1286,6 +1310,12 @@
     }
     $('rush-pill').classList.toggle('hidden', !rush);
     if (rush) $('rush-pill').innerHTML = `${ico('bolt')} 점수 2배 · ${Math.max(0, Math.ceil(runDuration - elapsed))}`;
+    const hp = hunger && hunger.phase !== 'ok';
+    $('hunger-pill').classList.toggle('hidden', !hp);
+    if (hp) {
+      $('hunger-pill').innerHTML = hunger.phase === 'count' ? `${face('surprised')} 배고파요 <b>${Math.ceil(hunger.left)}</b>` : `${face('surprised')} 너무 배고파요! 몸이 줄어요`;
+      $('hunger-pill').classList.toggle('starve', hunger.phase === 'starve');
+    }
     $('score').classList.toggle('rush', rush);
     // Boss: who it is and how big you must be to swallow it; turns gold once you are big enough.
     const boss = guards.find(g => g.boss);
@@ -1533,6 +1563,7 @@
 
   // Every icon is a picture (img/): UI marks are SVG, maps and collection-book kinds are 3D renders.
   const ico = name => `<img class="ico" src="img/ui/${name}.svg" alt="">`;
+  const face = name => `<img class="ico face" src="img/ui/face-${name}.svg" alt="">`;
   const dexIco = e => `<img class="ico dex" src="${e.img}" alt="">`;
   const mapIco = theme => `<img class="ico map" src="img/map/${theme}.png" alt="">`;
   function starText(n) {
@@ -1667,7 +1698,8 @@
   function offerContinue(got) {
     state = 'cont';
     const n = got.filter(Boolean).length;
-    $('cont-why').textContent = stage.hard === 'super' ? '거대 등불지기를 삼켜야 깰 수 있어요.'
+    $('cont-why').textContent = endedBy === 'hunger' ? '너무 오래 굶어서 집에 갔어요. 뭐든 계속 삼켜야 해요!'
+      : stage.hard === 'super' ? '거대 등불지기를 삼켜야 깰 수 있어요.'
       : stage.hard === 'hard' ? `어려움 레벨은 별 2개가 필요해요. (지금 ${n}개)` : '별을 하나도 못 땄어요.';
     const can = Store.wallet.gems >= CONTINUE_GEMS;
     $('btn-cont-yes').innerHTML = can ? `${GEM}${CONTINUE_GEMS}로 ${CONTINUE_S}초 더!` : `보석이 부족해요 (${GEM}${CONTINUE_GEMS})`;
@@ -1681,6 +1713,7 @@
     Store.update(paid);
     continued = true;
     runDuration += CONTINUE_S; rush = false; Sound.music.rush(false);
+    lastEat = elapsed; starving = false; starveT = 0; endedBy = null; // a fresh stomach for the extra time
     state = 'play'; show(null);
   }
 
@@ -1695,7 +1728,7 @@
     let w = Shop.finishRun(Shop.awardStars(Store.wallet, before, n));
     w = Badges.record(w, { eaten: stats.total, guards: stats.eaten.guard || 0, clean: stats.lit ? 0 : 1,
       size: Math.round(stats.maxR / 4 * 10) / 10, night: stats.night, buildings: stats.eaten.building || 0,
-      bosses: stats.eaten.boss || 0, golds: stats.golds || 0, bolts: stats.bonus || 0, rush: stats.rushEaten || 0 });
+      bosses: stats.eaten.boss || 0, golds: stats.golds || 0, bolts: stats.bonus || 0, rush: stats.rushEaten || 0, fed: stats.hungry ? 0 : 1 });
     const xpBefore = w.stats.xp || 0, xp = Level.runXp(stats.total, n), lv = Level.gain(w, xp);
     w = lv.wallet;
     const doneBefore = Challenge.status(w, dayKey()).filter(m => m.done).length;
@@ -2081,7 +2114,8 @@
 
   // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
   if (window.__DUSK_TEST__) {
-    window.__DUSK_TEST__.api = { start, openDaily, isShaded, get punches() { return punches; }, get tiers() { return [...tierDone]; }, get camPulse() { return camPulse; }, centerOf, input, skipTo: sec => { elapsed = sec; tut = null; }, view, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
+    window.__DUSK_TEST__.api = { start, openDaily, isShaded, get punches() { return punches; }, get tiers() { return [...tierDone]; }, get camPulse() { return camPulse; }, centerOf, input, skipTo: sec => { elapsed = sec; lastEat = sec; tut = null; }, view,
+      hungerSet: (since, starved = 0) => { lastEat = elapsed - since; starveT = starved; }, get hunger() { return hunger; }, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
       get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase, sun, clouds, eclipse, elapsed, runDuration, rush }; } };

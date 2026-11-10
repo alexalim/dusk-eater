@@ -78,6 +78,16 @@
   }
 
   // Building footprint {x, y, w, d, h} -> shadow polygon with bbox for cheap rejection.
+  // Hunger: idling is not free (hiding in shade, or waiting for night). `since` = seconds since the last swallow
+  // (the run's first `grace` seconds count as fed). Quiet for `wait` s, a visible countdown of `count` s, then
+  // 'starve': the body shrinks by `shrink`/s, and a body kept at its smallest for `end` s ends the run.
+  const HUNGER = { grace: 8, wait: 6, count: 5, shrink: 0.8, end: 10 };
+  function hungerState(since) {
+    if (since < HUNGER.wait) return { phase: 'ok', left: HUNGER.wait - since };
+    const left = HUNGER.wait + HUNGER.count - since;
+    return left > 0 ? { phase: 'count', left } : { phase: 'starve', left: 0 };
+  }
+
   function boxed(poly, owner) {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const p of poly) {
@@ -166,7 +176,7 @@
   const api = {
     DURATION, NIGHT_START, EAT_RATIO, MAX_SHADOW,
     mulberry32, dayPhase, sunState, shadowLength, convexHull, pointInConvex,
-    shadowPolygon, canopyShadow, inAnyShadow, inCone, canEat, grow,
+    shadowPolygon, canopyShadow, inAnyShadow, inCone, canEat, grow, HUNGER, hungerState,
     goalProgress, evaluateStars, isUnlocked, isCleared,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
