@@ -101,12 +101,12 @@
       eat: [['person', 12, 70], ['planter', 3, 24], ['parasol', 2, 14]],
     },
     hanok: {
-      look: { wall: 'hanok', roof: 'hip', rise: 0.5, eave: 0.24 }, // building walls and roofs (render3d.js)
+      look: { wall: 'hanok', roof: 'hanok', rise: 0.55, eave: 0.3, base: true }, // curved tiled roof on a stone platform (render3d.js)
       theme: 'hanok',
       name: '한옥 마을',
       desc: '낮은 기와집 골목이에요. 그늘이 짧아서 처마 밑으로 살금살금 다녀요.',
-      ground: ['#e6d6b8', '#ece2cc', '#e2ad7c'], groundNight: '#2a2740', lawn: '#9cc27a',
-      roofs: ['#3d3f48', '#4a4c55', '#353741'], plainWalls: true,
+      ground: ['#e6d6b8', '#ece2cc', '#e2ad7c'], groundNight: '#2a2740', lawn: '#d2bc92', // earthen courtyards, not lawns
+      roofs: ['#5a5e6a', '#50545f', '#646876'], plainWalls: true, // charcoal tiles, light enough to show the ribs
       parkChance: 0.25, splitChance: 0.75, height: [24, 48],
       small: [['hanbok', 200], ['jangdok', 120], ['persimmon', 50]],
       parkItems: [['pagoda', 0.5, 'center'], ['jangdok', 6], ['persimmon', 3]], carsPerRoad: 1,

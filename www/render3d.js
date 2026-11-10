@@ -193,22 +193,45 @@
   function roofGeometry(kind) {
     const pos = [], nor = [], uv = [], ctr = [0, 0.35, 0];
     const tri = (a, b, c) => {
+      // tile ribs run down the slope: faces that look along x take their stripes from z
       const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
       let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
       const m = Math.hypot(...n) || 1; n = n.map(x => x / m);
       const out = (a[0] + b[0] + c[0]) / 3 - ctr[0], outy = (a[1] + b[1] + c[1]) / 3 - ctr[1], outz = (a[2] + b[2] + c[2]) / 3 - ctr[2];
       const pts = n[0] * out + n[1] * outy + n[2] * outz < 0 ? [a, c, b] : [a, b, c];
       if (n[0] * out + n[1] * outy + n[2] * outz < 0) n = n.map(x => -x);
-      for (const p of pts) { pos.push(...p); nor.push(...n); uv.push((p[0] + 0.5) * 4, (p[2] + 0.5) * 4); }
+      const sideways = Math.abs(n[0]) > Math.abs(n[2]);
+      for (const p of pts) { pos.push(...p); nor.push(...n); uv.push(((sideways ? p[2] : p[0]) + 0.5) * 4, ((sideways ? p[0] : p[2]) + 0.5) * 4); }
     };
     const quad = (a, b, c, d) => { tri(a, b, c); tri(a, c, d); };
     const A = [-.5, 0, -.5], B = [.5, 0, -.5], C = [.5, 0, .5], D = [-.5, 0, .5];
     if (kind === 'gable') { // ridge along x
       const E = [-.5, 1, 0], F = [.5, 1, 0];
       quad(A, B, F, E); quad(D, C, F, E); tri(A, E, D); tri(B, F, C);
-    } else { // hip: a flattened pyramid with a small flat top
+    } else if (kind === 'hip') { // hip: a flattened pyramid with a small flat top
       const k = 0.22, a = [-k, 1, -k], b = [k, 1, -k], c = [k, 1, k], d = [-k, 1, k];
       quad(A, B, b, a); quad(B, C, c, b); quad(C, D, d, c); quad(D, A, a, d); quad(a, b, c, d);
+    } else { // hanok: eave corners lifted (the curve of 처마), a long ridge, and a pale ridge cap (용마루) in its own group
+      const up = 0.14, Au = [-.5, up, -.5], Bu = [.5, up, -.5], Cu = [.5, up, .5], Du = [-.5, up, .5];
+      const M1 = [0, 0, -.5], M2 = [.5, 0, 0], M3 = [0, 0, .5], M4 = [-.5, 0, 0], E = [-.36, 1, 0], F = [.36, 1, 0];
+      tri(Au, M1, E); tri(M1, F, E); tri(M1, Bu, F); // front slope
+      tri(Du, M3, E); tri(M3, F, E); tri(M3, Cu, F); // back slope
+      tri(Au, E, M4); tri(M4, E, Du); tri(Bu, M2, F); tri(M2, Cu, F); // ends
+      const n0 = pos.length / 3, cx = 0.42, cz = 0.06, y0 = 0.96, y1 = 1.12;
+      quad([-cx, y1, -cz], [cx, y1, -cz], [cx, y1, cz], [-cx, y1, cz]);
+      quad([-cx, y0, -cz], [cx, y0, -cz], [cx, y1, -cz], [-cx, y1, -cz]); quad([-cx, y0, cz], [cx, y0, cz], [cx, y1, cz], [-cx, y1, cz]);
+      quad([-cx, y0, -cz], [-cx, y0, cz], [-cx, y1, cz], [-cx, y1, -cz]); quad([cx, y0, -cz], [cx, y0, cz], [cx, y1, cz], [cx, y1, -cz]);
+      // pale lines along the four hips (추녀마루) and the eave edges (처마 끝), laid just above the slopes
+      const strip = (p, q, w) => { const dx = q[2] - p[2], dz = -(q[0] - p[0]), m = Math.hypot(dx, dz) || 1, ox = dx / m * w, oz = dz / m * w, lift = 0.02;
+        quad([p[0] - ox, p[1] + lift, p[2] - oz], [p[0] + ox, p[1] + lift, p[2] + oz], [q[0] + ox, q[1] + lift, q[2] + oz], [q[0] - ox, q[1] + lift, q[2] - oz]); };
+      for (const [r, c] of [[E, Au], [E, Du], [F, Bu], [F, Cu]]) strip(r, c, 0.018);
+      for (const [a, b] of [[Au, M1], [M1, Bu], [Bu, M2], [M2, Cu], [Cu, M3], [M3, Du], [Du, M4], [M4, Au]]) strip(a, b, 0.016);
+      const g = new T.BufferGeometry();
+      g.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+      g.setAttribute('normal', new T.Float32BufferAttribute(nor, 3));
+      g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
+      g.addGroup(0, n0, 0); g.addGroup(n0, pos.length / 3 - n0, 1);
+      return g;
     }
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
@@ -216,7 +239,7 @@
     g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
     return g;
   }
-  const ROOFS = { gable: roofGeometry('gable'), hip: roofGeometry('hip') };
+  const ROOFS = { gable: roofGeometry('gable'), hip: roofGeometry('hip'), hanok: roofGeometry('hanok') };
 
   // A unit box whose wall UVs count windows in world units, so every building gets the same window size.
   function buildingGeometry(b, shift) {
@@ -533,12 +556,19 @@
       w.roofIM = null;
       if (ROOFS[look.roof]) {
         const list = w.buildings.filter(b => !b.crane);
-        const roofMat = lambert('#ffffff', { map: look.snow ? TEX.snowroof : look.roof === 'hip' ? TEX.tiles : TEX.shingles });
-        const im = new T.InstancedMesh(ROOFS[look.roof], roofMat, list.length);
+        const roofMat = lambert('#ffffff', { map: look.snow ? TEX.snowroof : look.roof === 'flat' ? TEX.roof : look.roof === 'gable' ? TEX.shingles : TEX.tiles });
+        const capMat = lambert('#e6e4e0'); // pale ridge cap, hip lines and eave edges of a hanok roof; the second geometry group
+        const im = new T.InstancedMesh(ROOFS[look.roof], look.roof === 'hanok' ? [roofMat, capMat] : roofMat, list.length);
         im.receiveShadow = true; im.frustumCulled = false;
         list.forEach((b, i) => { b.roofIM = im; b.roofIdx = i; im.setColorAt(i, look.snow ? col('#f7f9fc').lerp(col(b.roof), 0.15) : col(b.roof)); });
         im.instanceColor.needsUpdate = true;
         group.add(im); w.roofIM = im; w.roofMats.push(roofMat);
+        if (look.base) { // a stone platform under each building (기단), a shade lighter than the ground
+          const bim = new T.InstancedMesh(unit.box, lambert('#cfc6b6'), list.length);
+          bim.receiveShadow = true; bim.frustumCulled = false;
+          list.forEach((b, i) => { b.baseIM = bim; b.baseIdx = i; });
+          group.add(bim);
+        }
         for (const b of list) placeBuilding(b, b.x + b.w / 2, b.y + b.d / 2, 1, 0);
       }
 
@@ -613,6 +643,11 @@
         dummy.position.set(cx, b.h * s + lift, cy); dummy.rotation.set(0, along ? 0 : Math.PI / 2, 0);
         dummy.scale.set((along ? b.w : b.d) * s * e || 1e-6, rise * s || 1e-6, (along ? b.d : b.w) * s * e || 1e-6);
         dummy.updateMatrix(); b.roofIM.setMatrixAt(b.roofIdx, dummy.matrix); b.roofIM.instanceMatrix.needsUpdate = true;
+        if (b.baseIM) {
+          dummy.position.set(cx, 1.5 * s + lift, cy); dummy.rotation.set(0, 0, 0);
+          dummy.scale.set(b.w * s * 1.14 || 1e-6, 3 * s || 1e-6, b.d * s * 1.14 || 1e-6);
+          dummy.updateMatrix(); b.baseIM.setMatrixAt(b.baseIdx, dummy.matrix); b.baseIM.instanceMatrix.needsUpdate = true;
+        }
       }
     }
 

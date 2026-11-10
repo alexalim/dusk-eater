@@ -103,10 +103,10 @@ test('hard levels: the 8th of every region is hard, the boss level super-hard; n
 
 test('every theme declares a building look the renderer knows (wall texture and roof shape)', () => {
   const walls = ['windows', 'planks', 'pastel', 'glass', 'brick', 'adobe', 'hanok', 'corrugated', 'concrete'];
-  const roofs = ['flat', 'gable', 'hip'];
+  const roofs = ['flat', 'gable', 'hip', 'hanok'];
   for (const t of Object.values(THEMES)) {
     assert.ok(t.look && walls.includes(t.look.wall) && roofs.includes(t.look.roof), `${t.theme}: ${JSON.stringify(t.look)}`);
   }
-  assert.equal(THEMES.hanok.look.roof, 'hip');
+  assert.equal(THEMES.hanok.look.roof, 'hanok');
   assert.ok(THEMES.snow.look.snow && THEMES.xmas.look.snow);
 });
