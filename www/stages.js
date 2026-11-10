@@ -112,9 +112,11 @@
       desc: '낮은 기와집과 흙담 골목이에요. 담장 밑 그늘과 은행나무 아래가 쉼터고, 몸이 커지면 담장은 그냥 밀고 지나가요.',
       ground: ['#e6d6b8', '#ece2cc', '#e2ad7c'], groundNight: '#2a2740', lawn: '#d2bc92', // earthen courtyards, not lawns
       roofs: ['#5a5e6a', '#50545f', '#646876'], plainWalls: true, // charcoal tiles, light enough to show the ribs
-      parkChance: 0.25, splitChance: 0.75, height: [24, 48],
+      parkChance: 0.1, splitChance: 0.75, height: [24, 48],
+      pavilion: { w: 42, h: 30 }, // a 정자 in every open lot (index.html buildWorld), so an open lot is not a sunny void
+      streetTree: 'persimmon', streetAt: 2, streetEvery: 40, streetFill: 0.75, squareTrees: 'persimmon', // persimmon trees line the lanes and ring the square
       small: [['hanbok', 200], ['jangdok', 120], ['persimmon', 50]],
-      parkItems: [['pagoda', 0.5], ['jangdok', 6], ['persimmon', 3]], carsPerRoad: 1,
+      parkItems: [['pagoda', 0.5], ['jangdok', 6], ['persimmon', 10]], carsPerRoad: 1,
       waterFrom: null, cranes: 0,
       eat: [['hanbok', 10, 60], ['jangdok', 6, 40], ['persimmon', 2, 14]],
     },

@@ -29,7 +29,7 @@
   // own color; glow parts ignore lighting (headlights).
   const P = (geo, s, y, color, o, glow) => ({ geo, s, y, color, o, glow });
   const HAIR = '#4a3426', SKIN = '#f6d2b0';
-  const CASTERS = new Set(['ginkgo']); // prop types whose parts cast shadows (their TYPES entry has a canopy for the rule)
+  const CASTERS = new Set(['ginkgo', 'persimmon']); // prop types whose parts cast shadows (their TYPES entry has a canopy for the rule)
   // A person: body in the instance color, head, hair or hat, plus any extra parts.
   const human = (hat = HAIR, extra = []) => [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN),
     P('sphere', [0.58, 0.32, 0.58], 2.7, hat)].concat(extra);

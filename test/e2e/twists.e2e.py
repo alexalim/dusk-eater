@@ -154,18 +154,25 @@ with sync_playwright() as p:
       return [bs.length, touching, f.length, f.filter(b => b.d > b.w).length, Math.max(...bs.map(b => b.h)), Math.max(...f.map(b => b.h)), f.every(b => b.type === 'fence')]; }})()''')
     rec('W12', 'hanok: ㄱ/ㄷ houses (side wings touching the main wing) inside low wall rings', shape[0] >= 20 and shape[1] >= 8 and shape[2] >= 120 and shape[3] >= 50 and shape[4] <= 48 and shape[5] <= 8 and shape[6],
         f'houses={shape[0]} wings-touching={shape[1]} walls={shape[2]} (along y {shape[3]}) max-h={shape[4]} wall-h={shape[5]} typed-fence={shape[6]}')
-    # W13 the village square: one ginkgo in the middle cell whose crown shades the ground (a point down-sun of it at
-    # noon), and with the low sun plus walls the map keeps real shade at noon (a 20-unit grid, lanes and yards only)
+    # W13 the village square and the shade budget: one ginkgo in the middle cell whose crown shades down-sun of it,
+    # a pavilion beside it, and at noon real shade everywhere — the whole map, the lanes (persimmon trees along the
+    # walls) and the square itself (TestFlight: "중앙은 거의 그림자가 없잖아"). A 20-unit grid over open ground.
     pg.evaluate(f'{A}.skipTo(40)'); frames_wait(pg, 3)
-    sq = pg.evaluate(f'''(() => {{ const s = {A}.s, g = s.objects.filter(o => o.type === 'ginkgo'), t = g[0], sun = s.sun;
+    sq = pg.evaluate(f'''(() => {{ const s = {A}.s, g = s.objects.filter(o => o.type === 'ginkgo'), t = g[0], sun = s.sun, CELL = 225, ROAD = 46;
       const len = 60 / Math.tan(sun.elev), under = t && {A}.isShaded({{ x: t.x + sun.sx * len, y: t.y + sun.sy * len }}, null);
-      let n = 0, k = 0;
+      const z = {{ all: [0, 0], lane: [0, 0], square: [0, 0] }}, add = (k, v) => {{ z[k][0]++; if (v) z[k][1]++; }};
       for (let x = 40; x < 1760; x += 20) for (let y = 40; y < 1760; y += 20) {{
         if (s.buildings.some(b => b.state === 0 && x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.d)) continue;
-        n++; if ({A}.isShaded({{ x, y }}, null)) k++; }}
-      return [g.length, t && Math.hypot(t.x - 900, t.y - 900) < 250, under, k / n]; }})()''')
-    rec('W13', 'hanok: one ginkgo on the central square shades down-sun of its crown; the map is at least 8% shade at noon',
-        sq[0] == 1 and sq[1] and sq[2] and sq[3] >= 0.08, f'ginkgos={sq[0]} central={sq[1]} shade-under-crown={sq[2]} noon-shade={sq[3]:.3f}')
+        const v = {A}.isShaded({{ x, y }}, null), lx = x % CELL, ly = y % CELL;
+        add('all', v);
+        if (lx < ROAD / 2 || ly < ROAD / 2 || lx > CELL - ROAD / 2 || ly > CELL - ROAD / 2) add('lane', v);
+        else if (Math.floor(x / CELL) === 4 && Math.floor(y / CELL) === 4) add('square', v); }}
+      const pav = s.buildings.some(b => !b.wall && b.w < 50 && Math.floor(b.x / CELL) === 4 && Math.floor(b.y / CELL) === 4);
+      const f = k => z[k][1] / z[k][0];
+      return [g.length, t && Math.hypot(t.x - 900, t.y - 900) < 250, under, pav, f('all'), f('lane'), f('square')]; }})()''')
+    rec('W13', 'hanok: ginkgo and pavilion on the central square; at noon >= 20% shade overall, >= 12% in lanes, >= 15% on the square',
+        sq[0] == 1 and sq[1] and sq[2] and sq[3] and sq[4] >= 0.2 and sq[5] >= 0.12 and sq[6] >= 0.15,
+        f'ginkgos={sq[0]} central={sq[1]} shade-under-crown={sq[2]} pavilion={sq[3]} noon all={sq[4]:.2f} lane={sq[5]:.2f} square={sq[6]:.2f}')
 
     # W14 hanok is passable: a body of r 16 (below the wall-crossing size) reaches most of the map from the middle
     # crossing through 66-wide lanes, gates and side doors; a body of r 18 takes a sunlit wall as food (walls are low)

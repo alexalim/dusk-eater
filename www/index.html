@@ -632,7 +632,7 @@
     fountain:  { r: 22, color: '#cfd8e0' },
     hanbok:    { r: 5,  color: '#e85d75', colors: ['#e85d75', '#5b8def', '#f2c14e', '#9bc53d', '#c46fd8'] },
     jangdok:   { r: 5,  color: '#5a3a2a' },
-    persimmon: { r: 12, color: '#3f7d3f' },
+    persimmon: { r: 14, color: '#3f7d3f', canopy: [1.8, 0.9] }, // its crown shades the ground (core canopyShadow)
     pagoda:    { r: 12, color: '#b8b2a6' },
     fence:     { r: 9,  color: '#e3d5b8' }, // the book entry; in the world it is a thin wall building (compound)
     ginkgo:    { r: 30, color: '#f2c230', canopy: [2.0, 1.0] }, // canopy [height, radius] in r: its crown casts shade (core canopyShadow)
@@ -841,15 +841,19 @@
     waterY = stage.waterFrom ? WORLD * stage.waterFrom : WORLD;
     const cells = WORLD / CELL;
     const parks = lots = [], blocks = []; // built lots get street trees along their curbs
+    let square = null; // the landmark's lot (hanok village square)
     for (let gy = 0; gy < cells; gy++) {
       for (let gx = 0; gx < cells; gx++) {
         const x0 = gx * CELL + ROAD / 2, y0 = gy * CELL + ROAD / 2, inner = CELL - ROAD;
         if (y0 + inner > waterY - 40) continue; // keep the quay clear
         if (stage.landmark && gx === (cells >> 1) && gy === (cells >> 1)) { // the village square and its great tree
-          parks.push([x0, y0, inner]); addObj(stage.landmark, x0 + inner / 2, y0 + inner / 2); continue;
+          parks.push([x0, y0, inner]); addObj(stage.landmark, x0 + inner / 2, y0 + inner / 2); square = [x0, y0, inner];
+          // a few trees around the great one, so the whole square has places to rest
+          if (stage.squareTrees) for (const [fx, fy] of [[.2, .8], [.8, .8], [.8, .2], [.5, .9]]) addObj(stage.squareTrees, x0 + inner * fx, y0 + inner * fy);
+          continue;
         }
         if (rnd() < stage.parkChance) { parks.push([x0, y0, inner]); continue; }
-        if (stage.compound) { compound(x0, y0, inner, R); continue; }
+        if (stage.compound) { compound(x0, y0, inner, R); blocks.push([x0, y0, inner]); continue; }
         blocks.push([x0, y0, inner]);
         const split = rnd() < stage.splitChance;
         const count = split ? 2 : 1;
@@ -883,15 +887,24 @@
       b.r = T_.w * 0.6;
       buildings.push(b); i++;
     }
+    // A pavilion (정자) in each open lot of a theme that has one: a small roofed building, so the lot has shade.
+    // On the village square it stands to one side of the great tree.
+    if (stage.pavilion) for (const lot of parks) {
+      const [x0, y0, inner] = lot, P = stage.pavilion, cx = x0 + inner * (lot === square ? 0.22 : 0.5), cy = y0 + inner * (lot === square ? 0.25 : 0.5);
+      const b = { x: cx - P.w / 2, y: cy - P.w / 2, w: P.w, d: P.w, h: P.h, roof: stage.roofs[(rnd() * stage.roofs.length) | 0], state: 0, ft: 0, type: 'building' };
+      b.r = Math.hypot(P.w, P.w) / 2 * 0.75;
+      buildings.push(b);
+    }
     // Street trees: the theme's tree along the curb of each built lot, about every 60 units, wherever the lot has room.
-    const streetTree = stage.streetTree || 'tree';
+    // `streetAt` sets how far inside the lot edge they stand (hanok: in the lane, just outside the courtyard wall).
+    const streetTree = stage.streetTree || 'tree', inset = stage.streetAt === undefined ? 7 : stage.streetAt, pad = stage.streetAt === undefined ? 10 : 3;
     for (const [x0, y0, inner] of blocks) {
       for (let k = 0; k < 4; k++) {
-        const horiz = k < 2, at = k % 2 ? inner - 7 : 7;
-        for (let s = 22; s < inner - 14; s += 60) {
-          if (rnd() > 0.55) continue;
+        const horiz = k < 2, at = k % 2 ? inner - inset : inset;
+        for (let s = 22; s < inner - 14; s += stage.streetEvery || 60) {
+          if (rnd() > (stage.streetFill || 0.55)) continue;
           const x = horiz ? x0 + s : x0 + at, y = horiz ? y0 + at : y0 + s;
-          if (y < waterY - 20 && !insideAnyBuilding(x, y, 10)) addObj(streetTree, x, y);
+          if (y < waterY - 20 && !insideAnyBuilding(x, y, pad)) addObj(streetTree, x, y);
         }
       }
     }
