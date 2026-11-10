@@ -136,6 +136,16 @@ with sync_playwright() as p:
         'car' not in before and '자동차' in text and '꿀꺽' in text and pulse > 0 and 'car' in after and 'tree' in after,
         f'text={text!r} pulse={pulse:.2f} new={sorted(set(after) - set(before))}')
 
+    # W11 every kind sucked in gets its own voice (cat, person, car, tree, building) without errors
+    pg.evaluate(f'{A}.start(2)'); pg.evaluate(f'{A}.skipTo({A}.s.runDuration * 0.9)'); frames_wait(pg, 3)  # night: all shade
+    voiced = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player; p.r = 80; const kinds = ['cat', 'person', 'car', 'tree'];
+      for (const k of kinds) {{ const o = s.objects.find(o => o.state === 0 && o.type === k); if (o) {{ o.x = p.x + 3; o.y = p.y; }} }}
+      const b = s.buildings.find(b => b.state === 0 && b.r < p.r * 0.8); if (b) {{ b.x = p.x - b.w / 2; b.y = p.y - b.d / 2; }}
+      return kinds; }})()''')
+    frames_wait(pg, 4)
+    heard = pg.evaluate('window.DuskSound.sfx.lastVoices')
+    rec('W11', 'each kind sucked in is voiced by type', all(k in heard for k in ['cat', 'person', 'car', 'tree']) and 'building' in heard, f'heard={heard}')
+
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)
     rec('W0', 'no page errors', not errs, '; '.join(errs[:3]))

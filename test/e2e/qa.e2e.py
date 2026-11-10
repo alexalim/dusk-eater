@@ -292,6 +292,7 @@ with sync_playwright() as p:
     b, pg, errs = page(p)
     # sample times are 3/4 of the old 120-second marks, so they land at the same point of today's 90-second day
     for si, sec in [(0, 9), (0, 41), (0, 71), (HARB, 22), (HARB, 71), (CITY, 37), (SNOW, 22), (SNOW, 52), (DESERT, 22), (FARM, 37)]:
+      for attempt in range(3):  # a random map with no shadow in view (the farm has few buildings) proves nothing: roll another
         pg.evaluate(f'{A}.start({si}); {A}.skipTo({sec})'); frames_wait(pg, 2); pg.evaluate(f'{A}.freeze()'); frames_wait(pg, 2)
         pts = pg.evaluate('''(() => {
           const A = window.__DUSK_TEST__.api, C = window.DuskCore, s = A.s, T = window.THREE;
@@ -339,6 +340,9 @@ with sync_playwright() as p:
             ok = sum((l < thr) == v for l, v in arr); agree += ok; total += len(arr)
             det.append(f'{kind[:5]} lit~{statistics.median(lit):.0f} shade~{statistics.median(sha):.0f} n={len(arr)}')
         rate = agree / total if total else 0
+        if total >= 60: break
+        print(f'   S9 stage{si} t={sec}s: only {total} usable points (no shadow in view?), rolling another map')
+      if True:  # scored on the last roll
         thr = {kd: (statistics.median([l for l, v in a if not v] or [0]) + statistics.median([l for l, v in a if v] or [0])) / 2 for kd, a in by.items()}
         bad = [(v, ib, ed) for l, v, kd, ib, ed in raw if (l < thr[kd]) != v]
         print('   mismatches:', len(bad), '| rule-shade-but-bright', sum(1 for v, ib, ed in bad if v), '| rule-lit-but-dark', sum(1 for v, ib, ed in bad if not v),

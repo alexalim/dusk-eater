@@ -1024,6 +1024,7 @@
 
   function startSwallow(o, ox, oy) {
     o.state = 1; o.ft = 0; o.fx = ox; o.fy = oy;
+    Sound.sfx.voice(o.type); // its cry, honk or rustle as it gets sucked in
   }
 
   function stepTutorial(dt) {
