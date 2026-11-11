@@ -20,6 +20,7 @@
     { id: 'bolt', name: '번개 달인', icon: 'bolt', goal: '성공한 번개 미션', unit: '번', steps: [3, 15, 50], value: c => c.stats.bolts || 0 },
     { id: 'rush', name: '러시 왕', icon: 'clock', goal: '막판 러시 동안 삼킨 수', unit: '개', steps: [50, 300, 1000], value: c => c.stats.rush || 0 },
     { id: 'fed', name: '배부른 하루', icon: 'face-happy', goal: '한 번도 굶지 않고 끝낸 판', unit: '판', steps: [1, 5, 20], value: c => c.stats.fed || 0 },
+    { id: 'combo', name: '콤보 왕', icon: 'bolt', goal: '한 판 최고 콤보', unit: '', steps: [8, 15, 30], value: c => c.stats.combo || 0 },
     { id: 'checkin', name: '출석왕', icon: 'gift', goal: '출석한 날', unit: '일', steps: [7, 30, 100], value: c => c.daily },
     { id: 'missions', name: '미션 해결사', icon: 'check', goal: '받은 오늘의 미션 보상', unit: '개', steps: [5, 30, 100], value: c => c.stats.missions || 0 },
     { id: 'level', name: '쑥쑥 성장', icon: 'medal', goal: '레벨', unit: '', steps: [5, 10, 20], value: c => c.level },
@@ -53,7 +54,7 @@
     const s = w.stats, add = k => (s[k] || 0) + (run[k] || 0), best = k => Math.max(s[k] || 0, run[k] || 0);
     const stats = Object.assign({}, s, { eaten: add('eaten'), guards: add('guards'), clean: add('clean'),
       bosses: add('bosses'), golds: add('golds'), bolts: add('bolts'), rush: add('rush'), fed: add('fed'),
-      size: best('size'), night: best('night'), buildings: best('buildings') });
+      size: best('size'), night: best('night'), buildings: best('buildings'), combo: best('combo') });
     return Object.assign({}, w, { stats });
   }
 

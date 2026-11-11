@@ -11,10 +11,10 @@ const Y = require('../www/sync.js');
 const wallet = w => Object.assign(S.emptyWallet(), w);
 const ctx = (w, stars = 0) => B.context(w, stars);
 
-test('sixteen categories of three badges each, every one with a name, a goal, a reward and an icon', () => {
-  assert.equal(B.CATS.length, 16);
-  assert.equal(B.BADGES.length, 48);
-  assert.equal(new Set(B.BADGES.map(b => b.id)).size, 48);
+test('seventeen categories of three badges each, every one with a name, a goal, a reward and an icon', () => {
+  assert.equal(B.CATS.length, 17);
+  assert.equal(B.BADGES.length, 51);
+  assert.equal(new Set(B.BADGES.map(b => b.id)).size, 51);
   for (const b of B.BADGES) assert.ok(b.name && b.goal && b.gems > 0, b.id);
   for (const c of B.CATS) assert.ok(fs.existsSync(path.join(__dirname, '../www/img/ui', `${c.icon}.svg`)), c.icon);
   assert.equal(B.CATS.find(c => c.id === 'dex').steps[2], D.ENTRIES.length, 'gold dex badge = the whole book');
@@ -33,7 +33,7 @@ test('a run adds to the counts and keeps the best of per-run records', () => {
   const run = { eaten: 120, guards: 1, clean: 1, size: 33.2, night: 12, buildings: 4, fed: 1 };
   let w = B.record(wallet(), run);
   w = B.record(w, Object.assign({}, run, { clean: 0, size: 20, night: 31, fed: 0 }));
-  assert.deepEqual(w.stats, { eaten: 240, guards: 2, clean: 1, bosses: 0, golds: 0, bolts: 0, rush: 0, fed: 1, size: 33.2, night: 31, buildings: 4 });
+  assert.deepEqual(w.stats, { eaten: 240, guards: 2, clean: 1, bosses: 0, golds: 0, bolts: 0, rush: 0, fed: 1, size: 33.2, night: 31, buildings: 4, combo: 0 });
 });
 
 test('an earned badge pays its gems once; an unearned one pays nothing', () => {

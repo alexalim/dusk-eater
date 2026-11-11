@@ -6,6 +6,7 @@
     town: {
       look: { wall: 'windows', roof: 'gable', rise: 0.35 }, // building walls and roofs (render3d.js)
       theme: 'town',
+      extras: ['zombie'], // zombies shuffle through every map (index.html buildWorld); the book lists them here, on the first map
       name: '조용한 마을',
       desc: '낮은 지붕과 공원이 있는 동네예요. 처음 연습하기 딱 좋아요.',
       ground: ['#f1d4a2', '#ece6cf', '#e8a066'], groundNight: '#2e2c4a',

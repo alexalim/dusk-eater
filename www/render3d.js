@@ -39,6 +39,9 @@
   const PARTS = {
     person:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.58, 0.32, 0.58], 2.7, HAIR)],
     worker:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.62, 0.36, 0.62], 2.72, '#f2c14e')],
+    // a zombie: green skin, dark hair, torn clothes in the instance color, both arms out in front (forward is +x)
+    zombie:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, '#9bd38a'), P('sphere', [0.58, 0.32, 0.58], 2.7, '#3a4a2a'),
+                P('box', [0.9, 0.22, 0.22], 1.9, '#9bd38a', [0.6, 0.35]), P('box', [0.9, 0.22, 0.22], 1.9, '#9bd38a', [0.6, -0.35])],
     cat:       [P('blob', [1.1, 0.6, 0.6], 0.6, 'inst'), P('sphere', [0.5, 0.48, 0.5], 1.05, 'inst', [1.0, 0]),
                 P('cone', [0.17, 0.4, 0.17], 1.55, 'inst', [1.05, 0.26]), P('cone', [0.17, 0.4, 0.17], 1.55, 'inst', [1.05, -0.26]),
                 P('cyl', [0.12, 1.0, 0.12], 1.0, 'inst', [-1.1, 0])],
@@ -385,7 +388,11 @@
     const hintMat = new T.MeshBasicMaterial({ color: 0xffb35c, transparent: true, opacity: 0.7, depthWrite: false });
     const hints = new T.InstancedMesh(hintGeo, hintMat, MAX_HINTS);
     hints.renderOrder = 4;
-    scene.add(hints);
+    // the same ring in violet under things that are edible but bad for you (zombies): a warning, not an invitation
+    const badMat = new T.MeshBasicMaterial({ color: 0xb57bee, transparent: true, opacity: 0.7, depthWrite: false });
+    const badHints = new T.InstancedMesh(hintGeo, badMat, 64);
+    badHints.renderOrder = 4;
+    scene.add(hints, badHints);
 
     const TEX = makeTextures();
     const NIGHT_WINDOWS = col('#ffc46b');
@@ -875,6 +882,7 @@
       body.rotation.set(0, -L, 0);
       const grown = Math.min(1, Math.max(0, (player.r / (player.r0 || player.r) - 1) / 4));
       bodyMat.color.copy(bodyColor).lerp(glowColor, grown * 0.25);
+      if (player.slow) bodyMat.color.lerp(tmpCol.set(0x9bd38a), 0.45); // queasy green while a zombie bite slows it
       // Growth stages: the darkness it has eaten swirls inside, brighter the bigger it gets.
       aura.position.copy(body.position); aura.scale.copy(body.scale).multiplyScalar(1.01); aura.rotation.copy(body.rotation);
       auraMat.opacity = grown * 0.8; auraMat.color.copy(glowColor);
@@ -935,19 +943,21 @@
       goldBeam.instanceMatrix.needsUpdate = true;
 
       // Hints: pulse rings under things the player could eat right now.
-      let n = 0;
+      let n = 0, nb = 0;
       const pulse = 0.5 + Math.sin(t * 6) * 0.5;
       for (const item of f.hints) {
-        if (n >= MAX_HINTS) break;
+        const im = item.bad ? badHints : hints, k = item.bad ? nb : n;
+        if (k >= (item.bad ? 64 : MAX_HINTS)) continue;
         dummy.position.set(item.x, 1.0, item.y);
         dummy.rotation.set(0, 0, 0);
         dummy.scale.setScalar(item.r * (1 + pulse * 0.08));
         dummy.updateMatrix();
-        hints.setMatrixAt(n++, dummy.matrix);
+        im.setMatrixAt(k, dummy.matrix);
+        if (item.bad) nb++; else n++;
       }
-      hints.count = n;
-      hints.instanceMatrix.needsUpdate = true;
-      hintMat.opacity = 0.35 + pulse * 0.45;
+      hints.count = n; badHints.count = nb;
+      hints.instanceMatrix.needsUpdate = badHints.instanceMatrix.needsUpdate = true;
+      hintMat.opacity = badMat.opacity = 0.35 + pulse * 0.45;
 
       renderer.render(scene, fp ? fpCamera : camera);
     }

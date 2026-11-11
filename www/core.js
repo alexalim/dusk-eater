@@ -78,6 +78,10 @@
   }
 
   // Building footprint {x, y, w, d, h} -> shadow polygon with bbox for cheap rejection.
+  // Combo: another swallow within `window` seconds stacks the multiplier by `step`, up to `max`.
+  const COMBO = { window: 1.5, step: 0.1, max: 2 };
+  const comboMult = n => Math.min(COMBO.max, 1 + COMBO.step * Math.max(0, n - 1));
+
   // Hunger: idling is not free (hiding in shade, or waiting for night). `since` = seconds since the last swallow
   // (the run's first `grace` seconds count as fed). Quiet for `wait` s, a visible countdown of `count` s, then
   // 'starve': the body shrinks by `shrink`/s, and a body kept at its smallest for `end` s ends the run.
@@ -186,7 +190,7 @@
   const api = {
     DURATION, NIGHT_START, EAT_RATIO, MAX_SHADOW,
     mulberry32, dayPhase, sunState, shadowLength, convexHull, pointInConvex,
-    shadowPolygon, propShadow, inAnyShadow, inCone, canEat, grow, HUNGER, hungerState,
+    shadowPolygon, propShadow, inAnyShadow, inCone, canEat, grow, HUNGER, hungerState, COMBO, comboMult,
     goalProgress, evaluateStars, isUnlocked, isCleared,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

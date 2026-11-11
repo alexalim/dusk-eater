@@ -104,6 +104,10 @@
   @keyframes rushpulse { to { transform: scale(1.08); } }
   #hunger-pill { align-self: center; font-size: 13px; padding: 2px 12px; border-color: #ff9f9f; color: #ffe0e0; }
   #hunger-pill b { font-size: 20px; color: #fff; margin-left: 4px; }
+  #slow-pill { align-self: center; font-size: 13px; padding: 2px 12px; border-color: #9bd38a; color: #dff3d6; }
+  #slow-pill b { font-size: 15px; color: #fff; margin-left: 4px; }
+  #combo { position: absolute; right: 6px; top: calc(100% + 3px); white-space: nowrap; font: 13px var(--display); color: #7debff; text-shadow: 0 1px 0 rgba(0,0,0,.5); }
+  #combo.pop { animation: pop .25s ease-out; }
   #hunger-pill.starve { background: #c0392b; border-color: #fff; color: #fff; animation: rushpulse .4s ease-in-out infinite alternate; }
   #score.rush { color: var(--star); }
   #boss-pill { align-self: center; font-size: 13px; padding: 2px 12px; border-color: #c94dff; }
@@ -394,12 +398,13 @@
 <div id="burst"></div>
 <div id="hud">
   <div id="sunbar"><div id="sun"></div></div>
-  <div id="stats"><span id="size" class="pill">크기 0</span><span class="right"><span class="pill" id="score-pill"><span id="score">0</span></span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></span></div>
+  <div id="stats"><span id="size" class="pill">크기 0</span><span class="right"><span class="pill" id="score-pill"><span id="score">0</span><span id="combo" class="hidden"></span></span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></span></div>
   <div id="goals"></div>
   <div id="status"><!-- one status at a time (hudStatus): hunger, then the bolt mission, the rush, the boss -->
     <div id="boss-pill" class="pill hidden"></div>
     <div id="rush-pill" class="pill hidden"></div>
     <div id="hunger-pill" class="pill hidden"></div>
+    <div id="slow-pill" class="pill hidden"></div>
     <div id="bonus-pill" class="pill hidden"></div>
   </div>
   <div id="warn" role="status" aria-label="햇빛이에요! 몸이 줄어들어요"></div>
@@ -604,6 +609,7 @@
   // ---------- world ----------
   const TYPES = {
     cat:       { r: 4,  color: '#e8a25a' },
+    zombie:    { r: 5,  color: '#6b5b7a', bad: true, slow: 3 }, // on every map; swallowing one chills you: slow for `slow` s, no growth, no points
     gull:      { r: 4,  color: '#f7f7f2' },
     person:    { r: 5,  color: '#5b8def' },
     worker:    { r: 5,  color: '#ff8a3d' },
@@ -703,6 +709,7 @@
   let stage, stageIndex, waterY, buildings, objects, guards, lighthouse, player, state, elapsed;
   let lots = []; // open lots [x0, y0, size]: parks, plazas, fields (the renderer lays lawns on them)
   let casters = []; // props that throw shade (SHADE below, core propShadow)
+  let zombies = []; // they shuffle about (update)
   let score, stats, shadows, sun, phase, rnd, runSun = 1;
   let bannerUntil = 0; // elapsed second until which the banner shows
   // The bolt mission's target: a kind with plenty left on the map that the player can already swallow.
@@ -719,7 +726,7 @@
   // One status pill at a time under the goals, by urgency: hunger, the bolt mission, the rush, the boss.
   function hudStatus() {
     let shown = false;
-    for (const id of ['hunger-pill', 'bonus-pill', 'rush-pill', 'boss-pill']) {
+    for (const id of ['hunger-pill', 'slow-pill', 'bonus-pill', 'rush-pill', 'boss-pill']) {
       const el = $(id), on = !el.classList.contains('hidden');
       el.classList.toggle('muted', on && shown); if (on) shown = true;
     }
@@ -757,6 +764,7 @@
   const WALL_OVER = 18; // a body this big goes through a courtyard wall even in sunlight (the walls are low)
   // Hunger (core HUNGER): time of the last swallow, the current state for the HUD, and how long the body has sat at its smallest
   let lastEat = 0, hunger = null, hungerTick = 0, starving = false, starveT = 0, endedBy = null;
+  let combo = 0, comboUntil = 0, slowUntil = 0; // swallow chain (core COMBO) and the zombie slowdown
   // Size tiers: the first time the body is big enough for a new kind of thing on this map ("이제 자동차도 꿀꺽!"),
   // a banner, a chime, a bulge and a short camera pull-back mark the moment. Seeded with what already fits at the start.
   let tierDone = new Set(), tierNext = 0, camPulse = 0;
@@ -960,6 +968,7 @@
       }
     }
     scatter(stage.small, 0, waterY - 10);
+    scatter([['zombie', 10]], 0, waterY - 10); // a few zombies on every map: the one thing you should not eat
     if (stage.waterSmall) scatter(stage.waterSmall, waterY + 20, WORLD);
     for (let i = 0; i < stage.guards; i++) {
       const g = { x: R(200, WORLD - 200), y: R(200, waterY - 200), dir: rnd() * Math.PI * 2,
@@ -977,6 +986,7 @@
     const L = stage.lighthouse;
     lighthouse = L ? { x: WORLD * L.x, y: WORLD * L.y, range: L.range, half: L.half, speed: L.speed, dir: 0 } : null;
     casters = objects.filter(o => SHADE[o.type]);
+    zombies = objects.filter(o => o.type === 'zombie');
   }
   // Everything that throws shade right now: standing buildings (walls included) and big trees' crowns.
   const shadeCasts = () => buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun))
@@ -1066,7 +1076,7 @@
     stageIndex = i; stage = list[i];
     buildWorld(Date.now() & 0xffff);
     elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; continued = false; nextGold = 4; rush = false; rushTick = 0; Sound.music.rush(false); bonus = null;
-    lastEat = 0; hunger = null; hungerTick = 0; starving = false; starveT = 0; endedBy = null;
+    lastEat = 0; hunger = null; hungerTick = 0; starving = false; starveT = 0; endedBy = null; combo = 0; comboUntil = 0; slowUntil = 0;
     clouds = stage.twist === 'clouds' ? Array.from({ length: 7 }, (_, k) => ({ x: rnd() * WORLD, y: rnd() * waterY, r: 70 + rnd() * 50 })) : [];
     tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
@@ -1202,6 +1212,14 @@
     const CLOUD_V = 8;
     // past the right edge (+100) a cloud comes back in from the left (-100); the span is WORLD + 200
     for (const c of clouds) { c.x = (c.x + 100 + CLOUD_V * dt) % (WORLD + 200) - 100; c.y += Math.sin(elapsed * 0.1 + c.r) * 1.5 * dt; }
+    // Zombies shuffle about slowly, picking a new heading every few seconds or when they bump into a building.
+    for (const o of zombies) {
+      if (o.state !== 0) continue;
+      o.t = (o.t || 0) - dt; if (o.t <= 0) { o.rot = rnd() * Math.PI * 2; o.t = 2 + rnd() * 3; }
+      const nx = o.x + Math.cos(o.rot) * 9 * dt, ny = o.y + Math.sin(o.rot) * 9 * dt;
+      if (nx < 10 || nx > WORLD - 10 || ny < 10 || ny > waterY - 10 || insideAnyBuilding(nx, ny, 6)) { o.t = 0; continue; }
+      o.x = nx; o.y = ny; o.dirty = true;
+    }
     if (!bonus && !tut && stage.twist !== 'boss' && elapsed >= runDuration * BONUS_AT && !phase.night) bonus = pickBonus();
     if (bonus && !bonus.done && elapsed >= bonus.until) { bonus.done = 'fail'; banner(`${ico('bolt')} 번개 미션 실패… 다음엔 꼭!`, 1.5); }
     if (stage.twist === 'golden' && elapsed >= nextGold) { // a golden friend near the player, gone again after 8 s
@@ -1223,9 +1241,9 @@
     }
     const ml = Math.hypot(mx, my);
     if (ml > 1) { mx /= ml; my /= ml; }
-    // Small is nimble, big is ponderous: 225 at the starting size, easing down to 190 for a huge body (the camera
-    // also pulls back as you grow, so on screen a big body crawls at under half the speed of a small one).
-    const speed = 225 - Math.min(35, Math.max(0, player.r - 14) * 0.45);
+    // One speed at every size (the camera pulls back as you grow, so a big body already looks slower on screen);
+    // the only slowdown is the few seconds after swallowing a zombie.
+    const speed = 225 * (elapsed < slowUntil ? 0.5 : 1);
     // Velocity moves toward the target at a fixed rate: a quick start (ACCEL_S to full speed) and a short
     // glide when the finger lifts (GLIDE_S to a stop). A grown body is heavier, so both stretch with size.
     const heavy = 1 + Math.min(1, (player.r / player.r0 - 1) / 6) * 0.8;
@@ -1278,12 +1296,23 @@
       if (o.ft < 1) { inFlight = true; continue; }
       o.state = 2; player.bulge = 1; gulped = true;
       lastEat = elapsed; starving = false; starveT = 0; hungerTick = 0; // fed again
+      if (TYPES[o.type] && TYPES[o.type].bad) { // a zombie: chills you — slow for a few seconds, no growth, no points, combo gone
+        slowUntil = elapsed + TYPES[o.type].slow; combo = 0; stats.yuck = (stats.yuck || 0) + 1;
+        Sound.sfx.yuck(); punch(1, '#9bd38a'); banner(`${face('surprised')} 으엑! 좀비는 먹는 게 아니에요… ${TYPES[o.type].slow}초 느려져요`, 2);
+        stats.eaten[o.type] = (stats.eaten[o.type] || 0) + 1; stats.total++;
+        if (!Store.wallet.dex.includes(o.type)) discoverDex(o.type);
+        continue;
+      }
+      // combo: another swallow within COMBO.window stacks the score multiplier
+      combo = elapsed < comboUntil ? combo + 1 : 1; comboUntil = elapsed + C.COMBO.window; stats.maxCombo = Math.max(stats.maxCombo || 0, combo);
+      const mult = C.comboMult(combo);
+      if (combo >= 3) Sound.sfx.combo(combo);
       const v = o.worth || o.r; // a courtyard wall is swallowed at its size but grows and scores little (worth)
       Sound.sfx.gulp(Math.min(1, o.r / player.r));
       if (v > player.r * 0.45 && !o.boss) punch(1);
       player.r = C.grow(player.r, v);
       const gold = o.goldUntil > elapsed;
-      score += Math.round(v * v / 2) * (gold ? 5 : 1) * (rush ? 2 : 1);
+      score += Math.round(Math.round(v * v / 2) * (gold ? 5 : 1) * (rush ? 2 : 1) * mult);
       if (gold) { stats.golds = (stats.golds || 0) + 1; Sound.sfx.coin(); banner(`${ico('sparkle')} 황금 친구! 점수 5배`, 1.5); punch(1, '#ffd25c'); }
       if (rush) stats.rushEaten = (stats.rushEaten || 0) + 1;
       if (bonus && !bonus.done && o.type === bonus.type && ++bonus.got >= bonus.n) {
@@ -1329,10 +1358,11 @@
     if (!R || !stage) return;
     // Hint rings for things the player could eat right now (nearby only).
     const hints = [];
+    player.slow = elapsed < slowUntil; // the renderer tints it green
     for (const o of objects) {
       if (o.state !== 0 || o.r >= player.r * C.EAT_RATIO) continue;
       if (Math.hypot(o.x - player.x, o.y - player.y) > 260 + player.r) continue;
-      if (isShaded(o, o) || o.goldUntil > elapsed) hints.push({ x: o.x, y: o.y, r: o.r + 2 });
+      if (isShaded(o, o) || o.goldUntil > elapsed) hints.push({ x: o.x, y: o.y, r: o.r + 2, bad: !!TYPES[o.type].bad }); // violet ring: edible but bad
     }
     for (const g of guards) {
       if (g.state === 0 && g.r < player.r * C.EAT_RATIO && isShaded(g, g)) hints.push({ x: g.x, y: g.y, r: g.r + 3 });
@@ -1409,6 +1439,12 @@
       $('hunger-pill').classList.toggle('starve', hunger.phase === 'starve');
     }
     $('score').classList.toggle('rush', rush);
+    const sl = elapsed < slowUntil;
+    $('slow-pill').classList.toggle('hidden', !sl);
+    if (sl) $('slow-pill').innerHTML = `${face('surprised')} 으엑… 느려짐 <b>${Math.ceil(slowUntil - elapsed)}</b>`;
+    const cb = elapsed < comboUntil && combo >= 2, cbText = cb ? `콤보 ${combo} ×${C.comboMult(combo).toFixed(1)}` : '';
+    $('combo').classList.toggle('hidden', !cb);
+    if (cb && $('combo').textContent !== cbText) { $('combo').textContent = cbText; $('combo').classList.remove('pop'); void $('combo').offsetWidth; $('combo').classList.add('pop'); }
     // Boss: who it is and how big you must be to swallow it; turns gold once you are big enough.
     const boss = guards.find(g => g.boss);
     $('boss-pill').classList.toggle('hidden', !boss || boss.state !== 0);
@@ -1823,7 +1859,7 @@
     let w = Shop.finishRun(Shop.awardStars(Store.wallet, before, n));
     w = Badges.record(w, { eaten: stats.total, guards: stats.eaten.guard || 0, clean: stats.lit ? 0 : 1,
       size: Math.round(stats.maxR / 4 * 10) / 10, night: stats.night, buildings: stats.eaten.building || 0,
-      bosses: stats.eaten.boss || 0, golds: stats.golds || 0, bolts: stats.bonus || 0, rush: stats.rushEaten || 0, fed: stats.hungry ? 0 : 1 });
+      bosses: stats.eaten.boss || 0, golds: stats.golds || 0, bolts: stats.bonus || 0, rush: stats.rushEaten || 0, fed: stats.hungry ? 0 : 1, combo: stats.maxCombo || 0 });
     const xpBefore = w.stats.xp || 0, xp = Level.runXp(stats.total, n), lv = Level.gain(w, xp);
     w = lv.wallet;
     const doneBefore = Challenge.status(w, dayKey()).filter(m => m.done).length;
@@ -2210,7 +2246,8 @@
   // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
   if (window.__DUSK_TEST__) {
     window.__DUSK_TEST__.api = { start, openDaily, isShaded, get punches() { return punches; }, get tiers() { return [...tierDone]; }, get camPulse() { return camPulse; }, centerOf, input, skipTo: sec => { elapsed = sec; lastEat = sec; tut = null; shadeStale = true; }, view,
-      hungerSet: (since, starved = 0) => { lastEat = elapsed - since; starveT = starved; }, get hunger() { return hunger; }, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
+      hungerSet: (since, starved = 0) => { lastEat = elapsed - since; starveT = starved; }, get hunger() { return hunger; },
+      get combo() { return combo; }, get slowUntil() { return slowUntil; }, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
       get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase, sun, clouds, eclipse, elapsed, runDuration, rush, shadows }; } };
