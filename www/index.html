@@ -1186,7 +1186,7 @@
   // Lifting a finger ends the pinch; movement waits for a fresh touch so the zoom gesture doesn't steer.
   const lift = e => {
     touches.delete(e.pointerId);
-    if (touches.size < 2) { pinch = null; if (!view.fp) view.target = 0; } // an uncommitted preview springs back
+    if (touches.size < 2) { if (pinch && !view.fp) save('dusk-zoom', view.zoom); pinch = null; if (!view.fp) view.target = 0; } // an uncommitted preview springs back; the zoom is kept
     endDrag();
   };
   canvas.addEventListener('pointerup', lift);
@@ -1199,7 +1199,9 @@
   // ---------- update ----------
   // `view` = world units across the shorter screen side; grows with the player.
   const cam = { x: 0, y: 0, view: 400 };
-  const targetView = () => (250 + player.r * 6.2) * view.zoom; // closer than before: the street fills the screen
+  // World units across the shorter screen side. Starts close (about 1.6x nearer than the old 250+6.2r), so a fresh
+  // body fills the screen like Hole.io's, and pulls back as it grows; pinch (view.zoom, kept between runs) scales it.
+  const targetView = () => (100 + player.r * 7.8) * view.zoom;
 
   function beams() {
     const list = guards.filter(g => g.state === 0);
@@ -2139,6 +2141,8 @@
     if (await Store.isTestBuild()) testBuild = true;
     lastWallet = JSON.stringify(Store.wallet);
     $('shop-demo').classList.toggle('hidden', !Store.demo);
+    const zoom = +(await Store.kv.get('dusk-zoom')); // the pinch zoom from last time
+    if (zoom >= ZOOM_MIN && zoom <= ZOOM_MAX) view.zoom = zoom;
     const snd = await Store.kv.get('dusk-sound');
     if (snd) { Sound.setOn('sfx', snd.sfx !== false); Sound.setOn('music', snd.music !== false); renderSound(); }
     Account.init(accountHooks); // signs back in and syncs in the background; the game never waits for it
