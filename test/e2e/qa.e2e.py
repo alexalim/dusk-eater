@@ -312,6 +312,7 @@ with sync_playwright() as p:
             // just off each prop, so prop shade (trees, parasols) is sampled too, but clear of the orange hint ring drawn on
             // the ground around anything edible (radius r+2, a few units wide): that ring is bright by design
             if (things.some(o => Math.hypot(o.x - x, o.y - y) < o.r + 12)) continue;
+            if ((A.shards || []).some(h => h.state === 0 && Math.hypot(h.x - x, h.y - y) < 40)) continue; // a light shard's ring and pillar
             if (s.buildings.some(b => { if (b.state !== 0 || b.r >= s.player.r * 0.85) return false; const R = Math.hypot(b.w, b.d) / 2, d = Math.hypot(b.x + b.w / 2 - x, b.y + b.d / 2 - y); return Math.abs(d - R) < 9; })) continue;
             if (Math.hypot(s.player.x - x, s.player.y - y) < s.player.r * 1.6) continue;
             const v = C.inAnyShadow(sh, x, y);

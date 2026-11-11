@@ -393,6 +393,22 @@
     const badHints = new T.InstancedMesh(hintGeo, badMat, 64);
     badHints.renderOrder = 4;
     scene.add(hints, badHints);
+    // Light shards (pickups): a spinning crystal over a pale ring with a thin pillar, colored by kind, instanced.
+    const MAX_SHARDS = 4, SHARD_COL = { bolt: 0x7debff, cloud: 0xe3d7ff, magnet: 0xff7ad9 };
+    const shardGem = new T.InstancedMesh(new T.OctahedronGeometry(1), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 }), MAX_SHARDS);
+    const shardRing = new T.InstancedMesh(goldGeo, new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false }), MAX_SHARDS);
+    const shardBeam = new T.InstancedMesh(new T.CylinderGeometry(1, 1, 1, 10, 1, true),
+      new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide }), MAX_SHARDS);
+    for (const m of [shardGem, shardRing, shardBeam]) { // instance colors exist up front, so the shader is built with them (as the props do)
+      for (let i = 0; i < MAX_SHARDS; i++) m.setColorAt(i, new T.Color(0xffffff));
+      m.instanceColor.needsUpdate = true; m.count = 0; m.frustumCulled = false; m.renderOrder = 8; scene.add(m);
+    }
+    // the cloud shard's bubble of shade and the magnet's closing ring, both around the player
+    const bubble = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0xcfc2ff, transparent: true, opacity: 0.16, depthWrite: false, blending: T.AdditiveBlending }));
+    bubble.visible = false; bubble.renderOrder = 7;
+    const magnetRing = new T.Mesh(hintGeo, new T.MeshBasicMaterial({ color: 0xff7ad9, transparent: true, opacity: 0.5, depthWrite: false }));
+    magnetRing.visible = false; magnetRing.renderOrder = 4;
+    scene.add(bubble, magnetRing);
 
     const TEX = makeTextures();
     const NIGHT_WINDOWS = col('#ffc46b');
@@ -869,16 +885,21 @@
       blob.position.set(player.x, 1.2, player.y);
       blob.scale.setScalar(player.r);
       blobMat.opacity = player.lit ? 0.35 + Math.sin(t * 30) * 0.2 : 0.55;
-      rimMat.color.set(player.lit ? LIT_RIM : rimColor);
+      rimMat.color.set(player.lit ? LIT_RIM : player.slow ? 0x9bd38a : rimColor); // red for sunlight always wins; green while poisoned
       rimMat.opacity = player.lit ? 0.85 : 0.55;
       litRing.position.copy(blob.position).setY(1.3);
       litRing.scale.setScalar(player.r);
+      bubble.visible = !!player.bubble;
+      if (player.bubble) { bubble.position.set(player.x, 2, player.y); bubble.scale.set(player.bubble, player.bubble * 0.35, player.bubble); }
+      magnetRing.visible = player.magnet >= 0;
+      if (player.magnet >= 0) { const s = 220 - (220 - player.r) * player.magnet; magnetRing.position.set(player.x, 1.4, player.y); magnetRing.scale.setScalar(s); magnetRing.material.opacity = 0.5 * (1 - player.magnet); }
       // Face toward `look` (the game keeps it turned to the camera); the mouth opens wide and the arms
       // reach in while something is being sucked in, and the body bulges once when it goes down.
       const gulp = player.gulp || 0, bulge = player.bulge || 0, L = player.look === undefined ? player.face : player.look;
-      const breathe = 1 + Math.sin(t * 3) * 0.025, R = player.r;
+      const breathe = 1 + Math.sin(t * (player.fast ? 9 : 3)) * 0.025, R = player.r; // quick, excited breath while fast
       body.position.set(player.x, R * BODY_Y, player.y);
       body.scale.set(R * (1 + bulge * 0.12), R * BODY_SY * breathe * (1 - bulge * 0.06), R * (1 + bulge * 0.12));
+      if (player.slow) { const w = Math.sin(t * 14); body.scale.x *= 1 + w * 0.08; body.scale.z *= 1 - w * 0.08; body.scale.y *= 1 + Math.sin(t * 14 + 1) * 0.06; } // poisoned: a wobbling jelly
       body.rotation.set(0, -L, 0);
       const grown = Math.min(1, Math.max(0, (player.r / (player.r0 || player.r) - 1) / 4));
       bodyMat.color.copy(bodyColor).lerp(glowColor, grown * 0.25);
@@ -902,17 +923,17 @@
       throat.rotation.copy(mouth.rotation);
       throat.scale.set(R * 0.06, mouth.scale.y * (0.45 + gulp * 0.35), mouth.scale.z * (0.5 + gulp * 0.3));
       // Eyes: wide half-lidded ovals with a glint; they squeeze shut happily (^^) for a moment after each gulp.
-      const happy = Math.min(1, bulge * 1.6);
+      const happy = Math.min(1, bulge * 1.6), wide = player.fast ? 1 : 0; // fast: the lids lift and the eyes open wide, bright
       eyes.forEach(({ e, p, lid }, k) => {
         onBody(player, L + (k ? 1 : -1) * 0.4, 0.66 + gulp * 0.1, 0.0, e.position);
         e.rotation.set(0, -L, 0);
-        e.scale.set(R * 0.1, R * (0.14 - happy * 0.1), R * 0.19);
+        e.scale.set(R * 0.1, R * (0.14 + wide * 0.06 - happy * 0.1), R * 0.19);
         // the lid: a body-colored cap over the upper part of the eye, so the eye reads as a flat-topped half-moon
-        onBody(player, L + (k ? 1 : -1) * 0.4, 0.78 + gulp * 0.1, 0.03, lid.position);
+        onBody(player, L + (k ? 1 : -1) * 0.4, 0.78 + gulp * 0.1 + wide * 0.1, 0.03, lid.position);
         lid.rotation.set(0, -L, 0);
         lid.scale.set(R * 0.11, R * 0.09, R * 0.22);
         onBody(player, L + (k ? 1 : -1) * 0.36, 0.64 + gulp * 0.1, 0.09, p.position);
-        p.scale.setScalar(R * 0.045 * (1 - happy));
+        p.scale.setScalar(R * (0.045 + wide * 0.02) * (1 - happy));
       });
       cheeks.forEach((m, i) => {
         onBody(player, L + (i ? 1 : -1) * 0.66, 0.5, 0.0, m.position);
@@ -934,6 +955,15 @@
         goldRings.setMatrixAt(i, dummy.matrix);
       }
       goldRings.instanceMatrix.needsUpdate = true;
+      const shardsL = f.shards || [];
+      shardGem.count = shardRing.count = shardBeam.count = Math.min(MAX_SHARDS, shardsL.length);
+      shardsL.slice(0, MAX_SHARDS).forEach((h, i) => {
+        const c = tmpCol.set(SHARD_COL[h.kind] || 0xffffff), vis = h.blink ? (Math.sin(t * 14) > 0 ? 1 : 0.25) : 1;
+        dummy.position.set(h.x, 15 + Math.sin(t * 3 + i) * 3, h.y); dummy.rotation.set(0.6, t * 2, 0.3); dummy.scale.set(9 * vis, 13 * vis, 9 * vis); dummy.updateMatrix(); shardGem.setMatrixAt(i, dummy.matrix); shardGem.setColorAt(i, c);
+        dummy.position.set(h.x, 1.3, h.y); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(14 * (1 + Math.sin(t * 5) * 0.1)); dummy.updateMatrix(); shardRing.setMatrixAt(i, dummy.matrix); shardRing.setColorAt(i, c);
+        dummy.position.set(h.x, 45, h.y); dummy.rotation.set(0, t, 0); dummy.scale.set(6, 90, 6); dummy.updateMatrix(); shardBeam.setMatrixAt(i, dummy.matrix); shardBeam.setColorAt(i, c);
+      });
+      for (const m of [shardGem, shardRing, shardBeam]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
       goldBeam.count = goldRings.count;
       for (let i = 0; i < goldBeam.count; i++) {
         const w = Math.max(golden[i].r * 0.9, 8);

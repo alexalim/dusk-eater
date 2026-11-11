@@ -12,3 +12,10 @@ test('combo: x1 for a lone swallow, +0.1 per extra link, capped at x2; the windo
   assert.equal(C.comboMult(40), 2, 'capped');
   assert.deepEqual(C.COMBO, { window: 1.5, step: 0.1, max: 2 });
 });
+
+test('light shards: timing constants and a kind that never repeats', () => {
+  assert.deepEqual(C.SHARD_KINDS, ['bolt', 'cloud', 'magnet']);
+  assert.equal(C.SHARD.from + C.SHARD.every * 4, 70, 'about five shards in a 90 s day');
+  for (const prev of C.SHARD_KINDS) for (const r of [0, 0.3, 0.6, 0.99]) assert.notEqual(C.nextShardKind(prev, r), prev);
+  assert.equal(C.nextShardKind(null, 0.99), 'magnet');
+});

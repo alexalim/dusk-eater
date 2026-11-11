@@ -244,6 +244,22 @@ with sync_playwright() as p:
         z0[0] >= 8 and moved > 0.5 and s1 == s0 and r1 <= r0 + 0.01 and 2.3 <= slow <= 3 and combo >= 2,
         f'zombies={z0[0]} moved={moved:.1f} score {s0}->{s1} r {r0:.1f}->{r1:.1f} slow-left={slow:.2f} combo={combo}')
 
+    # W18 light shards: one appears in sunlight within reach by 12 s; touching it is enough; the cloud makes the sun
+    # harmless around the body, the bolt raises the speed, the magnet pulls food in
+    pg.evaluate(f'{A}.start(0)'); pg.evaluate(f'{A}.skipTo(12)'); frames_wait(pg, 3)
+    first = pg.evaluate(f'''(() => {{ const s = {A}.s, h = {A}.shards.filter(h => h.state === 0); return [h.length, h[0] ? !{A}.isShaded(h[0], null) : false, h[0] ? Math.hypot(h[0].x - s.player.x, h[0].y - s.player.y) : 0]; }})()''')
+    sunny = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player; for (let x = 80; x < 1700; x += 23) for (let y = 80; y < 1700; y += 29)
+        if (!{A}.isShaded({{ x, y }}, null) && !s.buildings.some(b => x > b.x - 40 && x < b.x + b.w + 40 && y > b.y - 40 && y < b.y + b.d + 40)) {{ p.x = x; p.y = y; p.vx = p.vy = 0; return [x, y]; }} }})()''')
+    pg.evaluate(f'{A}.spawnShard("cloud", {sunny[0]} + 5, {sunny[1]})'); frames_wait(pg, 3)
+    cloud = pg.evaluate(f'[{A}.s.player.lit, {A}.effects.bubble > {A}.s.elapsed, {A}.s.stats.shards]')
+    pg.evaluate(f'{A}.spawnShard("bolt", {A}.s.player.x + 5, {A}.s.player.y)'); frames_wait(pg, 3)
+    speed = pg.evaluate(f'{A}.speedNow')
+    mag = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player; p.vx = p.vy = 0; const o = s.objects.find(o => o.state === 0 && o.r <= 5 && o.type !== 'zombie'); o.x = p.x + 120; o.y = p.y; window.__mo = o; {A}.spawnShard("magnet", p.x + 5, p.y); return o.x - p.x; }})()''')
+    frames_wait(pg, 8); mag2 = pg.evaluate(f'window.__mo.x - {A}.s.player.x')
+    rec('W18', 'light shards: one in sunlight by 12 s; cloud = no sunburn, bolt = x1.6 speed, magnet = food drifts in',
+        first[0] >= 1 and first[1] and first[2] < 320 and cloud[0] is False and cloud[1] and cloud[2] == 1 and abs(speed - 360) < 1 and mag2 < mag - 10,
+        f'first={first} cloud={cloud} speed={speed:.0f} magnet dist {mag:.0f}->{mag2:.0f}')
+
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune
     rec('W0', 'no page errors', not errs, '; '.join(errs[:3]))

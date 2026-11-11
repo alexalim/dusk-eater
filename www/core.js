@@ -78,6 +78,14 @@
   }
 
   // Building footprint {x, y, w, d, h} -> shadow polygon with bbox for cheap rejection.
+  // Light shards: pickups that appear in sunlight mid-run (index.html shards). From `from` s, one every `every` s,
+  // at most `max` on the map, each gone after `life` s. Effects, in seconds: bolt = faster, cloud = your own shade,
+  // magnet = nearby food drifts to you.
+  const SHARD = { from: 10, every: 15, life: 12, max: 2, bolt: 8, cloud: 6, magnet: 8, speed: 1.6, pull: 150 };
+  const SHARD_KINDS = ['bolt', 'cloud', 'magnet'];
+  // the next kind: never the same twice in a row (r in [0,1))
+  const nextShardKind = (prev, r) => SHARD_KINDS.filter(k => k !== prev)[Math.floor(r * (prev ? 2 : 3))] || SHARD_KINDS[0];
+
   // Combo: another swallow within `window` seconds stacks the multiplier by `step`, up to `max`.
   const COMBO = { window: 1.5, step: 0.1, max: 2 };
   const comboMult = n => Math.min(COMBO.max, 1 + COMBO.step * Math.max(0, n - 1));
@@ -190,7 +198,7 @@
   const api = {
     DURATION, NIGHT_START, EAT_RATIO, MAX_SHADOW,
     mulberry32, dayPhase, sunState, shadowLength, convexHull, pointInConvex,
-    shadowPolygon, propShadow, inAnyShadow, inCone, canEat, grow, HUNGER, hungerState, COMBO, comboMult,
+    shadowPolygon, propShadow, inAnyShadow, inCone, canEat, grow, HUNGER, hungerState, COMBO, comboMult, SHARD, SHARD_KINDS, nextShardKind,
     goalProgress, evaluateStars, isUnlocked, isCleared,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

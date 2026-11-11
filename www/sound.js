@@ -124,7 +124,15 @@
     grow() { tone(320, 960, 0.35, { type: 'triangle', vol: 0.25 }); [79, 84, 88].forEach((n, i) => tone(note(n), note(n), 0.25, { type: 'sine', vol: 0.22, at: 0.3 + i * 0.08 })); },
     hit() { tone(180, 60, 0.18, { type: 'square', vol: 0.35 }); tone(900, 1800, 0.12, { type: 'triangle', vol: 0.2, at: 0.02 }); [84, 91].forEach((n, i) => tone(note(n), note(n), 0.3, { type: 'triangle', vol: 0.25, at: 0.1 + i * 0.08 })); },
     tick() { tone(1500, 1500, 0.06, { type: 'square', vol: 0.12 }); },
-    yuck() { tone(300, 110, 0.28, { type: 'sawtooth', vol: 0.2 }); tone(520, 130, 0.32, { type: 'square', vol: 0.07 }); }, // 으엑: a zombie went down
+    yuck() { // 으엑: a zombie went down, then three seconds of queasy gurgling
+      tone(300, 110, 0.28, { type: 'sawtooth', vol: 0.2 }); tone(520, 130, 0.32, { type: 'square', vol: 0.07 });
+      for (let i = 0; i < 7; i++) tone(90 + (i % 2) * 25, 60, 0.22, { type: 'sawtooth', vol: 0.06, at: 0.45 + i * 0.38 });
+    },
+    shard(kind) { // a light shard: a quick rising sparkle, higher for the bolt
+      const base = kind === 'bolt' ? 84 : kind === 'cloud' ? 72 : 79;
+      [0, 4, 7, 12].forEach((n, i) => tone(note(base + n), note(base + n) * 1.02, 0.12, { type: 'triangle', vol: 0.14, at: i * 0.05 }));
+    },
+    dash() { tone(2200, 1800, 0.03, { type: 'square', vol: 0.05 }); }, // quick footsteps while the bolt lasts
     combo(n) { const f = note(72 + Math.min(12, n)); tone(f, f * 1.5, 0.08, { type: 'square', vol: 0.1 }); }, // each link a step higher
     win() { [60, 64, 67, 72, 76].forEach((n, i) => tone(note(n), note(n), 0.35, { type: 'triangle', vol: 0.3, at: i * 0.1 })); },
     lose() { [67, 64, 60].forEach((n, i) => tone(note(n), note(n), 0.4, { type: 'triangle', vol: 0.25, at: i * 0.16 })); },

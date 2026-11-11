@@ -57,11 +57,13 @@ with sync_playwright() as p:
     g0 = wallet(pg)['gems']
     pg.tap('#btn-dex'); frames_wait(pg)
     revealed = not pg.query_selector(f'.card[data-dex={kind}]').evaluate("e => e.classList.contains('hide')")
-    pg.tap(f'.card[data-dex={kind}]'); frames_wait(pg)
+    pg.tap(f'.card[data-dex={kind}]')
+    # the line above the tabs names the friend for a moment, then clears (TestFlight: an icon used to stay there);
+    # read it at once — a slow software GPU can take longer than the message lasts to draw a few frames
+    said = pg.inner_html('#dex-msg'); frames_wait(pg)
     pg.tap(f'.card[data-dex={kind}]'); frames_wait(pg)
     g1 = wallet(pg)['gems']
-    # the line above the tabs names the friend for a moment, then clears (TestFlight: an icon used to stay there)
-    said = pg.inner_html('#dex-msg'); pg.wait_for_function("document.querySelector('#dex-msg').innerHTML === ''", timeout=4000)
+    pg.wait_for_function("document.querySelector('#dex-msg').innerHTML === ''", timeout=4000)
     reload(pg); g2 = wallet(pg)['gems']
     rec('X4', 'reward paid exactly once and kept; the message line clears by itself', revealed and g1 == g0 + pg.evaluate('window.DuskDex.REWARD') and g2 == g1 and pg.inner_text('#dex-badge') == '' and 'ico dex' in said, f'{g0} -> {g1} -> {g2} said={said[:60]!r}')
 
@@ -115,6 +117,19 @@ with sync_playwright() as p:
     rec('B1', 'run end records progress and names the new badge; its gems pay once; hidden badges stay ???',
         '먹보 동' in note and eaten >= 300 and count != '' and g1 == g0 + 5 and locked == '?' and pg.is_visible('#title'),
         f'note={note!r} eaten={eaten} count={count!r} gems {g0}->{g1} locked={locked!r}')
+    # B2 a reward waiting further down the badge list: its card is marked, says the gems in red, and the window opens
+    # scrolled to it (TestFlight: "받을 거 있을 때 테두리나 빨간 글자, 스크롤 포커스")
+    pg.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ stats: Object.assign({{}}, {A}.Store.wallet.stats, {{ combo: 8 }}) }}))")
+    pg.tap('#btn-badges'); frames_wait(pg, 2)
+    mark = pg.evaluate('''(() => { const list = document.querySelector('#badges-list'), w = list.querySelector('.bcat.waiting');
+      if (!w) return { waiting: 0 };
+      const L = list.getBoundingClientRect(), R = w.getBoundingClientRect(), rw = w.querySelector('.rw');
+      // the first waiting card is in view: scrolled to when it sits below the fold, left alone when it is already visible
+      return { waiting: list.querySelectorAll('.bcat.waiting').length, name: w.querySelector('h4').textContent.trim(), inView: R.top >= L.top - 2 && R.bottom <= L.bottom + 2,
+        scrolled: list.scrollTop > 0 || w.offsetTop + w.offsetHeight <= list.clientHeight, red: rw && getComputedStyle(rw).color }; })()''')
+    pg.tap('#btn-badges-back'); frames_wait(pg)
+    rec('B2', 'a claimable badge card is marked and red, and the badge window opens scrolled to it',
+        mark.get('waiting', 0) >= 1 and mark.get('inView') and mark.get('scrolled') and mark.get('red') == 'rgb(214, 44, 58)', f'{mark}')
     # L1 a finished run adds experience: the end screen shows the gain and a level-up note, the title chip shows the level
     pg.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ stats: Object.assign({{}}, {A}.Store.wallet.stats, {{ xp: 119 }}) }}))")
     g0 = wallet(pg)['gems']
