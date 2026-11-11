@@ -86,6 +86,13 @@
   // the next kind: never the same twice in a row (r in [0,1))
   const nextShardKind = (prev, r) => SHARD_KINDS.filter(k => k !== prev)[Math.floor(r * (prev ? 2 : 3))] || SHARD_KINDS[0];
 
+  // Mid-run events (index.html mapEvent): one per run, somewhere 40–60% in (none on boss levels or during the tutorial).
+  // rain = shade everywhere while people scatter; parade = a line of edibles marches down a road; blackout = dark with two
+  // extra lantern keepers; front = a big cloud sweeps across the map. Values are seconds.
+  const EVENTS = { rain: 8, parade: 12, blackout: 10, front: 12 };
+  const EVENT_KINDS = Object.keys(EVENTS);
+  const eventWindow = r => 0.4 + r * 0.2; // when in the run it starts (fraction), r in [0,1)
+
   // Combo: another swallow within `window` seconds stacks the multiplier by `step`, up to `max`.
   const COMBO = { window: 1.5, step: 0.1, max: 2 };
   const comboMult = n => Math.min(COMBO.max, 1 + COMBO.step * Math.max(0, n - 1));
@@ -198,7 +205,7 @@
   const api = {
     DURATION, NIGHT_START, EAT_RATIO, MAX_SHADOW,
     mulberry32, dayPhase, sunState, shadowLength, convexHull, pointInConvex,
-    shadowPolygon, propShadow, inAnyShadow, inCone, canEat, grow, HUNGER, hungerState, COMBO, comboMult, SHARD, SHARD_KINDS, nextShardKind,
+    shadowPolygon, propShadow, inAnyShadow, inCone, canEat, grow, HUNGER, hungerState, COMBO, comboMult, SHARD, SHARD_KINDS, nextShardKind, EVENTS, EVENT_KINDS, eventWindow,
     goalProgress, evaluateStars, isUnlocked, isCleared,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

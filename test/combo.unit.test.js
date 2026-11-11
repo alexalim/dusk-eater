@@ -19,3 +19,10 @@ test('light shards: timing constants and a kind that never repeats', () => {
   for (const prev of C.SHARD_KINDS) for (const r of [0, 0.3, 0.6, 0.99]) assert.notEqual(C.nextShardKind(prev, r), prev);
   assert.equal(C.nextShardKind(null, 0.99), 'magnet');
 });
+
+test('mid-run events: four kinds with lengths, one window 40-60% into the run', () => {
+  assert.deepEqual(C.EVENT_KINDS, ['rain', 'parade', 'blackout', 'front']);
+  for (const k of C.EVENT_KINDS) assert.ok(C.EVENTS[k] >= 8 && C.EVENTS[k] <= 12, k);
+  assert.ok(Math.abs(C.eventWindow(0) - 0.4) < 1e-9 && Math.abs(C.eventWindow(0.999) - 0.6) < 1e-3);
+  assert.ok(C.eventWindow(0.999) < C.NIGHT_START, 'an event always ends before night');
+});

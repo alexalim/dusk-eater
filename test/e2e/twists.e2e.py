@@ -19,7 +19,7 @@ with sync_playwright() as p:
     pg = b.new_page(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True)
     errs = []
     pg.on('pageerror', lambda e: errs.append(str(e)))
-    pg.add_init_script('window.__DUSK_TEST__ = { fixedQuality: true };')
+    pg.add_init_script('window.__DUSK_TEST__ = { fixedQuality: true, noEvents: true };')
     pg.goto(URL); pg.evaluate(f'{A}.ready')
     # region 1 cleared up to level 9 with one star each, so levels 2..10 are open
     pg.evaluate("localStorage.setItem('dusk-stars', JSON.stringify(Object.fromEntries(Array.from({ length: 9 }, (_, i) => ['L' + (i + 1), 1]))))")
@@ -259,6 +259,30 @@ with sync_playwright() as p:
     rec('W18', 'light shards: one in sunlight by 12 s; cloud = no sunburn, bolt = x1.6 speed, magnet = food drifts in',
         first[0] >= 1 and first[1] and first[2] < 320 and cloud[0] is False and cloud[1] and cloud[2] == 1 and abs(speed - 360) < 1 and mag2 < mag - 10,
         f'first={first} cloud={cloud} speed={speed:.0f} magnet dist {mag:.0f}->{mag2:.0f}')
+
+    # W19 mid-run events (one per run 40–60% in; tests opt out and trigger kinds here): rain = shade everywhere while people
+    # scatter; parade = a line of edibles marches along one road; blackout = dark with two extra keepers; cloud front = a big
+    # cloud sweeps across. Each ends on time and cleans up after itself.
+    pg.evaluate(f'{A}.start(0)'); pg.evaluate(f'{A}.skipTo(30)'); frames_wait(pg, 2)
+    sunny = pg.evaluate(f'''(() => {{ const s = {A}.s; for (let x = 80; x < 1700; x += 23) for (let y = 80; y < 1700; y += 29)
+        if (!{A}.isShaded({{ x, y }}, null) && !s.buildings.some(b => x > b.x - 20 && x < b.x + b.w + 20 && y > b.y - 20 && y < b.y + b.d + 20)) return [x, y]; }})()''')
+    shaded_at = lambda: pg.evaluate(f'{A}.isShaded({{ x: {sunny[0]}, y: {sunny[1]} }}, null)')
+    people = lambda: pg.evaluate(f"{A}.s.objects.filter(o => o.state === 0 && o.type === 'person' && !o.parade).slice(0, 40).map(o => [o.x, o.y])")
+    pg.evaluate(f'{A}.startEvent("rain")'); p0 = people(); frames_wait(pg, 12); p1 = people()
+    rain = [shaded_at(), pg.evaluate(f'{A}.mapEvent && {A}.mapEvent.kind'), sum(1 for a, b in zip(p0, p1) if abs(a[0] - b[0]) + abs(a[1] - b[1]) > 2), pg.is_visible('#rain')]
+    pg.evaluate(f'{A}.endEvent()'); rain.append(shaded_at())
+    pg.evaluate(f'{A}.startEvent("parade")'); frames_wait(pg, 8)
+    par = pg.evaluate(f"(() => {{ const m = {A}.s.objects.filter(o => o.parade && o.state === 0); return [m.length, m.length > 0 && m[0].x > {A}.s.player.x - 240, new Set(m.map(o => Math.round(o.y))).size]; }})()")
+    pg.evaluate(f'{A}.endEvent()'); gone = pg.evaluate(f"{A}.s.objects.filter(o => o.parade && o.state === 0).length")
+    pg.evaluate(f'{A}.startEvent("blackout")'); frames_wait(pg, 3)
+    blk = [shaded_at(), pg.evaluate(f"{A}.s.guards.filter(g => g.state === 0 && g.pool).length"), not pg.evaluate("document.querySelector('#vignette').classList.contains('hidden')")]
+    pg.evaluate(f'{A}.endEvent()'); blk.append(pg.evaluate(f"{A}.s.guards.filter(g => g.state === 0 && g.pool).length"))
+    pg.evaluate(f'{A}.startEvent("front")'); x0 = pg.evaluate(f"{A}.s.clouds.find(c => c.front).x"); frames_wait(pg, 10); x1 = pg.evaluate(f"({A}.s.clouds.find(c => c.front) || {{ x: 1e9 }}).x")
+    pg.evaluate(f'{A}.endEvent()'); left = pg.evaluate(f"{A}.s.clouds.filter(c => c.front).length")
+    rec('W19', 'events: rain shades all and scatters people; parade marches on one road; blackout darkens with 2 keepers; front sweeps across; all clean up',
+        rain[0] and rain[1] == 'rain' and rain[2] >= 10 and rain[3] and rain[4] is False and par[0] >= 10 and par[1] and par[2] == 1 and gone == 0
+        and blk[0] and blk[1] == 2 and blk[2] and blk[3] == 0 and x1 > x0 + 50 and left == 0,
+        f'rain={rain} parade={par} gone={gone} blackout={blk} front {x0:.0f}->{x1:.0f} left={left}')
 
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune

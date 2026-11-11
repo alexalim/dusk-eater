@@ -65,7 +65,7 @@ with sync_playwright() as p:
     pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.on('console', lambda m: m.type == 'error' and errs.append(m.text))
     # this device already played three levels and has 120 gems; the account (another phone) has level 4, 300 gems and a skin
-    pg.add_init_script("window.__DUSK_TEST__ = { fixedQuality: true };" + FAKE + """
+    pg.add_init_script("window.__DUSK_TEST__ = { fixedQuality: true, noEvents: true };" + FAKE + """
       localStorage.setItem('dusk-stars', JSON.stringify({ L1: 3, L2: 1, L3: 2 }));
       localStorage.setItem('dusk-best', JSON.stringify({ L1: 2500, L2: 900, L3: 1500 }));
       localStorage.setItem('dusk-wallet', JSON.stringify({ gems: 120, owned: [], equipped: 'night', credited: [], pending: 0 }));
@@ -132,7 +132,7 @@ with sync_playwright() as p:
     # C7 browser demo (no app, no fake backend): explains that sign-in is in the app
     b = p.chromium.launch(args=GL)
     pg = b.new_context(viewport={'width': 390, 'height': 844}).new_page()
-    pg.add_init_script('window.__DUSK_TEST__ = { fixedQuality: true };')
+    pg.add_init_script('window.__DUSK_TEST__ = { fixedQuality: true, noEvents: true };')
     pg.goto(URL); pg.evaluate(f'{A}.ready'); tap(pg, '#btn-account')
     rec('C7', 'browser demo: account screen explains sign-in is in the app, no login buttons',
         '앱에서' in pg.inner_text('#account-body') and pg.query_selector('#account .login') is None, pg.inner_text('#account-body')[:40])

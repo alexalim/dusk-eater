@@ -108,6 +108,12 @@
   #slow-pill b { font-size: 15px; color: #fff; margin-left: 4px; }
   #boost-pill { align-self: center; font-size: 13px; padding: 2px 12px; border-color: #7debff; color: #dff7ff; }
   #boost-pill b { font-size: 15px; color: #fff; margin-left: 4px; }
+  #event-pill { align-self: center; font-size: 13px; padding: 2px 12px; border-color: #9fd0ff; color: #e6f2ff; }
+  #event-pill b { font-size: 15px; color: #fff; margin-left: 4px; }
+  /* a shower: thin diagonal streaks falling over the whole screen */
+  #rain { position: fixed; inset: -40px 0 0 0; pointer-events: none; z-index: 3; opacity: .55; mix-blend-mode: screen;
+    background: repeating-linear-gradient(112deg, transparent 0 13px, rgba(200, 220, 255, .6) 13px 15px); background-size: 160px 160px; animation: rainfall .32s linear infinite; }
+  @keyframes rainfall { to { background-position: -60px 150px; } }
   /* state particles at the body (always mid-screen): green smoke while poisoned, cyan glints while fast */
   #burst i.smoke { border-radius: 50%; filter: blur(1px); animation: smoke 1.1s ease-out forwards; }
   @keyframes smoke { 0% { transform: translate(0, 0) scale(.6); opacity: .7; } 100% { transform: translate(var(--dx), var(--dy)) scale(1.7); opacity: 0; } }
@@ -400,6 +406,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="vignette" class="hidden"></div>
+<div id="rain" class="hidden"></div>
 <div id="no3d" class="overlay hidden">
   <p class="big">이 브라우저에서는 3D 화면을 켤 수 없어요.</p>
   <p>브라우저의 그래픽 가속(WebGL)이 꺼져 있거나 그래픽 드라이버가 막혀 있어요.</p>
@@ -416,6 +423,7 @@
     <div id="rush-pill" class="pill hidden"></div>
     <div id="hunger-pill" class="pill hidden"></div>
     <div id="slow-pill" class="pill hidden"></div>
+    <div id="event-pill" class="pill hidden"></div>
     <div id="boost-pill" class="pill hidden"></div>
     <div id="bonus-pill" class="pill hidden"></div>
   </div>
@@ -725,6 +733,50 @@
   let score, stats, shadows, sun, phase, rnd, runSun = 1;
   let bannerUntil = 0; // elapsed second until which the banner shows
   // The bolt mission's target: a kind with plenty left on the map that the player can already swallow.
+  // ---------- mid-run events ----------
+  const darkEvent = () => !!(mapEvent && (mapEvent.kind === 'rain' || mapEvent.kind === 'blackout'));
+  const EVENT_TEXT = { rain: '소나기! 잠깐 어디든 그늘이에요', parade: '행렬이 지나가요! 길을 보세요', blackout: '정전! 어둡지만 등불지기가 늘었어요', front: '구름 떼가 지나가요! 그늘 다리를 타요' };
+  const openSpot = (ox, oy, d) => { // a point about d away from (ox, oy) that is not in a building, or null
+    for (let i = 0; i < 24; i++) { const a = rnd() * Math.PI * 2, x = ox + Math.cos(a) * d, y = oy + Math.sin(a) * d;
+      if (x > 20 && x < WORLD - 20 && y > 20 && y < waterY - 20 && !insideAnyBuilding(x, y, 12)) return [x, y]; }
+    return null;
+  };
+  function startEvent(kind) {
+    if (mapEvent) endEvent();
+    kind = kind || C.EVENT_KINDS[Math.floor(rnd() * C.EVENT_KINDS.length)];
+    mapEvent = { kind, until: elapsed + C.EVENTS[kind] }; eventDone = true; shadeStale = true;
+    if (kind === 'rain') { runners = objects.filter(o => o.state === 0 && PEOPLE.has(o.type)); for (const o of runners) o.rt = 0; $('rain').classList.remove('hidden'); Sound.sfx.rain(C.EVENTS.rain); }
+    if (kind === 'parade') { // marchers enter just left of the screen along the road nearest the player and cross it in ~10 s
+      const ky = Math.max(0, Math.min(Math.round(player.y / CELL), Math.floor((waterY - 20) / CELL))) * CELL + (rnd() < 0.5 ? -10 : 10);
+      paradePool.forEach((o, i) => { o.state = 0; o.x = player.x - 240 - i * 34; o.y = ky; o.rot = 0; o.dirty = true; });
+      Sound.sfx.parade();
+    }
+    if (kind === 'blackout') { // two extra keepers step out of the dark near the player
+      guardPool.forEach((g, i) => { const p = openSpot(player.x, player.y, 170 + i * 40) || [player.x + 170, player.y]; g.x = p[0]; g.y = p[1]; g.state = 0; pickTarget(g); });
+      Sound.sfx.night();
+    }
+    if (kind === 'front') { clouds.push({ x: -320, y: player.y + (rnd() - 0.5) * 300, r: 280, vx: (WORLD + 700) / C.EVENTS.front, front: true }); Sound.sfx.wind(C.EVENTS.front); }
+    banner(`${ico(kind === 'blackout' ? 'moon' : kind === 'front' ? 'cloud' : 'sparkle')} ${EVENT_TEXT[kind]}`, 2.5); punch(2, kind === 'rain' ? '#9fd0ff' : kind === 'blackout' ? '#b78cff' : '#fff6d6');
+  }
+  function stepEvent(dt) {
+    if (mapEvent.kind === 'rain') for (const o of runners) { // people run for cover: short dashes in new directions
+      if (o.state !== 0) continue;
+      o.rt -= dt; if (o.rt <= 0) { o.rot = rnd() * Math.PI * 2; o.rt = 0.6 + rnd(); }
+      const nx = o.x + Math.cos(o.rot) * 70 * dt, ny = o.y + Math.sin(o.rot) * 70 * dt;
+      if (nx < 10 || nx > WORLD - 10 || ny < 10 || ny > waterY - 10 || insideAnyBuilding(nx, ny, 6)) { o.rt = 0; continue; }
+      o.x = nx; o.y = ny; o.dirty = true;
+    }
+    if (mapEvent.kind === 'parade') for (const o of paradePool) { if (o.state !== 0) continue; o.x += 90 * dt; o.dirty = true; if (o.x > WORLD + 40) o.state = 2; }
+  }
+  function endEvent() {
+    if (!mapEvent) return;
+    if (mapEvent.kind === 'rain') $('rain').classList.add('hidden');
+    if (mapEvent.kind === 'parade') for (const o of paradePool) if (o.state === 0) { o.state = 2; o.dirty = true; }
+    if (mapEvent.kind === 'blackout') for (const g of guardPool) if (g.state === 0) g.state = 2;
+    if (mapEvent.kind === 'front') clouds = clouds.filter(c => !c.front);
+    mapEvent = null; shadeStale = true;
+  }
+
   // A light shard lands on a sunlit, open spot 120–300 away from the player: you have to leave the shade for it.
   function spawnShard(kind, x, y) {
     kind = kind || C.nextShardKind(lastShardKind, rnd());
@@ -762,7 +814,7 @@
   // One status pill at a time under the goals, by urgency: hunger, the bolt mission, the rush, the boss.
   function hudStatus() {
     let shown = false;
-    for (const id of ['hunger-pill', 'slow-pill', 'boost-pill', 'bonus-pill', 'rush-pill', 'boss-pill']) {
+    for (const id of ['hunger-pill', 'slow-pill', 'event-pill', 'boost-pill', 'bonus-pill', 'rush-pill', 'boss-pill']) {
       const el = $(id), on = !el.classList.contains('hidden');
       el.classList.toggle('muted', on && shown); if (on) shown = true;
     }
@@ -808,6 +860,9 @@
   // Hunger (core HUNGER): time of the last swallow, the current state for the HUD, and how long the body has sat at its smallest
   let lastEat = 0, hunger = null, hungerTick = 0, starving = false, starveT = 0, endedBy = null;
   let combo = 0, comboUntil = 0, slowUntil = 0; // swallow chain (core COMBO) and the zombie slowdown
+  // Mid-run event (core EVENTS): what is on, when it ends, when this run's one event is due, and the pools it uses
+  let mapEvent = null, eventDone = false, eventFrac = 0.5, runners = [], paradePool = [], guardPool = [];
+  const PEOPLE = new Set(['person', 'worker', 'officer', 'visitor', 'skier', 'hanbok', 'student', 'grandma', 'commuter', 'umbrella', 'fan', 'sunbather', 'traveler', 'caroler', 'surfer']);
   // Light shards (core SHARD): the pickups on the map and the three timed effects they give
   let shards = [], nextShard = 0, lastShardKind = null, fastUntil = 0, bubbleUntil = 0, magnetUntil = 0, dashTick = 0;
   const bubbleR = () => player.r * 2.2 + 40; // the cloud shard's own shade around the body
@@ -1034,6 +1089,13 @@
     lighthouse = L ? { x: WORLD * L.x, y: WORLD * L.y, range: L.range, half: L.half, speed: L.speed, dir: 0 } : null;
     casters = objects.filter(o => SHADE[o.type]);
     zombies = objects.filter(o => o.type === 'zombie');
+    // This run's event: when it comes, and pools for the kinds that need extra things (meshes are built once per map,
+    // so the parade's marchers and the blackout's keepers are made now, parked far off the map in state 3)
+    eventFrac = C.eventWindow(rnd());
+    paradePool = []; guardPool = [];
+    const marcher = (stage.small && stage.small[0] && stage.small[0][0]) || 'person';
+    for (let i = 0; i < 18; i++) { addObj(marcher, -500 - i * 34, -500, { parade: true }); objects[objects.length - 1].state = 3; paradePool.push(objects[objects.length - 1]); }
+    for (let i = 0; i < 2; i++) { const g = { x: -600 - i * 40, y: -600, dir: 0, half: 0.42, range: 150, r: 9, tx: 0, ty: 0, state: 3, ft: 0, type: 'guard', color: '#2f3e66', pool: true }; guards.push(g); guardPool.push(g); }
   }
   // Everything that throws shade right now: standing buildings (walls included) and big trees' crowns.
   const shadeCasts = () => buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun))
@@ -1124,6 +1186,7 @@
     buildWorld(Date.now() & 0xffff);
     elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; continued = false; nextGold = 4; rush = false; rushTick = 0; Sound.music.rush(false); bonus = null;
     lastEat = 0; hunger = null; hungerTick = 0; starving = false; starveT = 0; endedBy = null; combo = 0; comboUntil = 0; slowUntil = 0;
+    mapEvent = null; eventDone = false; runners = []; $('rain').classList.add('hidden');
     shards = []; nextShard = C.SHARD.from; lastShardKind = null; fastUntil = bubbleUntil = magnetUntil = 0; dashTick = 0;
     clouds = stage.twist === 'clouds' ? Array.from({ length: 7 }, (_, k) => ({ x: rnd() * WORLD, y: rnd() * waterY, r: 70 + rnd() * 50 })) : [];
     tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
@@ -1213,7 +1276,7 @@
 
   function isShaded(o, exclude) {
     if (inBeam(o.x, o.y, exclude)) return false;
-    if (phase.night || eclipse) return true;
+    if (phase.night || eclipse || darkEvent()) return true;
     if (clouds.some(c => Math.hypot(o.x - c.x, o.y - c.y) < c.r)) return true;
     if (elapsed < bubbleUntil && Math.hypot(o.x - player.x, o.y - player.y) < bubbleR()) return true; // the cloud shard's bubble
     return C.inAnyShadow(shadeNear(o.x, o.y), o.x, o.y, exclude);
@@ -1255,14 +1318,17 @@
     if (eclipse && !wasEclipse) { banner(`${ico('eclipse')} 일식! 지금은 어디든 그늘이에요`, ECLIPSE_S); Sound.sfx.night(); }
     // Shade is rebuilt when the sun has moved a little (every ~0.12 s of game time), when something stops casting
     // (swallowed), and when night or the eclipse starts or ends — not every frame: hundreds of props cast shade.
-    const dark = phase.night || eclipse;
+    const dark = phase.night || eclipse || darkEvent();
     if (shadeStale || dark !== shadeDark || Math.abs(phase.dayT - shadeAt) > 0.0015) {
       setShadows(dark ? [] : shadeCasts()); shadeAt = phase.dayT; shadeDark = dark; shadeStale = false;
     }
     // Clouds drift slowly with the wind (about a third of a map per run), with only a faint sideways sway.
     const CLOUD_V = 8;
     // past the right edge (+100) a cloud comes back in from the left (-100); the span is WORLD + 200
-    for (const c of clouds) { c.x = (c.x + 100 + CLOUD_V * dt) % (WORLD + 200) - 100; c.y += Math.sin(elapsed * 0.1 + c.r) * 1.5 * dt; }
+    for (const c of clouds) { if (c.vx) { c.x += c.vx * dt; continue; } c.x = (c.x + 100 + CLOUD_V * dt) % (WORLD + 200) - 100; c.y += Math.sin(elapsed * 0.1 + c.r) * 1.5 * dt; } // a front (vx) just crosses
+    // Mid-run event (core EVENTS): one per run, 40–60% in. Tests opt out with __DUSK_TEST__.noEvents and trigger kinds by hand.
+    if (!mapEvent && !eventDone && !tut && !stage.boss && !phase.night && !eclipse && elapsed >= runDuration * eventFrac && !(window.__DUSK_TEST__ && window.__DUSK_TEST__.noEvents)) startEvent();
+    if (mapEvent) { if (elapsed > mapEvent.until) endEvent(); else stepEvent(dt); }
     // Zombies shuffle about slowly, picking a new heading every few seconds or when they bump into a building.
     for (const o of zombies) {
       if (o.state !== 0) continue;
@@ -1454,7 +1520,7 @@
     const jolt = shake * cam.view * 0.035; shake = Math.max(0, shake - 1 / 20); // about a third of a second
     R.draw({ t, phase, sun, player, view: cam.view, camX: cam.x + (Math.random() - 0.5) * jolt, camY: cam.y + (Math.random() - 0.5) * jolt, swallowPos, hints, fp: state === 'title' ? 0 : view.t,
       clouds, golden, eclipse, shards: shards.filter(h => h.state === 0).map(h => ({ kind: h.kind, x: h.x, y: h.y, blink: h.until - elapsed < 3 })) });
-    $('vignette').classList.toggle('hidden', !phase.night && !eclipse);
+    $('vignette').classList.toggle('hidden', !phase.night && !eclipse && !(mapEvent && mapEvent.kind === 'blackout'));
     canvas.classList.toggle('eclipse', eclipse);
     if (state === 'play') renderHud();
   }
@@ -1517,6 +1583,8 @@
     const sl = elapsed < slowUntil;
     $('slow-pill').classList.toggle('hidden', !sl);
     if (sl) $('slow-pill').innerHTML = `${face('surprised')} 으엑… 느려짐 <b>${Math.ceil(slowUntil - elapsed)}</b>`;
+    $('event-pill').classList.toggle('hidden', !mapEvent);
+    if (mapEvent) $('event-pill').innerHTML = `${ico(mapEvent.kind === 'blackout' ? 'moon' : mapEvent.kind === 'front' ? 'cloud' : 'sparkle')} ${{ rain: '소나기 · 어디든 그늘', parade: '행렬 지나가는 중', blackout: '정전 · 등불지기 조심', front: '구름 떼 · 그늘 다리' }[mapEvent.kind]} <b>${Math.ceil(mapEvent.until - elapsed)}</b>`;
     const fx = [[fastUntil, '번개 사탕 · 쌩쌩'], [bubbleUntil, '구름 조각 · 내 그늘'], [magnetUntil, '자석 별 · 끌어당김']].filter(e => elapsed < e[0]).sort((a, b) => b[0] - a[0])[0];
     $('boost-pill').classList.toggle('hidden', !fx);
     if (fx) $('boost-pill').innerHTML = `${ico('sparkle')} ${fx[1]} <b>${Math.ceil(fx[0] - elapsed)}</b>`;
@@ -2334,7 +2402,7 @@
     window.__DUSK_TEST__.api = { start, openDaily, isShaded, get punches() { return punches; }, get tiers() { return [...tierDone]; }, get camPulse() { return camPulse; }, centerOf, input, skipTo: sec => { elapsed = sec; lastEat = sec; tut = null; shadeStale = true; }, view,
       hungerSet: (since, starved = 0) => { lastEat = elapsed - since; starveT = starved; }, get hunger() { return hunger; },
       get combo() { return combo; }, get slowUntil() { return slowUntil; },
-      get shards() { return shards; }, spawnShard, get effects() { return { fast: fastUntil, bubble: bubbleUntil, magnet: magnetUntil }; }, get speedNow() { return curSpeed(); }, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
+      get shards() { return shards; }, spawnShard, startEvent, endEvent, get mapEvent() { return mapEvent; }, get effects() { return { fast: fastUntil, bubble: bubbleUntil, magnet: magnetUntil }; }, get speedNow() { return curSpeed(); }, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
       get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase, sun, clouds, eclipse, elapsed, runDuration, rush, shadows }; } };

@@ -22,7 +22,7 @@ def open_page(b, w=390, h=844, init=''):
     pg = ctx.new_page(); errs = []
     pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.on('console', lambda m: m.type == 'error' and errs.append(m.text))
-    pg.add_init_script('window.__DUSK_TEST__ = { fixedQuality: true };' + init)
+    pg.add_init_script('window.__DUSK_TEST__ = { fixedQuality: true, noEvents: true };' + init)
     pg.goto(URL); pg.evaluate(f'{A}.ready'); frames_wait(pg)
     return pg, errs
 

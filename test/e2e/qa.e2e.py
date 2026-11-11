@@ -10,7 +10,7 @@ def rec(sid, name, ok, detail=''):
     res.append((sid, name, ok, detail)); print(f"{'PASS' if ok else 'FAIL'} {sid} {name} :: {detail}", flush=True)
 
 # Times every rAF callback so we can see the JS cost of one game frame.
-TIMER = '''window.__DUSK_TEST__ = { fixedQuality: true }; window.__ft = [];
+TIMER = '''window.__DUSK_TEST__ = { fixedQuality: true, noEvents: true }; window.__ft = [];
 const _raf = window.requestAnimationFrame.bind(window);
 window.requestAnimationFrame = cb => _raf(ts => { const a = performance.now(); cb(ts); window.__ft.push(performance.now() - a); });'''
 

@@ -133,6 +133,9 @@
       [0, 4, 7, 12].forEach((n, i) => tone(note(base + n), note(base + n) * 1.02, 0.12, { type: 'triangle', vol: 0.14, at: i * 0.05 }));
     },
     dash() { tone(2200, 1800, 0.03, { type: 'square', vol: 0.05 }); }, // quick footsteps while the bolt lasts
+    rain(dur) { hiss(dur, { f: 1800, q: 0.5, vol: 0.12 }); }, // a shower: soft broadband hiss for its length
+    wind(dur) { hiss(dur, { f: 420, q: 0.8, type: 'lowpass', vol: 0.16 }); }, // a cloud front rolling in
+    parade() { [67, 71, 74, 79, 74, 79].forEach((n, i) => tone(note(n), note(n), 0.13, { type: 'square', vol: 0.09, at: i * 0.12 })); }, // a little march
     combo(n) { const f = note(72 + Math.min(12, n)); tone(f, f * 1.5, 0.08, { type: 'square', vol: 0.1 }); }, // each link a step higher
     win() { [60, 64, 67, 72, 76].forEach((n, i) => tone(note(n), note(n), 0.35, { type: 'triangle', vol: 0.3, at: i * 0.1 })); },
     lose() { [67, 64, 60].forEach((n, i) => tone(note(n), note(n), 0.4, { type: 'triangle', vol: 0.25, at: i * 0.16 })); },

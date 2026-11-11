@@ -15,7 +15,7 @@ def frames_wait(pg, n=3):
 
 def boot(pg, day):
     # the date survives reloads through localStorage, so a test can move to another day and reload
-    pg.add_init_script(f"window.__DUSK_TEST__ = {{ fixedQuality: true, daily: true, today: localStorage.getItem('__day') || '{day}' }};")
+    pg.add_init_script(f"window.__DUSK_TEST__ = {{ fixedQuality: true, noEvents: true, daily: true, today: localStorage.getItem('__day') || '{day}' }};")
 
 wallet = lambda pg: pg.evaluate(f'{A}.Store.wallet')
 
