@@ -875,7 +875,7 @@
         const x0 = gx * CELL + ROAD / 2, y0 = gy * CELL + ROAD / 2, inner = CELL - ROAD;
         if (y0 + inner > waterY - 40) continue; // keep the quay clear
         if (stage.landmark && gx === (cells >> 1) && gy === (cells >> 1)) { // the village square and its great tree
-          parks.push([x0, y0, inner]); addObj(stage.landmark, x0 + inner / 2, y0 + inner / 2); square = [x0, y0, inner];
+          square = [x0, y0, inner]; parks.push(square); addObj(stage.landmark, x0 + inner / 2, y0 + inner / 2); // the same array: the pavilion loop tells the square apart by identity
           // a few trees around the great one, so the whole square has places to rest
           if (stage.squareTrees) for (const [fx, fy] of [[.2, .8], [.8, .8], [.8, .2], [.5, .9]]) addObj(stage.squareTrees, x0 + inner * fx, y0 + inner * fy);
           continue;

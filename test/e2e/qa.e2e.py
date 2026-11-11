@@ -56,14 +56,14 @@ with sync_playwright() as p:
     p0 = pos()
     cdp = pg.context.new_cdp_session(pg)
     cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': 200, 'y': 500}]})
-    for i in range(1, 30):
+    for i in range(1, 18):  # a short drag: small bodies are quick now, and a long one runs into the next building
         cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': 200 + way[0] * i * 3, 'y': 500 + way[1] * i * 3}]})
         pg.wait_for_timeout(16)
     frames_wait(pg)
     p1 = pos(); x0, x1 = 0, (p1[0] - p0[0]) * way[0] + (p1[1] - p0[1]) * way[1]  # distance along the drag
     cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
     # release: a short glide (GLIDE_S 0.3 s at start size), then a full stop
-    frames_wait(pg, 4); v_glide = pg.evaluate(f'Math.hypot({A}.s.player.vx, {A}.s.player.vy)')
+    frames_wait(pg, 1); v_glide = pg.evaluate(f'Math.hypot({A}.s.player.vx, {A}.s.player.vy)')  # read at once: a wall a few frames on would zero it
     frames_wait(pg, 40)  # by frames, not wall time: a slow software GPU runs fewer frames (dt is capped at 0.05 s)
     v_after = pg.evaluate(f'Math.hypot({A}.s.player.vx, {A}.s.player.vy)')
     rec('S2', 'touch drag moves the player, release glides then stops', x1 - x0 > 30 and v_glide > 5 and v_after == 0, f'dx={x1-x0:.0f} v_glide={v_glide:.1f} v_after={v_after:.1f}')
@@ -309,7 +309,10 @@ with sync_playwright() as p:
           const ray = new T.Raycaster(), out = [];
           for (let i = 0; i < 4000 && out.length < 500; i++) {
             const x = s.player.x + (Math.random() - .5) * 700, y = s.player.y + (Math.random() - .5) * 1400;
-            if (things.some(o => Math.hypot(o.x - x, o.y - y) < o.r + 4)) continue; // just off each prop, so prop shade (trees, parasols) is sampled too
+            // just off each prop, so prop shade (trees, parasols) is sampled too, but clear of the orange hint ring drawn on
+            // the ground around anything edible (radius r+2, a few units wide): that ring is bright by design
+            if (things.some(o => Math.hypot(o.x - x, o.y - y) < o.r + 12)) continue;
+            if (s.buildings.some(b => { if (b.state !== 0 || b.r >= s.player.r * 0.85) return false; const R = Math.hypot(b.w, b.d) / 2, d = Math.hypot(b.x + b.w / 2 - x, b.y + b.d / 2 - y); return Math.abs(d - R) < 9; })) continue;
             if (Math.hypot(s.player.x - x, s.player.y - y) < s.player.r * 1.6) continue;
             const v = C.inAnyShadow(sh, x, y);
             const edge = [[5,0],[-5,0],[0,5],[0,-5]].some(([dx,dy]) => C.inAnyShadow(sh, x+dx, y+dy) !== v);

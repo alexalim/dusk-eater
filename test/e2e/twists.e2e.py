@@ -168,7 +168,8 @@ with sync_playwright() as p:
         add('all', v);
         if (lx < ROAD / 2 || ly < ROAD / 2 || lx > CELL - ROAD / 2 || ly > CELL - ROAD / 2) add('lane', v);
         else if (Math.floor(x / CELL) === 4 && Math.floor(y / CELL) === 4) add('square', v); }}
-      const pav = s.buildings.some(b => !b.wall && b.w < 50 && Math.floor(b.x / CELL) === 4 && Math.floor(b.y / CELL) === 4);
+      // the pavilion stands to one side of the tree: never on top of it (TestFlight: a ring under the ginkgo nothing could reach)
+      const pav = s.buildings.some(b => !b.wall && b.w < 50 && Math.floor(b.x / CELL) === 4 && Math.floor(b.y / CELL) === 4 && t && Math.hypot(b.x + b.w / 2 - t.x, b.y + b.d / 2 - t.y) > 60);
       const f = k => z[k][1] / z[k][0];
       return [g.length, t && Math.hypot(t.x - 900, t.y - 900) < 250, under, pav, f('all'), f('lane'), f('square')]; }})()''')
     rec('W13', 'hanok: ginkgo and pavilion on the central square; at noon >= 15% shade overall, >= 7% in lanes, >= 15% on the square',
