@@ -226,10 +226,12 @@ with sync_playwright() as p:
     off = {th: v for th, v in noon.items() if not (bands.get(th, (6, 27))[0] <= v <= bands.get(th, (6, 27))[1])}  # six runs per map spread ±3 around these
     rec('W16', 'noon shade per region stays in its band (scarce 2-12%, dense up to 36%, others 6-27%)', not off, f'noon%={noon} off={off}')
 
-    # W17 zombies and combos: zombies shuffle on the town map; swallowing one slows the body for ~3 s, grows it not at
+    # W17 zombies and combos: six zombies shuffle on the town map, spread out and clear of the start; swallowing one slows the body for ~2 s, grows it not at
     # all and scores nothing; two quick swallows of ordinary things make a combo that multiplies the score
     pg.evaluate(f'{A}.start(0)'); pg.evaluate(f'{A}.skipTo(20)'); frames_wait(pg, 2)
-    z0 = pg.evaluate(f'''(() => {{ const s = {A}.s, z = s.objects.filter(o => o.type === 'zombie' && o.state === 0); return [z.length, z[0] && [z[0].x, z[0].y]]; }})()''')
+    z0 = pg.evaluate(f'''(() => {{ const s = {A}.s, z = s.objects.filter(o => o.type === 'zombie' && o.state === 0), p = s.player;
+        let gap = 1e9; for (const a of z) for (const b of z) if (a !== b) gap = Math.min(gap, Math.hypot(a.x - b.x, a.y - b.y));
+        return [z.length, z[0] && [z[0].x, z[0].y], Math.round(gap), Math.round(Math.min(...z.map(o => Math.hypot(o.x - p.x, o.y - p.y))))]; }})()''')
     frames_wait(pg, 20)
     moved = pg.evaluate(f'''(() => {{ const s = {A}.s, z = s.objects.filter(o => o.type === 'zombie' && o.state === 0)[0]; return z && Math.hypot(z.x - {z0[1][0]}, z.y - {z0[1][1]}); }})()''') if z0[1] else 0
     r0, s0 = pg.evaluate(f'[{A}.s.player.r, {A}.s.score]')
@@ -240,9 +242,9 @@ with sync_playwright() as p:
     pg.evaluate(f'''(() => {{ const s = {A}.s; for (const o of s.objects.filter(o => o.state === 0 && !TYPES_BAD(o)).slice(0, 2)) {{ o.state = 1; o.ft = 0.99; }} }})()'''.replace('TYPES_BAD(o)', "(o.type === 'zombie')"))
     frames_wait(pg, 3)
     combo = pg.evaluate(f'{A}.combo')
-    rec('W17', 'zombies shuffle; a zombie bite slows for ~3 s with no growth or points; two quick swallows start a combo',
-        z0[0] >= 8 and moved > 0.5 and s1 == s0 and r1 <= r0 + 0.01 and 2.3 <= slow <= 3 and combo >= 2,
-        f'zombies={z0[0]} moved={moved:.1f} score {s0}->{s1} r {r0:.1f}->{r1:.1f} slow-left={slow:.2f} combo={combo}')
+    rec('W17', 'six zombies, 190+ apart and 150+ from the start, shuffle; a bite slows for ~2 s with no growth or points; two quick swallows start a combo',
+        4 <= z0[0] <= 6 and z0[2] >= 190 and z0[3] >= 150 and moved > 0.5 and s1 == s0 and r1 <= r0 + 0.01 and 1.3 <= slow <= 2 and combo >= 2,
+        f'zombies={z0[0]} gap={z0[2]} from-start={z0[3]} moved={moved:.1f} score {s0}->{s1} r {r0:.1f}->{r1:.1f} slow-left={slow:.2f} combo={combo}')
 
     # W18 light shards: one appears in sunlight within reach by 12 s; touching it is enough; the cloud makes the sun
     # harmless around the body, the bolt raises the speed, the magnet pulls food in

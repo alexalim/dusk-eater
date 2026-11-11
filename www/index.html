@@ -629,7 +629,7 @@
   // ---------- world ----------
   const TYPES = {
     cat:       { r: 4,  color: '#e8a25a' },
-    zombie:    { r: 5,  color: '#6b5b7a', bad: true, slow: 3 }, // on every map; swallowing one chills you: slow for `slow` s, no growth, no points
+    zombie:    { r: 5,  color: '#6b5b7a', bad: true, slow: 2 }, // on every map (ZOMBIES of them); swallowing one chills you: slow for `slow` s, no growth, no points
     gull:      { r: 4,  color: '#f7f7f2' },
     person:    { r: 5,  color: '#5b8def' },
     worker:    { r: 5,  color: '#ff8a3d' },
@@ -924,6 +924,7 @@
   }
 
   const DENSITY = 1.5; // streets are busy: every theme's scatter counts, times this
+  const ZOMBIES = 6;   // per map, not scaled by DENSITY (buildWorld): a trap you can see coming, not a crowd
   function scatter(list, zoneTop, zoneBottom) {
     const R = (a, b) => a + rnd() * (b - a);
     for (const [type, n0] of list) {
@@ -1070,7 +1071,17 @@
       }
     }
     scatter(stage.small, 0, waterY - 10);
-    scatter([['zombie', 10]], 0, waterY - 10); // a few zombies on every map: the one thing you should not eat
+    // A few zombies on every map: the one thing you should not eat. Few (15 felt like an ambush), spread out so you never
+    // meet two in a row, and none near the middle, where the run starts (pickSpawn picks the shade nearest the centre).
+    {
+      const mid = { x: WORLD / 2, y: (waterY - 40) / 2 }, R = (a, b) => a + rnd() * (b - a), placed = [];
+      for (let tries = 0; placed.length < ZOMBIES && tries < 400; tries++) {
+        const x = R(10, WORLD - 10), y = R(10, waterY - 20);
+        if (Math.hypot(x - mid.x, y - mid.y) < 300 || insideAnyBuilding(x, y, TYPES.zombie.r + 2)) continue;
+        if (placed.some(p => Math.hypot(p.x - x, p.y - y) < 200)) continue;
+        addObj('zombie', x, y); placed.push({ x, y });
+      }
+    }
     if (stage.waterSmall) scatter(stage.waterSmall, waterY + 20, WORLD);
     for (let i = 0; i < stage.guards; i++) {
       const g = { x: R(200, WORLD - 200), y: R(200, waterY - 200), dir: rnd() * Math.PI * 2,
