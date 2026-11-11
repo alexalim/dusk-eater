@@ -45,8 +45,12 @@
   #hud {
     position: fixed; left: 0; right: 0; top: 0; pointer-events: none;
     padding: calc(env(safe-area-inset-top) + 10px) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
-    display: flex; flex-direction: column; gap: 6px;
+    display: flex; flex-direction: column; gap: 5px;
   }
+  /* The top keeps only the timer, size, score, goals and one status line; everything that comes and goes
+     (banners, book finds) appears low on the screen, and sunlight is a red glow at the screen edge, not a text box. */
+  #status { display: flex; justify-content: center; min-height: 0; }
+  #status .pill.muted { display: none; }
   /* Casual HUD: chunky rounded bars with a white outline, a glossy top and a drop shadow. */
   #sunbar { position: relative; height: 14px; border-radius: 999px; border: 2px solid rgba(255,255,255,.9);
     background: linear-gradient(90deg, #f3c27a, #fff1b8 50%, #f08a4b 85%, #3a2a7a 85%);
@@ -75,10 +79,10 @@
   #goals span.done { color: #2a1a05; background: var(--star); border-color: #fff; }
   #goals span.done::before { content: ''; display: inline-block; width: 1em; height: 1em; margin-right: 4px; vertical-align: -2px; background: url(img/ui/check.svg) center / contain no-repeat; }
   #cont .btn.off { opacity: .45; pointer-events: none; }
-  #bonus-pill { align-self: center; flex-direction: column; align-items: stretch; gap: 3px; min-width: 190px; font-size: 14px; padding: 4px 14px 6px; border-color: #ffd25c; color: #ffe8a0; }
+  #bonus-pill { align-self: center; flex-direction: column; align-items: stretch; gap: 2px; min-width: 150px; font-size: 13px; padding: 2px 12px 4px; border-color: #ffd25c; color: #ffe8a0; }
   #bonus-pill .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-  #bonus-pill b { font-size: 20px; color: #fff; }
-  #bonus-pill .bar { display: block; height: 6px; border-radius: 999px; background: rgba(255,255,255,.18); overflow: hidden; }
+  #bonus-pill b { font-size: 15px; color: #fff; }
+  #bonus-pill .bar { display: block; height: 4px; border-radius: 999px; background: rgba(255,255,255,.18); overflow: hidden; }
   #bonus-pill .bar i { display: block; height: 100%; background: linear-gradient(90deg, #ffd25c, #ff9f43); transition: width .2s linear; }
   #bonus-pill.urgent { border-color: var(--danger); animation: rushpulse .4s ease-in-out infinite alternate; }
   #bonus-pill.urgent b { color: var(--danger); }
@@ -95,18 +99,17 @@
   @keyframes popin { 0% { transform: translateX(-50%) scale(.6); } 100% { transform: translateX(-50%) scale(1); } }
   #twist-demo { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #3a3360; margin: 2px 0 4px; }
   #twist-demo img { width: 44px; height: 44px; filter: sepia(1) saturate(5) hue-rotate(-8deg) brightness(1.15) drop-shadow(0 0 6px #ffd25c); }
-  #rush-pill { align-self: center; font-size: 16px; padding: 4px 16px; color: #2a1a05; background: linear-gradient(#ffe8a0, #ffc94d);
+  #rush-pill { align-self: center; font-size: 14px; padding: 2px 14px; color: #2a1a05; background: linear-gradient(#ffe8a0, #ffc94d);
     border-color: #fff; animation: rushpulse .5s ease-in-out infinite alternate; }
   @keyframes rushpulse { to { transform: scale(1.08); } }
-  #hunger-pill { align-self: center; font-size: 14px; padding: 4px 14px; border-color: #ff9f9f; color: #ffe0e0; }
+  #hunger-pill { align-self: center; font-size: 13px; padding: 2px 12px; border-color: #ff9f9f; color: #ffe0e0; }
   #hunger-pill b { font-size: 20px; color: #fff; margin-left: 4px; }
   #hunger-pill.starve { background: #c0392b; border-color: #fff; color: #fff; animation: rushpulse .4s ease-in-out infinite alternate; }
   #score.rush { color: var(--star); }
-  #boss-pill { align-self: center; font-size: 13px; padding: 4px 12px; border-color: #c94dff; }
+  #boss-pill { align-self: center; font-size: 13px; padding: 2px 12px; border-color: #c94dff; }
   #boss-pill.ready { color: #2a1a05; background: var(--star); border-color: #fff; }
-  #warn { align-self: center; padding: 4px 14px; border-radius: 999px; background: rgba(18,10,42,.78); /* readable on sunny ground */
-    text-align: center; color: var(--danger); font-weight: 800; font-size: 15px; opacity: 0;
-    transition: opacity .15s; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+  #warn { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .15s;
+    box-shadow: inset 0 0 70px 14px rgba(255, 107, 107, .55); }
   #stats .right { display: flex; align-items: center; gap: 10px; }
   #btn-pause { pointer-events: auto; width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
     background: rgba(20,18,38,.6); color: var(--text); font: 14px var(--display); }
@@ -116,7 +119,7 @@
     word-break: keep-all; text-align: center; pointer-events: none; }
   #tutorial .step { display: block; font-size: 12px; color: var(--star); margin-bottom: 4px; }
   #tutorial .skip { pointer-events: auto; display: inline-block; margin-top: 8px; font-size: 13px; color: var(--muted); cursor: pointer; }
-  #banner { position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); width: max-content; max-width: min(88vw, 340px); text-align: center; line-height: 1.4; padding: 6px 14px; border-radius: 16px; font-weight: 800; font-size: 15px;
+  #banner { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 150px); transform: translateX(-50%); width: max-content; max-width: min(88vw, 340px); text-align: center; line-height: 1.4; padding: 6px 14px; border-radius: 16px; font-weight: 800; font-size: 15px;
     color: #2a1a05; background: var(--star); opacity: 0; transition: opacity .3s; }
   .overlay {
     position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
@@ -365,8 +368,8 @@
   .badge { display: inline-block; min-width: 20px; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
     background: var(--star); color: #2a1a05; font-size: 13px; vertical-align: 2px; }
   .badge:empty { display: none; }
-  #dex-new { position: absolute; left: 50%; top: calc(100% + 48px); transform: translateX(-50%); white-space: nowrap;
-    padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 14px; background: var(--card); color: var(--text);
+  #dex-new { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 200px); transform: translateX(-50%); white-space: nowrap;
+    padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 14px; background: rgba(18,10,42,.88); color: #fff;
     border: 2px solid var(--star); opacity: 0; pointer-events: none; transition: opacity .3s; }
   #dex-new.show { opacity: 1; }
   .boosts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -393,11 +396,13 @@
   <div id="sunbar"><div id="sun"></div></div>
   <div id="stats"><span id="size" class="pill">크기 0</span><span class="right"><span class="pill" id="score-pill"><span id="score">0</span></span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></span></div>
   <div id="goals"></div>
-  <div id="boss-pill" class="pill hidden"></div>
-  <div id="rush-pill" class="pill hidden"></div>
-  <div id="hunger-pill" class="pill hidden"></div>
-  <div id="bonus-pill" class="pill hidden"></div>
-  <div id="warn"><img class="ico face" src="img/ui/face-surprised.svg" alt=""> 앗, 햇빛이에요! 몸이 줄어들어요</div>
+  <div id="status"><!-- one status at a time (hudStatus): hunger, then the bolt mission, the rush, the boss -->
+    <div id="boss-pill" class="pill hidden"></div>
+    <div id="rush-pill" class="pill hidden"></div>
+    <div id="hunger-pill" class="pill hidden"></div>
+    <div id="bonus-pill" class="pill hidden"></div>
+  </div>
+  <div id="warn" role="status" aria-label="햇빛이에요! 몸이 줄어들어요"></div>
   <div id="banner">미션 완료! 밤이 일찍 와요 <img class="ico" src="img/ui/moon.svg" alt=""></div>
   <div id="dex-new"></div>
 </div>
@@ -632,10 +637,10 @@
     fountain:  { r: 22, color: '#cfd8e0' },
     hanbok:    { r: 5,  color: '#e85d75', colors: ['#e85d75', '#5b8def', '#f2c14e', '#9bc53d', '#c46fd8'] },
     jangdok:   { r: 5,  color: '#5a3a2a' },
-    persimmon: { r: 14, color: '#3f7d3f', canopy: [1.8, 0.9] }, // its crown shades the ground (core canopyShadow)
+    persimmon: { r: 14, color: '#3f7d3f' },
     pagoda:    { r: 12, color: '#b8b2a6' },
     fence:     { r: 9,  color: '#e3d5b8' }, // the book entry; in the world it is a thin wall building (compound)
-    ginkgo:    { r: 30, color: '#f2c230', canopy: [2.0, 1.0] }, // canopy [height, radius] in r: its crown casts shade (core canopyShadow)
+    ginkgo:    { r: 30, color: '#f2c230' },
     student:   { r: 5,  color: '#2f3e66', colors: ['#2f3e66', '#c0392b', '#3f9b4f', '#f2c14e'] },
     bicycle:   { r: 6,  color: '#e5533d', colors: ['#e5533d', '#2f6fd6', '#2a2a2a'] },
     statue:    { r: 14, color: '#9aa5a8' },
@@ -677,12 +682,27 @@
     tractor:   { r: 14, color: '#3f9b4f' },
     haystack:  { r: 9,  color: '#e8c66a' },
   };
+  // Props that throw shade, with the shape of that shade (core propShadow), matched to the parts render3d draws into
+  // the shadow map (CASTERS there). Trees, parasols, tents, haystacks, stalls and containers shade like buildings do.
+  const SHADE = {
+    tree:      { discs: [[1.2, 0.85], [1.8, 1.0], [2.4, 0.85], [3.0, 0.45]] },
+    persimmon: { discs: [[1.2, 0.75], [1.8, 1.0], [2.4, 0.75]] },
+    ginkgo:    { discs: [[1.4, 0.85], [1.8, 1.1], [2.2, 1.0], [2.6, 0.75], [3.0, 0.4]] },
+    pine:      { discs: [[0.8, 1.0], [1.95, 0.72], [3.25, 0.05]] },
+    xtree:     { discs: [[0.5, 1.0], [1.45, 0.75], [2.3, 0.5], [3.1, 0.05]] },
+    palm:      { discs: [[2.6, 0.5]] }, // a cross of fronds: a small disc under-covers it rather than filling the gaps
+    parasol:   { discs: [[1.7, 1.1], [2.1, 0.05]] },
+    tent:      { discs: [[0, 1.1], [1.3, 0.05]] },
+    haystack:  { discs: [[0, 1.0], [1.1, 1.02], [1.5, 0.05]] },
+    stall:     { box: [1.45, 1.8, 1.3] },
+    container: { box: [1.24, 2.64, 1.24] },
+  };
   const CAR_COLORS = ['#e2574c', '#f2c14e', '#4fb0c6', '#f4f1ea', '#7b68ee'];
   const CONTAINER_COLORS = ['#4f86c6', '#d9534f', '#5cb85c', '#f0ad4e', '#8e6fc1'];
 
   let stage, stageIndex, waterY, buildings, objects, guards, lighthouse, player, state, elapsed;
   let lots = []; // open lots [x0, y0, size]: parks, plazas, fields (the renderer lays lawns on them)
-  let casters = []; // objects whose crown casts shade (TYPES[].canopy)
+  let casters = []; // props that throw shade (SHADE below, core propShadow)
   let score, stats, shadows, sun, phase, rnd, runSun = 1;
   let bannerUntil = 0; // elapsed second until which the banner shows
   // The bolt mission's target: a kind with plenty left on the map that the player can already swallow.
@@ -695,6 +715,14 @@
     banner(`${ico('bolt')} 번개 미션! ${BONUS_S}초 안에 ${NAMES[type][0]} ${n}${NAMES[type][1]} 삼키기`, 2.5);
     Sound.sfx.star();
     return { type, n, got: 0, until: elapsed + BONUS_S, done: false };
+  }
+  // One status pill at a time under the goals, by urgency: hunger, the bolt mission, the rush, the boss.
+  function hudStatus() {
+    let shown = false;
+    for (const id of ['hunger-pill', 'bonus-pill', 'rush-pill', 'boss-pill']) {
+      const el = $(id), on = !el.classList.contains('hidden');
+      el.classList.toggle('muted', on && shown); if (on) shown = true;
+    }
   }
   function banner(html, secs) {
     const b = $('banner'); b.innerHTML = html; bannerUntil = elapsed + secs;
@@ -762,7 +790,7 @@
   // The clock stays frozen until the first swallow, so nobody learns under time pressure.
   const TUTORIAL = [
     { text: '화면을 손가락으로 끌면 움직여요. 한번 움직여 볼까요?', done: tt => tt.moved > 120 },
-    { text: '햇빛에 나가면 몸이 줄어요. 건물 그늘에 쏙 숨어 있어요.', done: tt => tt.t > 4 },
+    { text: '햇빛에 나가면 몸이 줄어요. 건물이나 나무 그늘에 쏙 숨어 있어요.', done: tt => tt.t > 4 },
     { text: '주황 고리가 있는 건 먹을 수 있어요. 가까이 가 볼까요?', done: () => stats.total >= 1 },
     { text: '먹을수록 커지고, 커지면 더 큰 것도 먹을 수 있어요!', done: tt => tt.t > 4, clock: true },
     { text: '해가 움직이면 그늘도 따라 움직여요. 맨 위 막대가 하루예요.', done: tt => tt.t > 5, clock: true },
@@ -948,11 +976,40 @@
     }
     const L = stage.lighthouse;
     lighthouse = L ? { x: WORLD * L.x, y: WORLD * L.y, range: L.range, half: L.half, speed: L.speed, dir: 0 } : null;
-    casters = objects.filter(o => TYPES[o.type].canopy);
+    casters = objects.filter(o => SHADE[o.type]);
   }
   // Everything that throws shade right now: standing buildings (walls included) and big trees' crowns.
   const shadeCasts = () => buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun))
-    .concat(casters.filter(o => o.state === 0).map(o => C.canopyShadow(o, TYPES[o.type].canopy, sun)));
+    .concat(propShades());
+  // A prop's shade only depends on its type, size and turn (and the sun), not where it stands: work the shape out once
+  // per kind for this sun, then move a copy to each prop. Hundreds of trees cost a few hull computations.
+  function propShades() {
+    const kinds = new Map(), out = [];
+    for (const o of casters) {
+      if (o.state !== 0) continue;
+      const key = o.type + '|' + o.r + '|' + (o.rot || 0);
+      let t = kinds.get(key);
+      if (!t) { t = C.propShadow({ x: 0, y: 0, r: o.r, rot: o.rot || 0 }, SHADE[o.type], sun); kinds.set(key, t); }
+      out.push({ poly: t.poly.map(q => [q[0] + o.x, q[1] + o.y]), minX: t.minX + o.x, maxX: t.maxX + o.x, minY: t.minY + o.y, maxY: t.maxY + o.y, owner: o });
+    }
+    return out;
+  }
+  // Shade lookups go through a coarse grid (SG units a cell): each shadow is listed in every cell its box touches,
+  // so a point tests only the few shadows near it instead of every one on the map.
+  const SG = 120;
+  let shadeGrid = new Map(), shadeAt = -1, shadeDark = false, shadeStale = true;
+  function setShadows(list) {
+    shadows = list; shadeGrid = new Map();
+    for (const s of list) {
+      const x0 = Math.max(-20, Math.floor(s.minX / SG)), x1 = Math.min(40, Math.floor(s.maxX / SG));
+      const y0 = Math.max(-20, Math.floor(s.minY / SG)), y1 = Math.min(40, Math.floor(s.maxY / SG));
+      for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++) {
+        const k = gx * 100 + gy, cell = shadeGrid.get(k);
+        if (cell) cell.push(s); else shadeGrid.set(k, [s]);
+      }
+    }
+  }
+  const shadeNear = (x, y) => shadeGrid.get(Math.floor(x / SG) * 100 + Math.floor(y / SG)) || [];
 
   // Buildings are solid unless they are food right now (small enough and in shade, the same rule as eating):
   // the body is pushed back out to its edge and bounces off instead of sliding through the walls.
@@ -1017,7 +1074,7 @@
     stats = { score: 0, eaten: {}, beamHit: false, total: 0, lit: false, night: 0, maxR: 0 };
     Sound.music.tune(stage.theme); Sound.music.mode(stage.boss ? 'boss' : 'play'); // every region has its own tune
     phase = C.dayPhase(0); sun = C.sunState(phase.dayT, stage.sunMax);
-    shadows = shadeCasts();
+    setShadows(shadeCasts()); shadeAt = phase.dayT; shadeDark = false; shadeStale = false;
     const spawn = pickSpawn();
     // Level perks (level.js): a bigger start and less shrinking in sunlight, fixed for the whole run.
     const perk = Level.perksOf(Level.levelOf(Store.wallet.stats.xp).level);
@@ -1098,13 +1155,13 @@
     if (inBeam(o.x, o.y, exclude)) return false;
     if (phase.night || eclipse) return true;
     if (clouds.some(c => Math.hypot(o.x - c.x, o.y - c.y) < c.r)) return true;
-    return C.inAnyShadow(shadows, o.x, o.y, exclude);
+    return C.inAnyShadow(shadeNear(o.x, o.y), o.x, o.y, exclude);
   }
 
   function centerOf(b) { return { x: b.x + b.w / 2, y: b.y + b.d / 2 }; }
 
   function startSwallow(o, ox, oy) {
-    o.state = 1; o.ft = 0; o.fx = ox; o.fy = oy;
+    o.state = 1; o.ft = 0; o.fx = ox; o.fy = oy; shadeStale = true; // it no longer casts shade
     Sound.sfx.voice(o.type); // its cry, honk or rustle as it gets sucked in
   }
 
@@ -1128,14 +1185,19 @@
     hunger = tut ? null : C.hungerState(elapsed - Math.max(lastEat, C.HUNGER.grace));
     if (hunger && hunger.phase === 'count' && Math.ceil(hunger.left) !== hungerTick) { hungerTick = Math.ceil(hunger.left); Sound.sfx.tick(); }
     if (hunger && hunger.phase === 'starve') {
-      if (!starving) { starving = true; stats.hungry = 1; banner(`${face('surprised')} 너무 배고파요! 몸이 줄어들어요`, 2.5); punch(1, '#ff8a8a'); }
+      if (!starving) { starving = true; stats.hungry = 1; punch(1, '#ff8a8a'); } // the hunger pill turns red and says so
       player.r = Math.max(10, player.r - C.HUNGER.shrink * dt);
       if (player.r <= 10.001 && (starveT += dt) >= C.HUNGER.end) { endedBy = 'hunger'; return finish(); }
     }
     const wasEclipse = eclipse;
     eclipse = stage.twist === 'eclipse' && gameT >= ECLIPSE_AT && gameT < ECLIPSE_AT + ECLIPSE_S / runDuration;
     if (eclipse && !wasEclipse) { banner(`${ico('eclipse')} 일식! 지금은 어디든 그늘이에요`, ECLIPSE_S); Sound.sfx.night(); }
-    shadows = phase.night || eclipse ? [] : shadeCasts();
+    // Shade is rebuilt when the sun has moved a little (every ~0.12 s of game time), when something stops casting
+    // (swallowed), and when night or the eclipse starts or ends — not every frame: hundreds of props cast shade.
+    const dark = phase.night || eclipse;
+    if (shadeStale || dark !== shadeDark || Math.abs(phase.dayT - shadeAt) > 0.0015) {
+      setShadows(dark ? [] : shadeCasts()); shadeAt = phase.dayT; shadeDark = dark; shadeStale = false;
+    }
     // Clouds drift slowly with the wind (about a third of a map per run), with only a faint sideways sway.
     const CLOUD_V = 8;
     // past the right edge (+100) a cloud comes back in from the left (-100); the span is WORLD + 200
@@ -1201,7 +1263,7 @@
       const over = o.wall && player.r >= WALL_OVER;
       if (C.canEat(player.r, o.r, golden || over || isShaded({ x: ox, y: oy }, exclude), dist)) startSwallow(o, ox, oy);
     };
-    for (const o of objects) if (o.state === 0) tryEat(o, o.x, o.y, null);
+    for (const o of objects) if (o.state === 0) tryEat(o, o.x, o.y, o); // its own crown's shade doesn't count
     for (const g of guards) if (g.state === 0) tryEat(g, g.x, g.y, g);
     for (const b of buildings) if (b.state === 0) { const c = centerOf(b); tryEat(b, c.x, c.y, b); }
 
@@ -1270,7 +1332,7 @@
     for (const o of objects) {
       if (o.state !== 0 || o.r >= player.r * C.EAT_RATIO) continue;
       if (Math.hypot(o.x - player.x, o.y - player.y) > 260 + player.r) continue;
-      if (isShaded(o, null) || o.goldUntil > elapsed) hints.push({ x: o.x, y: o.y, r: o.r + 2 });
+      if (isShaded(o, o) || o.goldUntil > elapsed) hints.push({ x: o.x, y: o.y, r: o.r + 2 });
     }
     for (const g of guards) {
       if (g.state === 0 && g.r < player.r * C.EAT_RATIO && isShaded(g, g)) hints.push({ x: g.x, y: g.y, r: g.r + 3 });
@@ -1353,8 +1415,9 @@
     if (boss && boss.state === 0) {
       const big = boss.r < player.r * C.EAT_RATIO;
       $('boss-pill').classList.toggle('ready', big);
-      $('boss-pill').innerHTML = `${ico('crown')} 거대 등불지기 · ${big ? '지금 그늘에서 삼켜요!' : `${(boss.r / C.EAT_RATIO / 4).toFixed(1)}m 넘게 커지면 삼킬 수 있어요`}`;
+      $('boss-pill').innerHTML = `${ico('crown')} ${big ? '등불지기를 그늘에서 꿀꺽!' : `${(boss.r / C.EAT_RATIO / 4).toFixed(1)}m 넘게 크면 꿀꺽`}`;
     }
+    hudStatus();
     $('sun').style.left = (Math.min(elapsed / runDuration, 1) * 100) + '%';
     $('size').textContent = '크기 ' + (player.r / 4).toFixed(1) + 'm';
     if ($('score').textContent !== score.toLocaleString()) showScore();
@@ -2146,11 +2209,11 @@
 
   // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
   if (window.__DUSK_TEST__) {
-    window.__DUSK_TEST__.api = { start, openDaily, isShaded, get punches() { return punches; }, get tiers() { return [...tierDone]; }, get camPulse() { return camPulse; }, centerOf, input, skipTo: sec => { elapsed = sec; lastEat = sec; tut = null; }, view,
+    window.__DUSK_TEST__.api = { start, openDaily, isShaded, get punches() { return punches; }, get tiers() { return [...tierDone]; }, get camPulse() { return camPulse; }, centerOf, input, skipTo: sec => { elapsed = sec; lastEat = sec; tut = null; shadeStale = true; }, view,
       hungerSet: (since, starved = 0) => { lastEat = elapsed - since; starveT = starved; }, get hunger() { return hunger; }, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },
-      get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase, sun, clouds, eclipse, elapsed, runDuration, rush }; } };
+      get s() { return { player, objects, guards, buildings, lighthouse, stats, score, state, phase, sun, clouds, eclipse, elapsed, runDuration, rush, shadows }; } };
   }
 })();
 </script>

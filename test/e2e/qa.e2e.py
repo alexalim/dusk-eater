@@ -298,17 +298,18 @@ with sync_playwright() as p:
           const A = window.__DUSK_TEST__.api, C = window.DuskCore, s = A.s, T = window.THREE;
           const { camera, scene } = A.R.debug;
           const sun = s.sun; // the stage's own sun (snow keeps it low)
-          const sh = s.buildings.filter(b => b.state === 0).map(b => C.shadowPolygon(b, sun));
+          const sh = s.shadows; // the game's own shade list for this frame: buildings and shade-casting props (trees, parasols...)
           const things = s.objects.filter(o => o.state === 0).concat(s.guards);
           // HUD pieces drawn over the ground (banners, timers, warnings) would read as "bright": skip points under them
-          const covers = ['#banner', '#bonus-pill', '#rush-pill', '#boss-pill', '#warn', '#goals', '#stats', '#sunbar', '#tutorial', '#dex-new']
+          document.getElementById('warn').style.visibility = 'hidden'; // the sunlight edge glow tints the frame; not ground
+          const covers = ['#banner', '#status', '#goals', '#stats', '#sunbar', '#tutorial', '#dex-new']
             .map(q => document.querySelector(q)).filter(e => e && !e.classList.contains('hidden') && getComputedStyle(e).opacity !== '0')
             .map(e => e.getBoundingClientRect()).filter(r => r.width && r.height);
           const covered = (sx, sy) => covers.some(r => sx > r.left - 4 && sx < r.right + 4 && sy > r.top - 4 && sy < r.bottom + 4);
           const ray = new T.Raycaster(), out = [];
           for (let i = 0; i < 4000 && out.length < 500; i++) {
             const x = s.player.x + (Math.random() - .5) * 700, y = s.player.y + (Math.random() - .5) * 1400;
-            if (things.some(o => Math.hypot(o.x - x, o.y - y) < o.r * 3 + 6)) continue;
+            if (things.some(o => Math.hypot(o.x - x, o.y - y) < o.r + 4)) continue; // just off each prop, so prop shade (trees, parasols) is sampled too
             if (Math.hypot(s.player.x - x, s.player.y - y) < s.player.r * 1.6) continue;
             const v = C.inAnyShadow(sh, x, y);
             const edge = [[5,0],[-5,0],[0,5],[0,-5]].some(([dx,dy]) => C.inAnyShadow(sh, x+dx, y+dy) !== v);

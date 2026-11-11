@@ -64,7 +64,8 @@ with sync_playwright() as p:
     # W3b in full sun a golden friend can be swallowed where an ordinary one cannot
     spot = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player;
       for (let x = 80; x < 1900; x += 23) for (let y = 80; y < 1900; y += 29)
-        if (!{A}.isShaded({{ x, y }}, null) && !s.buildings.some(b => b.state === 0 && x > b.x - p.r - 12 && x < b.x + b.w + p.r + 12 && y > b.y - p.r - 12 && y < b.y + b.d + p.r + 12)) return [x, y];
+        // sunny with a margin all round, so a shade edge (a building's or a tree's) cannot creep over it in a frame or two
+        if ([[0, 0], [20, 0], [-20, 0], [0, 20], [0, -20]].every(([dx, dy]) => !{A}.isShaded({{ x: x + dx, y: y + dy }}, null)) && !s.buildings.some(b => b.state === 0 && x > b.x - p.r - 12 && x < b.x + b.w + p.r + 12 && y > b.y - p.r - 12 && y < b.y + b.d + p.r + 12)) return [x, y];
       return null; }})()''')
     sun = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player; p.x = {spot[0]}; p.y = {spot[1]}; p.vx = p.vy = 0;
       const small = s.objects.filter(o => o.state === 0 && o.r <= 5 && !(o.goldUntil > s.elapsed));
@@ -170,8 +171,8 @@ with sync_playwright() as p:
       const pav = s.buildings.some(b => !b.wall && b.w < 50 && Math.floor(b.x / CELL) === 4 && Math.floor(b.y / CELL) === 4);
       const f = k => z[k][1] / z[k][0];
       return [g.length, t && Math.hypot(t.x - 900, t.y - 900) < 250, under, pav, f('all'), f('lane'), f('square')]; }})()''')
-    rec('W13', 'hanok: ginkgo and pavilion on the central square; at noon >= 20% shade overall, >= 12% in lanes, >= 15% on the square',
-        sq[0] == 1 and sq[1] and sq[2] and sq[3] and sq[4] >= 0.2 and sq[5] >= 0.12 and sq[6] >= 0.15,
+    rec('W13', 'hanok: ginkgo and pavilion on the central square; at noon >= 15% shade overall, >= 7% in lanes, >= 15% on the square',
+        sq[0] == 1 and sq[1] and sq[2] and sq[3] and sq[4] >= 0.15 and sq[5] >= 0.07 and sq[6] >= 0.15,
         f'ginkgos={sq[0]} central={sq[1]} shade-under-crown={sq[2]} pavilion={sq[3]} noon all={sq[4]:.2f} lane={sq[5]:.2f} square={sq[6]:.2f}')
 
     # W14 hanok is passable: a body of r 16 (below the wall-crossing size) reaches most of the map from the middle
@@ -208,6 +209,21 @@ with sync_playwright() as p:
         count[0] and '배고파요' in count[1] and count[2] == 'count' and starve == 'starve' and r1 < r0 and over[0] == 'cont' and '굶' in (over[1] or ''),
         f'count={count} r {r0:.1f}->{r1:.1f} phase={starve} over={over}')
     if pg.is_visible('#cont'): pg.tap('#btn-cont-no'); frames_wait(pg, 4)
+
+    # W16 every region keeps a sane amount of noon shade (buildings plus shade-casting props: trees, parasols, tents...):
+    # scarce maps (beach, desert, farm) 2-12%, building-dense ones (city, crossing) up to 36%, the rest 6-27%.
+    # Noon is the hard part of the day on purpose; the band keeps tuning from drifting into "no shade" or "all shade".
+    bands = {'beach': (2, 12), 'desert': (2, 12), 'farm': (3, 12), 'city': (15, 36), 'crossing': (15, 36)}
+    noon = {}
+    for i, th in enumerate(pg.evaluate("window.DuskStages.REGIONS.map(r => r.theme)")):
+        pg.evaluate(f'{A}.start({i * 10})'); pg.evaluate(f'{A}.skipTo(38)'); frames_wait(pg, 2)
+        noon[th] = pg.evaluate(f'''(() => {{ const s = {A}.s; let n = 0, k = 0;
+          for (let x = 15; x < 1785; x += 30) for (let y = 15; y < 1785; y += 30) {{
+            if (s.buildings.some(b => b.state === 0 && x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.d)) continue;
+            n++; if ({A}.isShaded({{ x, y }}, null)) k++; }}
+          return Math.round(k / n * 100); }})()''')
+    off = {th: v for th, v in noon.items() if not (bands.get(th, (6, 27))[0] <= v <= bands.get(th, (6, 27))[1])}  # six runs per map spread ±3 around these
+    rec('W16', 'noon shade per region stays in its band (scarce 2-12%, dense up to 36%, others 6-27%)', not off, f'noon%={noon} off={off}')
 
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune

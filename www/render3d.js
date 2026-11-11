@@ -29,7 +29,10 @@
   // own color; glow parts ignore lighting (headlights).
   const P = (geo, s, y, color, o, glow) => ({ geo, s, y, color, o, glow });
   const HAIR = '#4a3426', SKIN = '#f6d2b0';
-  const CASTERS = new Set(['ginkgo', 'persimmon']); // prop types whose parts cast shadows (their TYPES entry has a canopy for the rule)
+  // Prop parts drawn into the shadow map: the crown, canopy or body only (no trunks, poles, fruit or ornaments), the same
+  // shapes the game's shade rule models (index.html SHADE, core propShadow). type -> part indices.
+  const CASTERS = { tree: [1, 2], persimmon: [1], ginkgo: [1, 2, 3, 4], pine: [1, 2], xtree: [1, 2, 3], palm: [1, 2],
+    parasol: [1], tent: [0], haystack: [0, 1], stall: [0, 1], container: [0, 1] };
   // A person: body in the instance color, head, hair or hat, plus any extra parts.
   const human = (hat = HAIR, extra = []) => [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN),
     P('sphere', [0.58, 0.32, 0.58], 2.7, hat)].concat(extra);
@@ -604,7 +607,7 @@
           const mat = part.glow ? new T.MeshBasicMaterial({ color: col(c) }) : lambert(c);
           const im = new T.InstancedMesh(low[part.geo], mat, list.length);
           im.receiveShadow = true;
-          if (CASTERS.has(type)) im.castShadow = true; // a great tree's crown shades the ground, as the rule says
+          if (CASTERS[type] && CASTERS[type].includes(PARTS[type].indexOf(part))) im.castShadow = true; // shades the ground, as the rule says
           // Every part gets an instance color up front (white = the material's own color), so turning an object
           // golden later is just a color write, never a shader recompile.
           list.forEach((o, i) => im.setColorAt(i, tmpCol.set(part.color === 'inst' ? o.color : '#ffffff')));

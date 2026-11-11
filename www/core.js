@@ -102,13 +102,23 @@
     const corners = [[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.d], [b.x, b.y + b.d]];
     return boxed(convexHull(corners.concat(corners.map(c => [c[0] + ox, c[1] + oy]))), b);
   }
-  // The shade of a round canopy (a big tree): the hull of its disc cast from the lower and upper halves of the
-  // crown, close to what the shadow map draws for the rendered blob. canopy = [crown height, crown radius] in o.r units.
-  function canopyShadow(o, canopy, sun) {
-    const H = canopy[0] * o.r, R = canopy[1] * o.r, pts = [];
-    for (const h of [H - R * 0.5, H + R * 0.5]) {
-      const len = shadowLength(h, sun.elev), cx = o.x + sun.sx * len, cy = o.y + sun.sy * len;
-      for (let i = 0; i < 8; i++) pts.push([cx + R * Math.cos(i * Math.PI / 4), cy + R * Math.sin(i * Math.PI / 4)]);
+  // The shade a prop throws, matched to its rendered shape (the parts that cast in render3d CASTERS), in o.r units:
+  //  - discs: [[height, radius], ...] — horizontal slices of a crown, cone or drum; the shadow is the hull of each
+  //    slice cast to the ground (exact for cones and cylinders, close for round crowns);
+  //  - box: [height, w, d] — a block standing on the ground (w along the prop's own x, turned by o.rot), cast like a building.
+  function propShadow(o, shade, sun) {
+    const r = o.r, pts = [];
+    if (shade.box) {
+      const [h, w, d] = shade.box, c = Math.cos(o.rot || 0), s = Math.sin(o.rot || 0), len = shadowLength(h * r, sun.elev);
+      for (const [lx, lz] of [[-w, -d], [w, -d], [w, d], [-w, d]]) {
+        const x = o.x + (lx * c - lz * s) * r / 2, y = o.y + (lx * s + lz * c) * r / 2;
+        pts.push([x, y], [x + sun.sx * len, y + sun.sy * len]);
+      }
+    } else {
+      for (const [h, R] of shade.discs) {
+        const len = shadowLength(h * r, sun.elev), cx = o.x + sun.sx * len, cy = o.y + sun.sy * len;
+        for (let i = 0; i < 12; i++) pts.push([cx + R * r * Math.cos(i * Math.PI / 6), cy + R * r * Math.sin(i * Math.PI / 6)]);
+      }
     }
     return boxed(convexHull(pts), o);
   }
@@ -176,7 +186,7 @@
   const api = {
     DURATION, NIGHT_START, EAT_RATIO, MAX_SHADOW,
     mulberry32, dayPhase, sunState, shadowLength, convexHull, pointInConvex,
-    shadowPolygon, canopyShadow, inAnyShadow, inCone, canEat, grow, HUNGER, hungerState,
+    shadowPolygon, propShadow, inAnyShadow, inCone, canEat, grow, HUNGER, hungerState,
     goalProgress, evaluateStars, isUnlocked, isCleared,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
