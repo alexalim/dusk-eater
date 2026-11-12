@@ -40,8 +40,10 @@
     person:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.58, 0.32, 0.58], 2.7, HAIR)],
     worker:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.62, 0.36, 0.62], 2.72, '#f2c14e')],
     // a zombie: green skin, dark hair, torn clothes in the instance color, both arms out in front (forward is +x)
-    zombie:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, '#9bd38a'), P('sphere', [0.58, 0.32, 0.58], 2.7, '#3a4a2a'),
-                P('box', [0.9, 0.22, 0.22], 1.9, '#9bd38a', [0.6, 0.35]), P('box', [0.9, 0.22, 0.22], 1.9, '#9bd38a', [0.6, -0.35])],
+    // (TestFlight: "hard to tell apart in a crowd") so the skin is a louder green, the eyes glow and never dim at night
+    zombie:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, '#8fe07a'), P('sphere', [0.3, 0.2, 0.34], 2.88, '#2a3a1e', [-0.12, 0]), // a bald green head with a tuft, so it reads green from above
+                P('box', [0.9, 0.22, 0.22], 1.9, '#8fe07a', [0.6, 0.35]), P('box', [0.9, 0.22, 0.22], 1.9, '#8fe07a', [0.6, -0.35]),
+                P('sphere', [0.13, 0.13, 0.13], 2.5, '#eaff5c', [0.48, 0.2], true), P('sphere', [0.13, 0.13, 0.13], 2.5, '#eaff5c', [0.48, -0.2], true)],
     cat:       [P('blob', [1.1, 0.6, 0.6], 0.6, 'inst'), P('sphere', [0.5, 0.48, 0.5], 1.05, 'inst', [1.0, 0]),
                 P('cone', [0.17, 0.4, 0.17], 1.55, 'inst', [1.05, 0.26]), P('cone', [0.17, 0.4, 0.17], 1.55, 'inst', [1.05, -0.26]),
                 P('cyl', [0.12, 1.0, 0.12], 1.0, 'inst', [-1.1, 0])],
@@ -76,12 +78,17 @@
     // snow village
     skier:     [P('box', [0.2, 0.08, 2.4], 0.05, '#2b3550'), P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN),
                 P('sphere', [0.6, 0.36, 0.6], 2.72, '#f7f9fc')],
+    // a snowman is white on white snow, so what makes it read is the dark bits: hat, coal eyes and buttons, a red scarf
     snowman:   [P('sphere', [0.8, 0.8, 0.8], 0.8, 'inst'), P('sphere', [0.55, 0.55, 0.55], 1.9, 'inst'), P('cyl', [0.35, 0.4, 0.35], 2.55, '#222222'),
-                P('cone', [0.08, 0.3, 0.08], 1.95, '#f28c28', [0.55, 0])],
+                P('cone', [0.08, 0.3, 0.08], 1.95, '#f28c28', [0.55, 0]), P('cyl', [0.5, 0.08, 0.5], 2.33, '#222222'),
+                P('sphere', [0.08, 0.08, 0.08], 2.05, '#222222', [0.5, 0.18]), P('sphere', [0.08, 0.08, 0.08], 2.05, '#222222', [0.5, -0.18]),
+                P('sphere', [0.08, 0.08, 0.08], 0.65, '#222222', [0.78, 0]), P('sphere', [0.08, 0.08, 0.08], 0.95, '#222222', [0.78, 0]), P('sphere', [0.08, 0.08, 0.08], 1.22, '#222222', [0.68, 0]),
+                P('cyl', [0.56, 0.16, 0.56], 1.42, '#d3473d'), P('box', [0.16, 0.5, 0.14], 1.1, '#d3473d', [0.5, 0.2])],
     sled:      [P('box', [1.8, 0.2, 0.9], 0.35, 'inst'), P('box', [1.9, 0.08, 0.1], 0.08, '#555555', [0, 0.38]), P('box', [1.9, 0.08, 0.1], 0.08, '#555555', [0, -0.38])],
     fence:     [P('box', [2.0, 0.85, 0.42], 0.42, 'inst'), P('box', [2.12, 0.18, 0.62], 0.93, '#5a5e6a')], // a 16-unit span of courtyard wall with a tile cap
+    // (winter maps only) snow sits on the branch tips: a white skirt around the foot of each tier, and the cap
     pine:      [P('cyl', [0.2, 0.9, 0.2], 0.45, '#7a5233'), P('cone', [1.0, 1.8, 1.0], 1.7, 'inst'), P('cone', [0.72, 1.3, 0.72], 2.6, 'inst'),
-                P('cone', [0.4, 0.55, 0.4], 3.3, '#f7f9fc')],
+                P('cone', [0.4, 0.55, 0.4], 3.3, '#f7f9fc'), P('cone', [1.04, 0.5, 1.04], 1.06, '#f7f9fc'), P('cone', [0.76, 0.4, 0.76], 2.16, '#f7f9fc')],
     // oasis, hanok, campus
     parasol:   [P('cyl', [0.05, 1.8, 0.05], 0.9, '#dddddd'), P('cone', [1.1, 0.4, 1.1], 1.9, 'inst'), P('cyl', [0.5, 0.06, 0.5], 0.75, '#f4f1ea')],
     planter:   [P('box', [1.4, 0.8, 1.4], 0.4, 'inst'), P('blob', [0.8, 0.5, 0.8], 1.0, '#4f9b4f'), P('sphere', [0.25, 0.25, 0.25], 1.3, '#ff7aa8', [0.35, 0.2]),
@@ -457,9 +464,10 @@
         group.add(quay);
       }
 
-      const alley = !!stage.alley; // earthen lanes: no lane paint, no crosswalks, low stone edges
+      const alley = !!stage.alley, snowy = !!(stage.look && stage.look.snow); // earthen lanes: no lane paint, no crosswalks, low stone edges
       // Day colors of the street (the frame loop restores them after night): a cool mid gray so paint and curbs pop.
-      w.roadDay = alley ? '#cdb892' : '#9a96a4'; w.curbDay = alley ? '#b8aa90' : '#e6e0d4';
+      // on a snow map the streets are packed snow, not bare asphalt (TestFlight: "too little snow")
+      w.roadDay = alley ? '#cdb892' : snowy ? '#d9e0e9' : '#9a96a4'; w.curbDay = alley ? '#b8aa90' : snowy ? '#f6f8fb' : '#e6e0d4';
       w.roadMat = lambert(w.roadDay);
       for (let k = 0; k <= WORLD / CELL; k++) {
         const v = new T.Mesh(unit.box, w.roadMat);

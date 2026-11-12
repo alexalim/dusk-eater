@@ -292,8 +292,12 @@ with sync_playwright() as p:
     b, pg, errs = page(p)
     # sample times are 3/4 of the old 120-second marks, so they land at the same point of today's 90-second day
     for si, sec in [(0, 9), (0, 41), (0, 71), (HARB, 22), (HARB, 71), (CITY, 37), (SNOW, 22), (SNOW, 52), (DESERT, 22), (FARM, 37)]:
-      for attempt in range(3):  # a random map with no shadow in view (the farm has few buildings) proves nothing: roll another
-        pg.evaluate(f'{A}.start({si}); {A}.skipTo({sec})'); frames_wait(pg, 2); pg.evaluate(f'{A}.freeze()'); frames_wait(pg, 2)
+      t = sec
+      for attempt in range(5):  # a random map with no shadow in view (the farm has few buildings) proves nothing: roll another;
+        # at noon on a scarce map even three rolls can come up empty (shade hides under the trees' own exclusion radius), so
+        # the last two rolls move to the afternoon, where the same map throws long shadows
+        t = sec if attempt < 3 else min(sec + 30, 71)
+        pg.evaluate(f'{A}.start({si}); {A}.skipTo({t})'); frames_wait(pg, 2); pg.evaluate(f'{A}.freeze()'); frames_wait(pg, 2)
         pts = pg.evaluate('''(() => {
           const A = window.__DUSK_TEST__.api, C = window.DuskCore, s = A.s, T = window.THREE;
           const { camera, scene } = A.R.debug;
@@ -332,7 +336,7 @@ with sync_playwright() as p:
           }
           return out;
         })()''')
-        shot = out / f'pix-{si}-{sec}.png'; pg.screenshot(path=str(shot))
+        shot = out / f'pix-{si}-{t}.png'; pg.screenshot(path=str(shot))
         img = Image.open(shot).convert('L'); W, H = img.size; k = W / 390
         by = {}
         raw = [(img.getpixel((int(sx * k), int(sy * k))), v, kind, ib, ed) for sx, sy, v, kind, ib, ed in pts]
@@ -346,12 +350,12 @@ with sync_playwright() as p:
             det.append(f'{kind[:5]} lit~{statistics.median(lit):.0f} shade~{statistics.median(sha):.0f} n={len(arr)}')
         rate = agree / total if total else 0
         if total >= 60: break
-        print(f'   S9 stage{si} t={sec}s: only {total} usable points (no shadow in view?), rolling another map')
+        print(f'   S9 stage{si} t={t}s: only {total} usable points (no shadow in view?), rolling another map')
       if True:  # scored on the last roll
         thr = {kd: (statistics.median([l for l, v in a if not v] or [0]) + statistics.median([l for l, v in a if v] or [0])) / 2 for kd, a in by.items()}
         bad = [(v, ib, ed) for l, v, kd, ib, ed in raw if (l < thr[kd]) != v]
         print('   mismatches:', len(bad), '| rule-shade-but-bright', sum(1 for v, ib, ed in bad if v), '| rule-lit-but-dark', sum(1 for v, ib, ed in bad if not v),
               '| in-beam', sum(1 for b in bad if b[1]), '| edge-dist', sorted(b[2] for b in bad))
-        rec('S9', f'shadow pixels match rule stage{si} t={sec}s', rate >= 0.97, f'{rate*100:.1f}% of {total} pts; ' + ' | '.join(det))
+        rec('S9', f'shadow pixels match rule stage{si} t={t}s', rate >= 0.97, f'{rate*100:.1f}% of {total} pts; ' + ' | '.join(det))
     b.close()
 print('SUMMARY', sum(r[2] for r in res), '/', len(res))

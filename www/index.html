@@ -114,6 +114,10 @@
   #rain { position: fixed; inset: -40px 0 0 0; pointer-events: none; z-index: 3; opacity: .55; mix-blend-mode: screen;
     background: repeating-linear-gradient(112deg, transparent 0 13px, rgba(200, 220, 255, .6) 13px 15px); background-size: 160px 160px; animation: rainfall .32s linear infinite; }
   @keyframes rainfall { to { background-position: -60px 150px; } }
+  #snow { position: fixed; inset: -60px 0 0 0; pointer-events: none; z-index: 3; opacity: .8;
+    background-image: radial-gradient(circle, rgba(255,255,255,.95) 0 1.6px, transparent 2.4px), radial-gradient(circle, rgba(255,255,255,.7) 0 1.1px, transparent 1.8px);
+    background-size: 90px 90px, 57px 57px; background-position: 0 0, 30px 20px; animation: snowfall 7s linear infinite; }
+  @keyframes snowfall { to { background-position: 24px 630px, -18px 399px; } }
   /* state particles at the body (always mid-screen): green smoke while poisoned, cyan glints while fast */
   #burst i.smoke { border-radius: 50%; filter: blur(1px); animation: smoke 1.1s ease-out forwards; }
   @keyframes smoke { 0% { transform: translate(0, 0) scale(.6); opacity: .7; } 100% { transform: translate(var(--dx), var(--dy)) scale(1.7); opacity: 0; } }
@@ -407,6 +411,7 @@
 <canvas id="c"></canvas>
 <div id="vignette" class="hidden"></div>
 <div id="rain" class="hidden"></div>
+<div id="snow" class="hidden"></div>
 <div id="no3d" class="overlay hidden">
   <p class="big">이 브라우저에서는 3D 화면을 켤 수 없어요.</p>
   <p>브라우저의 그래픽 가속(WebGL)이 꺼져 있거나 그래픽 드라이버가 막혀 있어요.</p>
@@ -629,7 +634,7 @@
   // ---------- world ----------
   const TYPES = {
     cat:       { r: 4,  color: '#e8a25a' },
-    zombie:    { r: 5,  color: '#6b5b7a', bad: true, slow: 2 }, // on every map (ZOMBIES of them); swallowing one chills you: slow for `slow` s, no growth, no points
+    zombie:    { r: 6,  color: '#7d5fb8', bad: true, slow: 2 }, // on every map (ZOMBIES of them); swallowing one chills you: slow for `slow` s, no growth, no points
     gull:      { r: 4,  color: '#f7f7f2' },
     person:    { r: 5,  color: '#5b8def' },
     worker:    { r: 5,  color: '#ff8a3d' },
@@ -1198,6 +1203,7 @@
     elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; continued = false; nextGold = 4; rush = false; rushTick = 0; Sound.music.rush(false); bonus = null;
     lastEat = 0; hunger = null; hungerTick = 0; starving = false; starveT = 0; endedBy = null; combo = 0; comboUntil = 0; slowUntil = 0;
     mapEvent = null; eventDone = false; runners = []; $('rain').classList.add('hidden');
+    $('snow').classList.toggle('hidden', !(stage.look && stage.look.snow)); // it snows all run on winter maps
     shards = []; nextShard = C.SHARD.from; lastShardKind = null; fastUntil = bubbleUntil = magnetUntil = 0; dashTick = 0;
     clouds = stage.twist === 'clouds' ? Array.from({ length: 7 }, (_, k) => ({ x: rnd() * WORLD, y: rnd() * waterY, r: 70 + rnd() * 50 })) : [];
     tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
@@ -1514,7 +1520,8 @@
     for (const o of objects) {
       if (o.state !== 0 || o.r >= player.r * C.EAT_RATIO) continue;
       if (Math.hypot(o.x - player.x, o.y - player.y) > 260 + player.r) continue;
-      if (isShaded(o, o) || o.goldUntil > elapsed) hints.push({ x: o.x, y: o.y, r: o.r + 2, bad: !!TYPES[o.type].bad }); // violet ring: edible but bad
+      if (TYPES[o.type].bad) { hints.push({ x: o.x, y: o.y, r: o.r + 3, bad: true }); continue; } // violet ring under every zombie, shade or sun: the tell
+      if (isShaded(o, o) || o.goldUntil > elapsed) hints.push({ x: o.x, y: o.y, r: o.r + 2 });
     }
     for (const g of guards) {
       if (g.state === 0 && g.r < player.r * C.EAT_RATIO && isShaded(g, g)) hints.push({ x: g.x, y: g.y, r: g.r + 3 });
@@ -1877,7 +1884,7 @@
   }
 
   function openSelect() {
-    state = 'menu';
+    state = 'menu'; $('snow').classList.add('hidden'); // the snowfall is part of the world, not of the menus
     const live = liveEvents();
     if (listKey !== 'main' && !live.some(ev => ev.id === listKey)) { useList('main'); selected = lastUnlocked(); page = Math.floor(selected / pageSize()); }
     const ev = EVENTS.find(e => e.id === listKey);
@@ -1990,7 +1997,7 @@
   }
 
   function offerContinue(got) {
-    state = 'cont';
+    state = 'cont'; $('snow').classList.add('hidden');
     const n = got.filter(Boolean).length;
     $('cont-why').textContent = endedBy === 'hunger' ? '너무 오래 굶어서 집에 갔어요. 뭐든 계속 삼켜야 해요!'
       : stage.hard === 'super' ? '거대 등불지기를 삼켜야 깰 수 있어요.'
@@ -2008,10 +2015,11 @@
     continued = true;
     runDuration += CONTINUE_S; rush = false; Sound.music.rush(false);
     lastEat = elapsed; starving = false; starveT = 0; endedBy = null; // a fresh stomach for the extra time
-    state = 'play'; show(null);
+    state = 'play'; show(null); $('snow').classList.toggle('hidden', !(stage.look && stage.look.snow));
   }
 
   function endRun(got) {
+    $('snow').classList.add('hidden'); $('rain').classList.add('hidden');
     state = 'end';
     const cleared = C.isCleared(stage, got);
     const n = cleared ? got.filter(Boolean).length : 0; // an uncleared hard level keeps no stars
