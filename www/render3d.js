@@ -43,7 +43,8 @@
     // (TestFlight: "hard to tell apart in a crowd") so the skin is a louder green, the eyes glow and never dim at night
     zombie:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, '#8fe07a'), P('sphere', [0.3, 0.2, 0.34], 2.88, '#2a3a1e', [-0.12, 0]), // a bald green head with a tuft, so it reads green from above
                 P('box', [0.9, 0.22, 0.22], 1.9, '#8fe07a', [0.6, 0.35]), P('box', [0.9, 0.22, 0.22], 1.9, '#8fe07a', [0.6, -0.35]),
-                P('sphere', [0.13, 0.13, 0.13], 2.5, '#eaff5c', [0.48, 0.2], true), P('sphere', [0.13, 0.13, 0.13], 2.5, '#eaff5c', [0.48, -0.2], true)],
+                P('sphere', [0.13, 0.13, 0.13], 2.5, '#eaff5c', [0.48, 0.2], true), P('sphere', [0.13, 0.13, 0.13], 2.5, '#eaff5c', [0.48, -0.2], true),
+                P('cyl', [1.0, 0.07, 1.0], 3.45, '#d94fff', undefined, true), P('cyl', [0.72, 0.09, 0.72], 3.45, '#f3c6ff', undefined, true)], // a violet halo over the head: flat, so it shows from above
     cat:       [P('blob', [1.1, 0.6, 0.6], 0.6, 'inst'), P('sphere', [0.5, 0.48, 0.5], 1.05, 'inst', [1.0, 0]),
                 P('cone', [0.17, 0.4, 0.17], 1.55, 'inst', [1.05, 0.26]), P('cone', [0.17, 0.4, 0.17], 1.55, 'inst', [1.05, -0.26]),
                 P('cyl', [0.12, 1.0, 0.12], 1.0, 'inst', [-1.1, 0])],
@@ -396,8 +397,9 @@
     const hints = new T.InstancedMesh(hintGeo, hintMat, MAX_HINTS);
     hints.renderOrder = 4;
     // the same ring in violet under things that are edible but bad for you (zombies): a warning, not an invitation
-    const badMat = new T.MeshBasicMaterial({ color: 0xb57bee, transparent: true, opacity: 0.7, depthWrite: false });
-    const badHints = new T.InstancedMesh(hintGeo, badMat, 64);
+    const badMat = new T.MeshBasicMaterial({ color: 0xc766ff, transparent: true, opacity: 0.85, depthWrite: false });
+    const badGeo = new T.RingGeometry(0.95, 1.5, 28); badGeo.rotateX(-Math.PI / 2); // wider than the orange ring: a warning you cannot miss
+    const badHints = new T.InstancedMesh(badGeo, badMat, 64);
     badHints.renderOrder = 4;
     scene.add(hints, badHints);
     // Light shards (pickups): a spinning crystal over a pale ring with a thin pillar, colored by kind, instanced.
@@ -649,17 +651,128 @@
       }
       for (const o of w.objects) o.dirty = true;
 
-      // Guards: few, so plain meshes.
+    // Region bosses (stages.js BOSSES), one figure per map, about 26 tall like a guard and facing +x (the beam side).
+    // M(geo, color, scale, position, glow?, rotation?) adds a part; glow parts ignore lighting (lamps, eyes).
+    function bossMesh(kind, color) {
+      const g = new T.Group();
+      const M = (geo, c, sc, pos, glow, rot) => {
+        const m = new T.Mesh(unit[geo], glow ? new T.MeshBasicMaterial({ color: c }) : lambert(c));
+        m.scale.set(sc[0], sc[1], sc[2]); m.position.set(pos[0], pos[1], pos[2]); if (rot) m.rotation.set(rot[0], rot[1], rot[2]);
+        m.receiveShadow = !glow; g.add(m); return m;
+      };
+      const eyes = (c, x, y, z, r = 1.2) => { M('sphere', c, [r, r, r], [x, y, z], true); M('sphere', c, [r, r, r], [x, y, -z], true); };
+      const DARK = '#1b1b24', SKIN = '#f6d2b0';
+      switch (kind) {
+        case 'robot': // boxy patrol robot: headlight chest, antenna, cyan eyes
+          M('box', '#2b3444', [3, 6, 3], [0, 3, 2.6]); M('box', '#2b3444', [3, 6, 3], [0, 3, -2.6]);
+          M('box', color, [9, 13, 8], [0, 12.5, 0]); M('box', '#55688c', [7, 6, 7], [0, 22, 0]);
+          M('box', '#ffd23f', [1.5, 2.4, 4], [4.7, 12.5, 0], true); M('cyl', '#9aa7bd', [0.5, 4, 0.5], [0, 27, 0]); M('sphere', '#ff5e3a', [1, 1, 1], [0, 29.2, 0], true);
+          M('box', '#2b3444', [2.4, 8, 2.4], [1, 12, 5.6]); M('box', '#2b3444', [2.4, 8, 2.4], [1, 12, -5.6]);
+          eyes('#7debff', 3.6, 23, 1.9); break;
+        case 'genie': // smoke tail from a golden lamp, bare torso, turban, bright eyes
+          M('box', '#d4a017', [9, 2.6, 5], [-2, 1.3, 0]); M('cone', '#d4a017', [1.2, 4, 1.2], [3, 2.6, 0], false, [0, 0, -1.3]);
+          M('cone', '#8fd6f2', [3.2, 9, 3.2], [-1, 8, 0], false, [Math.PI, 0, 0]);
+          M('capsule', color, [4, 2.6, 4], [0, 16.5, 0]); M('sphere', '#5fc8ea', [4, 4, 4], [0, 25.5, 0]);
+          M('cone', '#f2c14e', [3.6, 4, 3.6], [0, 30.5, 0]); M('sphere', '#ff4fd8', [1, 1, 1], [3.2, 30.5, 0], true);
+          M('capsule', color, [1.3, 1.6, 1.3], [3.5, 17, 4.8], false, [0, 0, -1.1]); M('capsule', color, [1.3, 1.6, 1.3], [3.5, 17, -4.8], false, [0, 0, -1.1]);
+          eyes('#ffffff', 3.4, 26, 1.5, 0.9); break;
+        case 'dokkaebi': // red goblin: horns, tusks, fur skirt, a spiked club held out front, fire-yellow eyes
+          M('cyl', '#5a3a1a', [6, 5, 6], [0, 5.5, 0]); M('capsule', color, [4.5, 2.6, 4.5], [0, 15, 0]); M('sphere', color, [4.8, 4.8, 4.8], [0, 25, 0]);
+          M('cone', '#f5e6c8', [1.2, 4, 1.2], [0, 30.5, 2.2], false, [0, 0, -0.3]); M('cone', '#f5e6c8', [1.2, 4, 1.2], [0, 30.5, -2.2], false, [0, 0, 0.3]);
+          M('cone', '#ffffff', [0.6, 1.8, 0.6], [4.2, 22.8, 1.4]); M('cone', '#ffffff', [0.6, 1.8, 0.6], [4.2, 22.8, -1.4]);
+          M('box', '#6b4a2b', [14, 2.6, 2.6], [9, 15, 4.5]); M('cyl', '#4a3220', [2.2, 5, 2.2], [15, 15, 4.5], false, [0, 0, Math.PI / 2]);
+          M('capsule', color, [1.3, 1.8, 1.3], [3.5, 16, -5], false, [0, 0, -1.1]); eyes('#ffd23f', 3.8, 26, 1.8); break;
+        case 'tiger': // orange teacher with stripes, round glasses and a flashlight
+          M('capsule', color, [4.5, 2.6, 4.5], [0, 15, 0]); M('box', DARK, [4.6, 1, 9.4], [0.3, 17.5, 0]); M('box', DARK, [4.6, 1, 9.4], [0.3, 13.5, 0]);
+          M('sphere', color, [4.8, 4.8, 4.8], [0, 25, 0]); M('sphere', '#ffffff', [2.2, 1.8, 2.6], [3.6, 23.6, 0]);
+          M('cone', color, [1.4, 2.4, 1.4], [0, 30, 3]); M('cone', color, [1.4, 2.4, 1.4], [0, 30, -3]);
+          M('cyl', DARK, [1.9, 0.5, 1.9], [4.4, 26, 1.9], false, [0, 0, Math.PI / 2]); M('cyl', DARK, [1.9, 0.5, 1.9], [4.4, 26, -1.9], false, [0, 0, Math.PI / 2]);
+          M('cyl', DARK, [1.2, 7, 1.2], [8, 14, -5], false, [0, 0, Math.PI / 2]); M('cyl', '#fff3b0', [1.8, 1.5, 1.8], [12, 14, -5], true, [0, 0, Math.PI / 2]);
+          eyes('#ffffff', 4.2, 26, 1.9, 0.9); break;
+        case 'snowman': // three snowballs, top hat, red glowing eyes, a jagged coal grin, stick arms, a lantern
+          M('sphere', color, [7, 7, 7], [0, 6.5, 0]); M('sphere', color, [5.2, 5.2, 5.2], [0, 16.5, 0]); M('sphere', color, [4, 4, 4], [0, 24.5, 0]);
+          M('cyl', DARK, [3, 5, 3], [0, 30, 0]); M('cyl', DARK, [5, 0.6, 5], [0, 27.8, 0]);
+          M('cone', '#f28c28', [0.8, 3.5, 0.8], [5, 24, 0], false, [0, 0, -Math.PI / 2]);
+          for (const [z, y] of [[-2.2, 22.6], [-1.1, 22], [0, 22.4], [1.1, 22], [2.2, 22.6]]) M('box', DARK, [0.8, 1, 0.8], [3.7, y, z]);
+          M('box', '#6b4a2b', [10, 0.8, 0.8], [5, 18, 4], false, [0, 0.5, 0]); M('box', '#6b4a2b', [10, 0.8, 0.8], [5, 18, -4], false, [0, -0.5, 0]);
+          M('box', '#ffd23f', [2.4, 3, 2.4], [9.4, 16, 6.5], true);
+          eyes('#ff3b3b', 3.5, 25.5, 1.5, 1.1); break;
+        case 'jangseung': // a carved wooden post: bulging glowing eyes, big nose, grinning teeth, a hat band
+          M('cyl', color, [5.5, 26, 5.5], [0, 13, 0]); M('cyl', '#5a3a1a', [6.2, 3, 6.2], [0, 27.5, 0]); M('cyl', '#2b1a0a', [5.7, 1.2, 5.7], [0, 20.5, 0]);
+          M('box', '#6b4a2b', [2.6, 3.5, 2], [5.5, 17, 0]);
+          for (const z of [-2.4, -0.8, 0.8, 2.4]) M('box', '#fff3d6', [1, 2.2, 1.2], [5.2, 13, z]);
+          M('box', '#6b4a2b', [2, 0.8, 7], [5, 15, 0]); M('box', '#6b4a2b', [2, 0.8, 7], [5, 11.6, 0]);
+          eyes('#ffd23f', 5.2, 23, 2.4, 1.6); break;
+        case 'signal': // a walking traffic light: housing on a pole, three lamps (red lit), arms and legs
+          M('box', '#444c55', [3, 7, 3], [0, 3.5, 2.6]); M('box', '#444c55', [3, 7, 3], [0, 3.5, -2.6]);
+          M('cyl', '#444c55', [1.6, 8, 1.6], [0, 11, 0]); M('box', color, [6, 15, 6], [0, 22.5, 0]);
+          M('sphere', '#ff3b3b', [1.9, 1.9, 1.9], [3.2, 27, 0], true); M('sphere', '#5a4a1a', [1.9, 1.9, 1.9], [3.2, 22.5, 0]); M('sphere', '#1f4a2a', [1.9, 1.9, 1.9], [3.2, 18, 0]);
+          M('box', '#444c55', [2, 9, 2], [1, 18, 5]); M('box', '#444c55', [2, 9, 2], [1, 18, -5]); break;
+        case 'mascot': // a foam-headed plush mascot with a jersey number, holding a stadium light
+          M('sphere', color, [7, 7, 7], [0, 8, 0]); M('box', '#ffffff', [1.2, 5, 4], [6.2, 9, 0]);
+          M('sphere', '#ffd23f', [6, 6, 6], [0, 21, 0]); M('sphere', '#ffd23f', [2.4, 2.4, 2.4], [0, 27, 4.5]); M('sphere', '#ffd23f', [2.4, 2.4, 2.4], [0, 27, -4.5]);
+          M('sphere', '#ffffff', [3, 2.4, 3.6], [4.5, 19.5, 0]); M('sphere', DARK, [1.2, 1.2, 1.2], [6.8, 19.8, 0]);
+          M('cyl', '#444c55', [1, 8, 1], [7, 12, -7], false, [0, 0, Math.PI / 2]); M('box', '#fff3b0', [2, 4, 4], [11.5, 12, -7], true);
+          eyes('#ffffff', 5, 22.5, 2.2, 1.3); eyes(DARK, 6, 22.5, 2.2, 0.6); break;
+        case 'lighthouse': // a small lighthouse on legs: white tower, red band, lamp head, cross arms
+          M('cyl', '#ddd6c8', [2.2, 6, 2.2], [0, 3, 3]); M('cyl', '#ddd6c8', [2.2, 6, 2.2], [0, 3, -3]);
+          M('cyl', color, [6, 20, 6], [0, 16, 0]); M('cyl', '#d9534f', [6.3, 4, 6.3], [0, 14, 0]); M('cyl', '#d9534f', [6.3, 1.5, 6.3], [0, 24, 0]);
+          M('cyl', '#444c55', [5, 1.2, 5], [0, 26.5, 0]); M('sphere', '#fff3b0', [4, 4, 4], [0, 29.5, 0], true); M('cone', '#d9534f', [4.6, 3, 4.6], [0, 33.5, 0]);
+          M('box', DARK, [1, 1.2, 2.4], [5.6, 20, 1.8], false, [0.4, 0, 0]); M('box', DARK, [1, 1.2, 2.4], [5.6, 20, -1.8], false, [-0.4, 0, 0]);
+          M('box', '#ddd6c8', [2, 9, 2], [1, 15, 7]); M('box', '#ddd6c8', [2, 9, 2], [1, 15, -7]); break;
+        case 'crane': // a crane on tracks: yellow body, dark cab with lit glass, a long boom with a hook, a warning light
+          M('box', '#2b2b2b', [12, 4, 3.5], [0, 2, 5]); M('box', '#2b2b2b', [12, 4, 3.5], [0, 2, -5]);
+          M('box', color, [9, 10, 9], [0, 9, 0]); M('box', '#2c3e50', [7, 7, 7], [1, 17.5, 0]); M('box', '#9fd0ff', [0.6, 4, 5], [4.6, 18, 0], true);
+          M('box', color, [20, 2, 2], [8, 24, -2], false, [0, 0, 0.35]); M('cyl', '#444c55', [0.4, 6, 0.4], [16.5, 24, -2]); M('box', '#444c55', [1.6, 1.6, 1.6], [16.5, 20.5, -2]);
+          M('sphere', '#ff5e3a', [1.3, 1.3, 1.3], [0, 22, 0], true); break;
+        case 'clown': // white suit, red nose, orange hair, cone hat, big shoes, a balloon on a string, a flashlight
+          M('box', '#ff3b3b', [6, 2, 3.5], [1.5, 1, 3]); M('box', '#ff3b3b', [6, 2, 3.5], [1.5, 1, -3]);
+          M('capsule', color, [4.6, 2.6, 4.6], [0, 15, 0]); M('sphere', '#ff3b3b', [1.3, 1.3, 1.3], [0, 18, 0]); M('sphere', '#2a7fff', [1.3, 1.3, 1.3], [0, 14, 0]);
+          M('sphere', SKIN, [4.6, 4.6, 4.6], [0, 25, 0]); M('sphere', '#ff3b3b', [1.6, 1.6, 1.6], [4.4, 25, 0], true);
+          M('sphere', '#ff7a00', [2.4, 2.4, 2.4], [0, 26, 4.6]); M('sphere', '#ff7a00', [2.4, 2.4, 2.4], [0, 26, -4.6]);
+          M('cone', '#2a7fff', [2.6, 5, 2.6], [0, 31.5, 0]); M('sphere', '#ffd23f', [1, 1, 1], [0, 34.3, 0]);
+          M('cyl', '#ffffff', [0.15, 14, 0.15], [-3, 25, 6]); M('sphere', '#ff4fd8', [3.2, 3.8, 3.2], [-3, 35, 6]);
+          M('cyl', DARK, [1.2, 7, 1.2], [8, 14, -5], false, [0, 0, Math.PI / 2]); M('cyl', '#fff3b0', [1.8, 1.5, 1.8], [12, 14, -5], true, [0, 0, Math.PI / 2]);
+          eyes(DARK, 4, 26.2, 1.8, 0.8); break;
+        case 'crab': // a wide flat crab: eye stalks with glowing eyes, two claws out front, six legs
+          M('sphere', color, [9, 5, 7.5], [0, 6, 0]);
+          M('cyl', color, [0.7, 6, 0.7], [4, 12, 2.5]); M('cyl', color, [0.7, 6, 0.7], [4, 12, -2.5]); eyes('#ff3b3b', 4, 15.5, 2.5, 1.4);
+          M('sphere', color, [3.5, 3, 3], [9, 6, 6]); M('box', color, [5, 1.6, 2], [12.5, 7, 6], false, [0, 0, 0.3]); M('box', color, [5, 1.6, 2], [12.5, 5, 6], false, [0, 0, -0.3]);
+          M('sphere', color, [3.5, 3, 3], [9, 6, -6]); M('box', color, [5, 1.6, 2], [12.5, 7, -6], false, [0, 0, 0.3]); M('box', color, [5, 1.6, 2], [12.5, 5, -6], false, [0, 0, -0.3]);
+          for (const x of [-4, 0, 4]) for (const sgn of [1, -1]) M('box', color, [1.2, 1.2, 8], [x, 3, sgn * 9], false, [sgn * 0.5, 0, 0]);
+          break;
+        case 'mummy': // bandaged walker: stripes of darker wrap, one burning eye, arms out, a torch
+          M('capsule', color, [4.4, 2.6, 4.4], [0, 15, 0]); M('sphere', color, [4.6, 4.6, 4.6], [0, 25, 0]);
+          for (const y of [11, 14.5, 18, 23.5, 26.8]) M('box', '#cbbf9f', [4.8, 0.9, 9.4], [0.2, y, 0], false, [0, 0, 0.12]);
+          M('sphere', '#ff5e3a', [1.4, 1.4, 1.4], [3.9, 25.5, 1.6], true); M('box', DARK, [1.5, 1.2, 1.2], [4, 25.5, -1.6]);
+          M('capsule', color, [1.3, 1.8, 1.3], [5, 17, 3.6], false, [0, 0, -1.4]); M('capsule', color, [1.3, 1.8, 1.3], [5, 17, -3.6], false, [0, 0, -1.4]);
+          M('cyl', '#6b4a2b', [0.7, 7, 0.7], [9, 20, -3.6]); M('sphere', '#ffb020', [2, 2.6, 2], [9, 24.5, -3.6], true); break;
+        case 'scarecrow': // a straw man off its pole: crossbar arms, burlap head, button eyes, a straw hat, a lantern
+          M('cyl', '#6b4a2b', [1.2, 9, 1.2], [0, 4.5, 0]); M('box', color, [6, 12, 5], [0, 15, 0]); M('box', '#7a4a8f', [6.4, 5, 5.4], [0, 13, 0]);
+          M('box', '#6b4a2b', [1.4, 1.4, 22], [0, 19, 0]); M('box', color, [2.4, 2.4, 5], [0, 19, 9]); M('box', color, [2.4, 2.4, 5], [0, 19, -9]);
+          M('sphere', '#c9a86a', [4.2, 4.6, 4.2], [0, 25, 0]); M('box', DARK, [0.8, 0.8, 4], [3.9, 23.2, 0]);
+          M('cyl', '#b08d3a', [7, 0.6, 7], [0, 28.8, 0]); M('cone', '#b08d3a', [4, 4, 4], [0, 31, 0]);
+          M('box', '#ffd23f', [2, 2.6, 2], [3, 15.5, 11], true); eyes('#ffd23f', 3.8, 26, 1.6, 0.9); break;
+        default: // keeper (the original): tall violet coat, a head, a hand lamp
+          M('cyl', color, [5, 18, 5], [0, 9, 0]); M('sphere', SKIN, [4.5, 4.5, 4.5], [0, 22, 0]); M('box', '#ffd23f', [6, 3, 3], [7, 14, 0], true);
+      }
+      return g;
+    }
+
+      // Guards: few, so plain meshes. A boss is the map's own figure (bossMesh), built at guard size and scaled up to its radius.
       const guardMat = lambert('#2f3e66'), skinMat = lambert('#f6d2b0'), lampMat = new T.MeshBasicMaterial({ color: 0xffd23f });
-      const bossMat = lambert('#5a2a6e');
       for (const g of w.guards) {
-        const gg = new T.Group();
-        g.k = g.boss ? g.r / 9 : 1; // the boss is a guard scaled up to its radius
-        const body = new T.Mesh(unit.cyl, g.boss ? bossMat : guardMat); body.scale.set(5, 18, 5); body.position.y = 9;
-        const head = new T.Mesh(unit.sphere, skinMat); head.scale.setScalar(4.5); head.position.y = 22;
-        const lamp = new T.Mesh(unit.box, lampMat); lamp.scale.set(6, 3, 3); lamp.position.set(7, 14, 0);
-        body.receiveShadow = head.receiveShadow = true;
-        gg.add(body, head, lamp);
+        g.k = g.boss ? g.r / 9 : 1;
+        let gg;
+        if (g.boss) gg = bossMesh(g.kind, g.color);
+        else {
+          gg = new T.Group();
+          const body = new T.Mesh(unit.cyl, guardMat); body.scale.set(5, 18, 5); body.position.y = 9;
+          const head = new T.Mesh(unit.sphere, skinMat); head.scale.setScalar(4.5); head.position.y = 22;
+          const lamp = new T.Mesh(unit.box, lampMat); lamp.scale.set(6, 3, 3); lamp.position.set(7, 14, 0);
+          body.receiveShadow = head.receiveShadow = true;
+          gg.add(body, head, lamp);
+        }
         group.add(gg);
         g.mesh = gg;
       }
@@ -995,7 +1108,7 @@
       }
       hints.count = n; badHints.count = nb;
       hints.instanceMatrix.needsUpdate = badHints.instanceMatrix.needsUpdate = true;
-      hintMat.opacity = badMat.opacity = 0.35 + pulse * 0.45;
+      hintMat.opacity = 0.35 + pulse * 0.45; badMat.opacity = 0.6 + pulse * 0.35; // the warning ring never fades far
 
       renderer.render(scene, fp ? fpCamera : camera);
     }

@@ -97,8 +97,14 @@ with sync_playwright() as p:
     pg.evaluate(f'(() => {{ const s = {A}.s, g = s.guards.find(g => g.boss); s.player.r = g.r / 0.8; g.x = g.tx = s.player.x + 4; g.y = g.ty = s.player.y; }})()')
     frames_wait(pg, 40)
     eaten = pg.evaluate(f"{A}.s.stats.eaten.boss || 0")
-    rec('W5', 'boss is bigger than a fresh player, says how big to grow, and counts toward its goal when swallowed',
-        boss and boss[0] > boss[2] * 0.85 and boss[1] > 150 and 'm 넘게' in pill and eaten == 1, f'boss={boss} pill={pill!r} eaten={eaten}')
+    # the run ends on its own a moment after the boss goes down (no waiting out the clock), cleared with the boss star
+    pg.evaluate(f'{A}.skipTo({A}.s.elapsed + 2)'); frames_wait(pg, 4)
+    ended = pg.evaluate(f'[{A}.s.state, document.querySelector("#cheer").classList.contains("hidden") && document.querySelector("#end").classList.contains("hidden")]')  # the celebration step is up
+    # every region's boss is its own figure: the hanok one is a dokkaebi, the snow one a scary snowman
+    kinds = pg.evaluate("(() => { const S = window.DuskStages; const b = t => S.STAGES.find(s => s.twist === 'boss' && s.theme === t).boss; return [b('town').id, b('hanok').name, b('snow').name, new Set(S.STAGES.filter(s => s.boss).map(s => s.boss.id)).size]; })()")
+    rec('W5', 'boss is bigger than a fresh player, says how big to grow, counts toward its goal when swallowed, and ends the run; each map has its own boss',
+        boss and boss[0] > boss[2] * 0.85 and boss[1] > 150 and 'm 넘게' in pill and eaten == 1 and ended == ['end', False] and kinds == ['keeper', '도깨비', '무서운 눈사람', 15],
+        f'boss={boss} pill={pill!r} eaten={eaten} ended={ended} kinds={kinds}')
 
     # W8 last-stretch rush: the final 10 s of any run score double, with a countdown pill; not before
     pg.evaluate(f'{A}.start(2)'); frames_wait(pg, 2)
@@ -120,6 +126,7 @@ with sync_playwright() as p:
     dur0 = pg.evaluate(f'{A}.s.runDuration'); pg.tap('#btn-cont-yes'); frames_wait(pg, 3)
     after = pg.evaluate(f'[{A}.s.state, {A}.s.runDuration, {A}.Store.wallet.gems]')
     pg.evaluate(f'{A}.skipTo({A}.s.runDuration - 0.02)'); frames_wait(pg, 4)  # time's up again: no second offer
+    pg.evaluate("document.querySelector('#cheer').dispatchEvent(new PointerEvent('pointerup'))"); frames_wait(pg, 3)  # past the celebration step (a plain event: it may already have moved on by itself)  # past the celebration step
     again = [pg.is_visible('#cont'), pg.is_visible('#end'), pg.inner_text('#end-title')]
     stars = pg.evaluate("JSON.parse(localStorage.getItem('dusk-stars') || '{}').L8 || 0")
     rec('W9', 'hard level: 1 star does not clear; continue costs 30 gems for +20 s, offered once; no new stars saved',

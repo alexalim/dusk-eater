@@ -34,6 +34,7 @@ def frames_wait(pg, n=3):
 def decline_continue(pg):
     # a run that did not clear its level offers a paid continue first; these checks want the plain end screen
     if pg.is_visible('#cont'): pg.tap('#btn-cont-no'); frames_wait(pg, 4)
+    pg.evaluate("document.querySelector('#cheer').dispatchEvent(new PointerEvent('pointerup'))"); frames_wait(pg, 3)  # past the celebration step (a plain event: it may already have moved on by itself)  # the celebration step, then the details
 with sync_playwright() as p:
     # S1 flow: title -> level picker, level 2 locked, locked card ignores taps
     b, pg, errs = page(p)

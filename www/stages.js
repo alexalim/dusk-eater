@@ -279,8 +279,28 @@
       tips: ['금빛으로 빛나며 통통 튀고, 위로 빛기둥이 올라가요.', '황금 친구만은 햇빛 속에서도 꿀꺽! 대신 내 몸은 햇빛에 줄어드니 빠르게 다녀와요.', '8초가 지나면 원래대로 돌아가요.', '근처에 9초마다 새로 나타나요.'] },
     eclipse: { name: '일식', text: '낮에 잠깐 일식이 와요. 그동안은 온 동네가 그늘이에요!',
       tips: ['판이 30%쯤 지나면 하늘이 어두워져요.', '6초 동안은 햇빛 걱정 없이 어디든 꿀꺽!', '큰 건물을 노려 두었다가 그때 달려가요.'] },
-    boss: { name: '보스: 거대 등불지기', text: '거대 등불지기가 큰 불빛을 비추며 돌아다녀요. 충분히 커진 뒤 그늘에서 삼켜요!',
-      tips: ['불빛이 아주 넓으니 뒤나 옆으로 다가가요.', '화면 위 표시가 금색이 되면 삼킬 수 있는 크기예요.', '삼키면 세 번째 별!'] },
+    // the boss card is filled per region from BOSSES (index.html go)
+    boss: { name: '보스 등장', text: '보스가 큰 불빛을 비추며 돌아다녀요. 충분히 커진 뒤 그늘에서 삼켜요!',
+      tips: ['불빛이 아주 넓으니 뒤나 옆으로 다가가요.', '화면 위 표시가 금색이 되면 삼킬 수 있는 크기예요.', '보스를 삼키면 판이 바로 끝나요. 세 번째 별!'] },
+  };
+  // The boss of each region's 10th level, in the map's own style (render3d.js draws `id`; the run ends once it is swallowed).
+  // `text` is the intro card's line, `tip` how to approach it, `color` its main body color.
+  const BOSSES = {
+    town: { id: 'keeper', name: '거대 등불지기', color: '#5a2a6e', text: '거대 등불지기가 큰 불빛을 비추며 돌아다녀요. 충분히 커진 뒤 그늘에서 삼켜요!', tip: '불빛이 아주 넓으니 뒤나 옆으로 다가가요.' },
+    city: { id: 'robot', name: '네온 로봇', color: '#3a4a6a', text: '빌딩숲을 순찰하는 네온 로봇이에요. 전조등이 닿는 곳은 전부 밝아요.', tip: '로봇은 느리지만 전조등이 넓어요. 등 뒤로 돌아가요.' },
+    oasis: { id: 'genie', name: '램프의 지니', color: '#3fb3e0', text: '램프에서 나온 지니가 빛을 뿌리며 떠다녀요. 커지면 지니도 꿀꺽!', tip: '지니의 빛은 앞쪽으로만 뻗어요. 옆에서 다가가요.' },
+    hanok: { id: 'dokkaebi', name: '도깨비', color: '#c0392b', text: '방망이를 든 도깨비가 마을을 돌아다녀요. 도깨비불이 비추는 곳은 그늘이 아니에요!', tip: '도깨비불은 앞을 비춰요. 담장 뒤에 숨었다가 뒤에서 덮쳐요.' },
+    campus: { id: 'tiger', name: '호랑이 선생님', color: '#f39c3a', text: '손전등을 든 호랑이 선생님이 캠퍼스를 순찰해요. 걸리면 혼나요!', tip: '손전등은 앞만 비춰요. 건물 그늘로 돌아서 뒤에서 다가가요.' },
+    snow: { id: 'snowman', name: '무서운 눈사람', color: '#f4f7fb', text: '눈이 빨갛게 빛나는 거대 눈사람이 마을을 어슬렁거려요. 커진 뒤 그늘에서 삼켜요!', tip: '빨간 눈빛이 닿는 곳은 피해요. 긴 겨울 그림자를 타고 옆으로 가요.' },
+    market: { id: 'jangseung', name: '장승 거인', color: '#8b5a2b', text: '장터 입구의 장승이 살아나 눈에서 빛을 뿜어요. 충분히 커지면 삼킬 수 있어요.', tip: '장승은 느려요. 눈빛이 돌아간 틈에 뒤로 가요.' },
+    crossing: { id: 'signal', name: '신호등 거인', color: '#2f3640', text: '교차로의 신호등이 거인이 되어 걸어 다녀요. 불빛에 걸리면 몸이 줄어요!', tip: '신호등 불빛은 앞쪽 부채꼴이에요. 등 뒤의 그늘이 안전해요.' },
+    stadium: { id: 'mascot', name: '거대 마스코트', color: '#2a7fff', text: '경기장의 마스코트 인형이 거대해져서 조명을 들고 뛰어다녀요.', tip: '마스코트는 조명을 앞으로 들어요. 옆으로 돌아가서 삼켜요.' },
+    harbor: { id: 'lighthouse', name: '등대 거인', color: '#f4f1ea', text: '작은 등대가 걸어 다녀요. 머리의 불빛이 바다처럼 넓게 퍼져요.', tip: '등대 거인의 빛은 아주 넓어요. 뒤쪽 그늘로 바짝 붙어요.' },
+    construction: { id: 'crane', name: '크레인 로봇', color: '#f1c40f', text: '공사장 크레인이 로봇이 되어 경광등을 번쩍여요. 커진 뒤 그늘에서 삼켜요!', tip: '경광등은 앞을 비춰요. 컨테이너 그늘에서 기다렸다가 뒤를 노려요.' },
+    park: { id: 'clown', name: '풍선 광대', color: '#fff6f0', text: '풍선을 든 거대 광대가 손전등을 흔들며 돌아다녀요. 웃는 얼굴에 속지 마요!', tip: '광대의 불빛은 앞만 비춰요. 놀이기구 그늘로 돌아가요.' },
+    beach: { id: 'crab', name: '거대 게', color: '#ff6a3d', text: '모래 속에서 나온 거대 게가 눈에서 빛을 뿜어요. 옆걸음이지만 빛은 넓어요.', tip: '게의 눈빛은 앞쪽이에요. 파라솔 그늘로 돌아서 뒤로 가요.' },
+    desert: { id: 'mummy', name: '사막 미라', color: '#e8dcc0', text: '횃불을 든 미라가 사막을 어슬렁거려요. 횃불 빛이 닿는 곳은 그늘이 아니에요.', tip: '미라는 느려요. 횃불이 비추지 않는 뒤쪽으로 다가가요.' },
+    farm: { id: 'scarecrow', name: '허수아비', color: '#d9b24c', text: '밭의 허수아비가 등불을 들고 걸어 다녀요. 커진 뒤 그늘에서 삼켜요!', tip: '허수아비의 등불은 앞을 비춰요. 헛간 그늘에서 뒤를 노려요.' },
   };
   const TIME_SCALE = 0.85;
   const regionOf = n => Math.floor((n - 1) / REGION_SIZE);
@@ -312,8 +332,8 @@
     const twist = region ? TWISTS[local] || null : null;
     let boss = null;
     if (twist === 'boss') {
-      boss = { r: 30 + regionOf(n) * 3 }; // must be outgrown (and caught in shade) to swallow
-      goals[2] = { kind: 'eat', what: 'boss', n: 1 };
+      boss = Object.assign({ r: 30 + regionOf(n) * 3 }, BOSSES[t.theme] || BOSSES.town); // must be outgrown (and caught in shade) to swallow
+      goals[2] = { kind: 'eat', what: 'boss', n: 1, name: boss.name };
     }
     // Hard levels: the 8th of a region needs two stars to clear, the boss (10th) needs the boss swallowed.
     const hard = region ? { 7: 'hard', 9: 'super' }[local] || null : null;
@@ -346,17 +366,17 @@
     foodtruck: ['푸드트럭', '대'], trash: ['쓰레기통', '개'], cone: ['꼬깔콘', '개'], beam: ['철골', '개'], sunbather: ['피서객', '명'],
     sandcastle: ['모래성', '개'], traveler: ['여행자', '명'], pot: ['항아리', '개'], camel: ['낙타', '마리'],
     gift: ['선물 상자', '개'], caroler: ['캐럴 합창단', '명'], reindeer: ['순록', '마리'],
-    guard: ['경비원', '명'], boss: ['거대 등불지기', '명'],
+    guard: ['경비원', '명'], boss: ['보스', '명'], // a level's boss goal carries its own `name` (BOSSES)
   };
 
   function goalLabel(g) {
     if (g.kind === 'score') return `${g.n.toLocaleString()}점 달성`;
-    if (g.kind === 'eat') { const [name, unit] = NAMES[g.what]; return `${name} ${g.n}${unit} 삼키기`; }
+    if (g.kind === 'eat') { const [name, unit] = NAMES[g.what]; return `${g.name || name} ${g.n}${unit} 삼키기`; }
     if (g.kind === 'noBeam') return '불빛에 한 번도 안 걸리기';
     return g.kind;
   }
 
-  const api = { THEMES, STAGES, NAMES, TWISTS, TWIST_INFO, TIME_SCALE, goalLabel, themeOf, REGIONS, REGION_SIZE, regionOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
+  const api = { THEMES, STAGES, NAMES, TWISTS, TWIST_INFO, BOSSES, TIME_SCALE, goalLabel, themeOf, REGIONS, REGION_SIZE, regionOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DuskStages = api;
 })(this);

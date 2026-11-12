@@ -10,15 +10,16 @@
 
   // Rims must stay clearly apart from the red "you are in light" warning (0xff6b6b).
   // `price` is only a fallback label for the browser demo; the app shows the App Store price.
+  // A paid skin also sells for `gems` (buySkin), so a patient player gets it without paying.
   const SKINS = [
     // `pupil` is the eye highlight; it defaults to dark for skins with light eyes.
     { id: 'night', name: '밤 그림자', body: 0xfff7f8, rim: 0xb78cff, eye: 0x241640, pupil: 0xffffff,
       desc: '처음부터 함께하는 기본 친구예요. 하얀 몸에 보랏빛 테두리가 포근해요.' },
-    { id: 'mint', name: '박하 그림자', body: 0x0f2226, rim: 0x7ff0d2, eye: 0xffffff, product: PREFIX + 'skin.mint', price: '₩1,500',
+    { id: 'mint', name: '박하 그림자', body: 0x0f2226, rim: 0x7ff0d2, eye: 0xffffff, product: PREFIX + 'skin.mint', gems: 300, price: '₩1,500',
       desc: '어두운 몸에 시원한 박하색 테두리를 둘렀어요. 그늘 속에서도 산뜻하게 보여요.' },
-    { id: 'starry', name: '별밤 그림자', body: 0x101833, rim: 0x9fd0ff, eye: 0xfff3c4, product: PREFIX + 'skin.starry', price: '₩1,500',
+    { id: 'starry', name: '별밤 그림자', body: 0x101833, rim: 0x9fd0ff, eye: 0xfff3c4, product: PREFIX + 'skin.starry', gems: 300, price: '₩1,500',
       desc: '밤하늘처럼 짙은 몸에 하늘빛 테두리가 은은해요. 별빛 같은 노란 눈이 반짝여요.' },
-    { id: 'gold', name: '황금 그림자', body: 0x221a0c, rim: 0xffe08a, eye: 0xffffff, product: PREFIX + 'skin.gold', price: '₩2,200',
+    { id: 'gold', name: '황금 그림자', body: 0x221a0c, rim: 0xffe08a, eye: 0xffffff, product: PREFIX + 'skin.gold', gems: 500, price: '₩2,200',
       desc: '반짝반짝 황금빛 테두리를 두른 특별한 아이예요. 어디에 있어도 눈에 쏙 들어와요.' },
     // Earned, not bought: `reward` names the event whose stars unlock it.
     { id: 'santa', name: '산타 그림자', body: 0x3a0d14, rim: 0x7fe08a, eye: 0xffffff, reward: 'xmas',
@@ -30,6 +31,14 @@
       desc: 'Lv.10을 넘긴 그림자만 입을 수 있어요. 북쪽 하늘처럼 푸른빛이 일렁여요.' },
     { id: 'galaxy', name: '은하 그림자', body: 0x120a2a, rim: 0xe0c3ff, eye: 0xffe08a, reward: 'level', level: 20,
       desc: 'Lv.20, 밤의 지배자에게 주는 선물이에요. 몸 안에 은하수가 반짝여요.' },
+    { id: 'ember', name: '잿불 그림자', body: 0x2b1008, rim: 0xe8a800, eye: 0xfff3c4, reward: 'level', level: 40,
+      desc: 'Lv.40, 달빛 포식자의 상이에요. 꺼지지 않는 잿불처럼 주황빛 테두리가 일렁여요.' },
+    { id: 'tide', name: '밀물 그림자', body: 0xe6fbff, rim: 0x00b8d4, eye: 0x0a2a3a, pupil: 0xffffff, reward: 'level', level: 60,
+      desc: 'Lv.60, 황혼의 군주에게 주는 선물이에요. 밀려오는 바닷물처럼 맑은 청록 테두리예요.' },
+    { id: 'obsidian', name: '흑요석 그림자', body: 0x0a0a12, rim: 0xe040ff, eye: 0xffffff, reward: 'level', level: 80,
+      desc: 'Lv.80, 심연의 입만 입는 옷이에요. 새까만 몸에 자홍빛 테두리가 날카롭게 빛나요.' },
+    { id: 'dusk', name: '황혼 그림자', body: 0x3a1a4a, rim: 0xffffff, eye: 0xffd25c, reward: 'level', level: 100,
+      desc: '만렙 Lv.100, 황혼 그 자체가 된 그림자예요. 보랏빛 몸을 하얀 빛이 감싸요.' },
     // Hidden: shown as ??? until its collection-book set is filled (`reward` is the set, dex.js SETS).
     { id: 'dawn', name: '새벽 그림자', body: 0x1d1430, rim: 0xf6a8ff, eye: 0xffffff, reward: 'dex', hidden: true,
       desc: '도감 첫 다섯 지도를 모두 채운 친구만 만나요. 새벽빛 분홍 테두리가 살랑거려요.' },
@@ -118,6 +127,13 @@
     return Object.assign({}, w, { owned: w.owned.concat(id) });
   }
 
+  // Buy a paid skin with gems instead of money: null when it is not for gems, already owned, or the gems are short.
+  function buySkin(w, id) {
+    const s = SKINS.find(k => k.id === id);
+    if (!s || !s.gems || w.owned.includes(id) || w.gems < s.gems) return null;
+    return Object.assign({}, w, { gems: w.gems - s.gems, owned: w.owned.concat(id) });
+  }
+
   function equip(w, id) {
     if (id !== DEFAULT_SKIN && !w.owned.includes(id)) return w;
     return Object.assign({}, w, { equipped: id });
@@ -167,7 +183,7 @@
     return gained ? Object.assign({}, w, { gems: w.gems + gained * GEMS_PER_STAR }) : w;
   }
 
-  const api = {
+  const api = { buySkin,
     PREFIX, DEFAULT_SKIN, GEMS_PER_STAR, CREDIT_LOG, SKINS, GEM_PACKS, BOOSTS, allProducts,
     emptyWallet, normalize, creditTransaction, applyEntitlements, grantReward, equip, spend,
     startBoosts, finishRun, refundPending, awardStars, grant, DAILY, dailyDue, claimDaily,

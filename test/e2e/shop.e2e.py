@@ -16,6 +16,7 @@ def frames_wait(pg, n=3):
 def decline_continue(pg):
     # a run that did not clear its level offers a paid continue first; these checks want the plain end screen
     if pg.is_visible('#cont'): pg.tap('#btn-cont-no'); frames_wait(pg, 4)
+    pg.evaluate("document.querySelector('#cheer').dispatchEvent(new PointerEvent('pointerup'))"); frames_wait(pg, 3)  # past the celebration step (a plain event: it may already have moved on by itself)  # the celebration step, then the details
 
 def open_page(b, w=390, h=844, init=''):
     ctx = b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=2, has_touch=True, is_mobile=True)
@@ -42,8 +43,10 @@ with sync_playwright() as p:
     santa = pg.inner_text('.item[data-skin=santa] .pr')
     hidden = [pg.inner_text(f'.item[data-skin={k}] .nm') for k in ('dawn', 'forest', 'sky')]
     lvl = [pg.inner_text(f'.item[data-skin={k}] .pr').strip() for k in ('candy', 'aurora', 'galaxy')]
-    rec('H1', 'shop lists 11 skins (santa locked to its event, 3 level skins with their level, 3 hidden as ???) + 3 gem packs, demo notice shown', pg.is_visible('#shop') and pg.is_visible('#shop-demo')
-        and len(skins) == 11 and '이벤트' in santa and hidden == ['???'] * 3 and lvl == ['Lv.5', 'Lv.10', 'Lv.20'] and len(packs) == 3 and all('₩' in x for x in prices), str(prices))
+    mint_pr = pg.inner_text('.item[data-skin=mint] .pr')
+    rec('H1', 'shop lists 15 skins (santa locked to its event, 7 level skins with their level, 3 hidden as ???, paid ones priced in won and gems) + 3 gem packs, demo notice shown', pg.is_visible('#shop') and pg.is_visible('#shop-demo')
+        and len(skins) == 15 and '이벤트' in santa and hidden == ['???'] * 3 and lvl == ['Lv.5', 'Lv.10', 'Lv.20'] and len(packs) == 3 and all('₩' in x for x in prices)
+        and '₩' in mint_pr and '300' in mint_pr, str(prices) + f' mint={mint_pr!r}')
 
     # H2 buying a gem pack credits gems and saves them
     packs[0].tap(); frames_wait(pg, 5)
@@ -160,6 +163,18 @@ with sync_playwright() as p:
     rec('H12', 'skin box shows description and price, buys nothing until its button; event skin cannot be bought',
         box[0] and box[1] == '별밤 그림자' and len(box[2]) > 10 and '구매하기' in box[3] and closed
         and '이벤트' in santa_act and santa_off and not pg6.is_visible('#skin-box') and not errs6, f'box={box} santa={santa_act!r}')
+
+    # H13 a paid skin is also sold for gems: the box offers it (greyed while short), 300 gems buy and equip it
+    pg6.tap('.item[data-skin=starry]'); frames_wait(pg6)
+    short = pg6.evaluate("[document.querySelector('#skin-box-gems').innerText, document.querySelector('#skin-box-gems').classList.contains('off')]")
+    pg6.tap('#skin-box-close'); frames_wait(pg6)
+    pg6.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ gems: 1000 }}))"); frames_wait(pg6)
+    pg6.tap('.item[data-skin=starry]'); frames_wait(pg6)
+    gbtn = pg6.inner_text('#skin-box-gems'); pg6.tap('#skin-box-gems'); frames_wait(pg6, 4)
+    w13 = wallet(pg6)
+    rec('H13', 'a paid skin is also sold for gems: greyed while short, then 300 gems buy and equip it',
+        '부족' in short[0] and short[1] and '300' in gbtn and w13['gems'] == 700 and 'starry' in w13['owned'] and w13['equipped'] == 'starry' and not errs6,
+        f'short={short} btn={gbtn!r} gems={w13["gems"]} owned={w13["owned"]}')
     b.close()
 
 print(f'{sum(res)}/{len(res)} passed')

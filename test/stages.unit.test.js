@@ -84,13 +84,14 @@ test('every region: level 2 clouds, 5 golden, 8 eclipse, 10 a boss you must swal
     const lv = k => St.STAGES[r * St.REGION_SIZE + k - 1];
     assert.deepEqual([2, 5, 8, 10].map(k => lv(k).twist), ['clouds', 'golden', 'eclipse', 'boss'], `region ${r}`);
     for (const k of [1, 3, 4, 6, 7, 9]) assert.equal(lv(k).twist, null);
-    assert.deepEqual(lv(10).goals[2], { kind: 'eat', what: 'boss', n: 1 });
+    assert.deepEqual(lv(10).goals[2], { kind: 'eat', what: 'boss', n: 1, name: lv(10).boss.name });
     assert.ok(lv(10).boss.r >= 30);
   }
   assert.ok(St.STAGES[149].boss.r > St.STAGES[9].boss.r, 'later bosses are bigger');
   for (const t of ['clouds', 'golden', 'eclipse', 'boss']) assert.ok(St.TWIST_INFO[t].name && St.TWIST_INFO[t].text);
   for (const list of Object.values(St.EVENT_LEVELS)) for (const s of list) assert.equal(s.twist, null);
-  assert.equal(St.goalLabel({ kind: 'eat', what: 'boss', n: 1 }), '거대 등불지기 1명 삼키기');
+  assert.equal(St.goalLabel({ kind: 'eat', what: 'boss', n: 1, name: '거대 등불지기' }), '거대 등불지기 1명 삼키기');
+  assert.equal(St.goalLabel({ kind: 'eat', what: 'boss', n: 1 }), '보스 1명 삼키기', 'without a name the generic word');
 });
 
 test('hard levels: the 8th of every region is hard, the boss level super-hard; nothing else, no events', () => {
@@ -112,4 +113,17 @@ test('every theme declares a building look the renderer knows (wall texture and 
   // hanok: walled compounds, earthen lanes, and a village tree that is also a book entry
   assert.ok(THEMES.hanok.compound && THEMES.hanok.alley && THEMES.hanok.landmark === 'ginkgo');
   assert.ok(THEMES.hanok.extras.includes('fence') && THEMES.hanok.extras.includes('ginkgo'));
+});
+
+test('every region has its own boss, in the style of its map, and the boss goal carries that name', () => {
+  const bosses = St.STAGES.filter(s => s.twist === 'boss').map(s => s.boss);
+  assert.equal(bosses.length, 15);
+  assert.equal(new Set(bosses.map(b => b.id)).size, 15, 'fifteen different figures');
+  for (const b of bosses) assert.ok(b.name && b.text && b.tip && /^#[0-9a-f]{6}$/.test(b.color) && b.r >= 30, b.id);
+  const by = Object.fromEntries(St.STAGES.filter(s => s.twist === 'boss').map(s => [s.theme, s]));
+  assert.equal(by.hanok.boss.name, '도깨비');
+  assert.equal(by.snow.boss.name, '무서운 눈사람');
+  assert.equal(by.town.boss.name, '거대 등불지기');
+  assert.equal(St.goalLabel(by.hanok.goals[2]), '도깨비 1명 삼키기');
+  assert.deepEqual(Object.keys(St.BOSSES).sort(), St.REGIONS.map(r => r.theme).sort(), 'one boss per region theme, none spare');
 });

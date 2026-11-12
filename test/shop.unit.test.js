@@ -117,3 +117,17 @@ test('event reward skin: granted once, survives save/load and an App Store entit
 test('every skin has a description for its shop box', () => {
   for (const s of S.SKINS) assert.ok(typeof s.desc === 'string' && s.desc.length > 10, s.id);
 });
+
+test('a paid skin also sells for gems: owned and paid once, refused when short, already owned, or not for gems', () => {
+  const mint = S.SKINS.find(s => s.id === 'mint');
+  assert.ok(mint.gems > 0 && mint.product, 'mint has both a product and a gem price');
+  const w = Object.assign(S.emptyWallet(), { gems: mint.gems + 5 });
+  const bought = S.buySkin(w, 'mint');
+  assert.equal(bought.gems, 5); assert.deepEqual(bought.owned, ['mint']);
+  assert.equal(w.gems, mint.gems + 5, 'input wallet is not mutated');
+  assert.equal(S.buySkin(bought, 'mint'), null, 'already owned');
+  assert.equal(S.buySkin(Object.assign(S.emptyWallet(), { gems: mint.gems - 1 }), 'mint'), null, 'gems short');
+  assert.equal(S.buySkin(Object.assign(S.emptyWallet(), { gems: 9999 }), 'candy'), null, 'a level skin is earned, never bought');
+  assert.equal(S.buySkin(Object.assign(S.emptyWallet(), { gems: 9999 }), 'nope'), null);
+  for (const s of S.SKINS.filter(k => k.product)) assert.ok(s.gems >= 300, s.id + ' costs real gems');
+});

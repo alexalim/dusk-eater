@@ -15,7 +15,7 @@
     { id: 'dex', name: '도감', icon: 'book', goal: '도감에서 찾은 친구', unit: '개', steps: [20, 45, Dex.ENTRIES.length], value: c => c.dex },
     { id: 'size', name: '덩치', icon: 'grow', goal: '한 판에서 가장 커진 크기', unit: 'm', steps: [30, 60, 90], value: c => c.stats.size || 0 },
     { id: 'shade', name: '그늘 달인', icon: 'moon', goal: '빛에 한 번도 안 닿고 끝낸 판', unit: '판', steps: [1, 5, 20], value: c => c.stats.clean || 0 },
-    { id: 'boss', name: '보스 사냥꾼', icon: 'crown', goal: '삼킨 거대 등불지기', unit: '명', steps: [1, 5, 15], value: c => c.stats.bosses || 0 },
+    { id: 'boss', name: '보스 사냥꾼', icon: 'crown', goal: '삼킨 보스', unit: '명', steps: [1, 5, 15], value: c => c.stats.bosses || 0 },
     { id: 'golden', name: '황금 수집가', icon: 'goldcoin', goal: '삼킨 황금 친구', unit: '개', steps: [5, 30, 100], value: c => c.stats.golds || 0 },
     { id: 'bolt', name: '번개 달인', icon: 'bolt', goal: '성공한 번개 미션', unit: '번', steps: [3, 15, 50], value: c => c.stats.bolts || 0 },
     { id: 'rush', name: '러시 왕', icon: 'clock', goal: '막판 러시 동안 삼킨 수', unit: '개', steps: [50, 300, 1000], value: c => c.stats.rush || 0 },

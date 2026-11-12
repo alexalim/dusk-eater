@@ -171,6 +171,27 @@
   .xpbox { width: min(100%, 300px); display: flex; flex-direction: column; gap: 6px; }
   .xprow { display: flex; justify-content: space-between; font-family: var(--display); font-size: 16px; }
   #end-xp-gain { color: var(--star); }
+  /* Celebration step: a dark violet glow, the face popping in, the stars landing one after another. */
+  #cheer { background: radial-gradient(circle at 50% 38%, #3b2070 0%, #170a2e 65%); justify-content: center; gap: 18px; }
+  #cheer .cheer-face { width: 168px; height: 168px; animation: cheerpop .6s cubic-bezier(.2, 1.6, .4, 1) both; }
+  #cheer .cheer-title { font-size: 34px; color: var(--star); }
+  #cheer .big-stars { display: flex; gap: 10px; justify-content: center; }
+  #cheer .big-stars .ico { width: 46px; height: 46px; animation: starin .45s cubic-bezier(.2, 1.6, .4, 1) both; }
+  #cheer .big-stars .ico:nth-child(2) { animation-delay: .18s; } #cheer .big-stars .ico:nth-child(3) { animation-delay: .36s; }
+  #cheer .btns { width: min(100%, 300px); margin-top: 18px; }
+  @keyframes cheerpop { 0% { transform: scale(.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes starin { 0% { transform: scale(0) rotate(-40deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+  /* Details step: three stat tiles (experience, best combo, time in shade). */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: min(100%, 320px); }
+  .tile { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 14px; padding: 10px 4px 8px; }
+  .tile b { display: block; font-family: var(--display); font-weight: 400; font-size: 21px; color: var(--star); line-height: 1.1; }
+  .tile small { font-size: 12px; color: var(--muted); }
+  /* Streak banner: a slanted gold slab that slides through the middle of the screen at every fifth combo. */
+  #streak { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%) rotate(-8deg); padding: 8px 26px; border-radius: 10px;
+    background: var(--star); color: #2a1a05; font: 32px var(--display); letter-spacing: 1px; box-shadow: 0 6px 0 #c9931d; pointer-events: none; z-index: 4; opacity: 0; }
+  #streak.go { animation: streak 1.6s ease-out forwards; }
+  @keyframes streak { 0% { transform: translate(-170%, -50%) rotate(-8deg); opacity: 0; } 22% { transform: translate(-50%, -50%) rotate(-8deg); opacity: 1; }
+    72% { transform: translate(-46%, -50%) rotate(-8deg); opacity: 1; } 100% { transform: translate(70%, -50%) rotate(-8deg); opacity: 0; } }
   .xpbar { height: 12px; border: 2px solid rgba(255,255,255,.5); }
   .xpbar i { transition: width .9s ease-out; }
   .chip.round { width: 36px; height: 36px; padding: 0; display: grid; place-items: center; font: italic 900 17px Georgia, serif; }
@@ -412,6 +433,7 @@
 <div id="vignette" class="hidden"></div>
 <div id="rain" class="hidden"></div>
 <div id="snow" class="hidden"></div>
+<div id="streak" class="hidden"></div>
 <div id="no3d" class="overlay hidden">
   <p class="big">이 브라우저에서는 3D 화면을 켤 수 없어요.</p>
   <p>브라우저의 그래픽 가속(WebGL)이 꺼져 있거나 그래픽 드라이버가 막혀 있어요.</p>
@@ -518,11 +540,21 @@
   <p id="cont-why"></p>
   <div class="btns"><div class="btn" id="btn-cont-yes"></div><div class="btn ghost" id="btn-cont-no">그만하기</div></div>
 </div>
+<!-- End of a run, in two steps (Duolingo-style): first the feeling (a big face, the title, the stars), a tap or a
+     moment later the details. Tests dismiss the first step by tapping it. -->
+<div id="cheer" class="overlay hidden">
+  <img class="face-big cheer-face" id="cheer-face" src="img/ui/face-happy.svg" alt="">
+  <h2 class="cheer-title" id="cheer-title">밤이 끝났어요</h2>
+  <div class="stars big-stars" id="cheer-stars"></div>
+  <p class="big" id="cheer-sub"></p>
+  <div class="btns"><div class="btn" id="btn-cheer">계속</div></div>
+</div>
 <div id="end" class="overlay hidden">
   <img class="face-big" id="end-face" src="img/ui/face-happy.svg" alt="">
   <h2 id="end-title">밤이 끝났어요</h2>
   <div class="stars" id="end-stars"></div>
   <p class="big" id="result"></p>
+  <div class="tiles" id="end-tiles"></div>
   <div class="xpbox" id="end-xp"><div class="xprow"><span id="end-lv"></span><span id="end-xp-gain"></span></div><div class="xpbar"><i id="end-xp-fill"></i></div></div>
   <div class="goal-list" id="end-goals"></div>
   <p id="best"></p>
@@ -574,7 +606,7 @@
   <span class="swatch" id="skin-box-swatch"></span>
   <div class="nm" id="skin-box-name"></div>
   <p id="skin-box-desc"></p>
-  <div class="btns"><div class="btn" id="skin-box-act"></div><div class="btn ghost" id="skin-box-close">닫기</div></div>
+  <div class="btns"><div class="btn" id="skin-box-act"></div><div class="btn hidden" id="skin-box-gems"></div><div class="btn ghost" id="skin-box-close">닫기</div></div>
 </div></div>
 <script src="vendor/three.min.js"></script>
 <script src="core.js"></script>
@@ -634,7 +666,7 @@
   // ---------- world ----------
   const TYPES = {
     cat:       { r: 4,  color: '#e8a25a' },
-    zombie:    { r: 6,  color: '#7d5fb8', bad: true, slow: 2 }, // on every map (ZOMBIES of them); swallowing one chills you: slow for `slow` s, no growth, no points
+    zombie:    { r: 7,  color: '#8a5fd1', bad: true, slow: 2 }, // on every map (ZOMBIES of them); swallowing one chills you: slow for `slow` s, no growth, no points
     gull:      { r: 4,  color: '#f7f7f2' },
     person:    { r: 5,  color: '#5b8def' },
     worker:    { r: 5,  color: '#ff8a3d' },
@@ -735,7 +767,7 @@
   let lots = []; // open lots [x0, y0, size]: parks, plazas, fields (the renderer lays lawns on them)
   let casters = []; // props that throw shade (SHADE below, core propShadow)
   let zombies = []; // they shuffle about (update)
-  let score, stats, shadows, sun, phase, rnd, runSun = 1;
+  let score, stats, shadows, sun, phase, rnd, runSun = 1, runPerk = { combo: 0, shard: 1, shardEvery: 1, zombie: 0 }; // level perks for this run (level.js)
   let bannerUntil = 0; // elapsed second until which the banner shows
   // The bolt mission's target: a kind with plenty left on the map that the player can already swallow.
   // ---------- mid-run events ----------
@@ -800,9 +832,10 @@
   const SHARD_TEXT = { bolt: `번개 사탕! ${C.SHARD.bolt}초 동안 쌩쌩`, cloud: `구름 조각! ${C.SHARD.cloud}초 동안 내 주변이 그늘`, magnet: `자석 별! ${C.SHARD.magnet}초 동안 먹이가 끌려와요` };
   function takeShard(h) {
     h.state = 2; stats.shards = (stats.shards || 0) + 1;
-    if (h.kind === 'bolt') fastUntil = elapsed + C.SHARD.bolt;
-    if (h.kind === 'cloud') bubbleUntil = elapsed + C.SHARD.cloud;
-    if (h.kind === 'magnet') magnetUntil = elapsed + C.SHARD.magnet;
+    const k = runPerk.shard; // level perk: longer effects
+    if (h.kind === 'bolt') fastUntil = elapsed + C.SHARD.bolt * k;
+    if (h.kind === 'cloud') bubbleUntil = elapsed + C.SHARD.cloud * k;
+    if (h.kind === 'magnet') magnetUntil = elapsed + C.SHARD.magnet * k;
     Sound.sfx.shard(h.kind); punch(2, '#7debff'); banner(`${ico('sparkle')} ${SHARD_TEXT[h.kind]}`, 2);
   }
 
@@ -865,6 +898,8 @@
   // Hunger (core HUNGER): time of the last swallow, the current state for the HUD, and how long the body has sat at its smallest
   let lastEat = 0, hunger = null, hungerTick = 0, starving = false, starveT = 0, endedBy = null;
   let combo = 0, comboUntil = 0, slowUntil = 0; // swallow chain (core COMBO) and the zombie slowdown
+  let bossDown = null; // when the boss was swallowed; the run ends BOSS_END_S later (long enough for the gulp and the banner)
+  const BOSS_END_S = 1.6;
   // Mid-run event (core EVENTS): what is on, when it ends, when this run's one event is due, and the pools it uses
   let mapEvent = null, eventDone = false, eventFrac = 0.5, runners = [], paradePool = [], guardPool = [];
   const PEOPLE = new Set(['person', 'worker', 'officer', 'visitor', 'skier', 'hanbok', 'student', 'grandma', 'commuter', 'umbrella', 'fan', 'sunbather', 'traveler', 'caroler', 'surfer']);
@@ -1097,7 +1132,7 @@
     // Boss (10th level of a region): a giant lantern keeper with a wide beam, slow, starting far from the middle.
     if (stage.boss) {
       const g = { x: WORLD * 0.8, y: Math.max(200, waterY * 0.22), dir: Math.PI, half: 0.55, range: 240, r: stage.boss.r, speed: 26,
-                  tx: 0, ty: 0, state: 0, ft: 0, type: 'boss', boss: true, color: '#5a2a6e' };
+                  tx: 0, ty: 0, state: 0, ft: 0, type: 'boss', boss: true, kind: stage.boss.id, color: stage.boss.color }; // the map's own boss (stages BOSSES)
       pickTarget(g);
       guards.push(g);
     }
@@ -1201,7 +1236,7 @@
     stageIndex = i; stage = list[i];
     buildWorld(Date.now() & 0xffff);
     elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; continued = false; nextGold = 4; rush = false; rushTick = 0; Sound.music.rush(false); bonus = null;
-    lastEat = 0; hunger = null; hungerTick = 0; starving = false; starveT = 0; endedBy = null; combo = 0; comboUntil = 0; slowUntil = 0;
+    lastEat = 0; hunger = null; hungerTick = 0; starving = false; starveT = 0; endedBy = null; combo = 0; comboUntil = 0; slowUntil = 0; bossDown = null;
     mapEvent = null; eventDone = false; runners = []; $('rain').classList.add('hidden');
     $('snow').classList.toggle('hidden', !(stage.look && stage.look.snow)); // it snows all run on winter maps
     shards = []; nextShard = C.SHARD.from; lastShardKind = null; fastUntil = bubbleUntil = magnetUntil = 0; dashTick = 0;
@@ -1209,14 +1244,14 @@
     tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
     runDuration = C.DURATION + used.reduce((a, b) => a + (b.extraTime || 0), 0);
-    stats = { score: 0, eaten: {}, beamHit: false, total: 0, lit: false, night: 0, maxR: 0 };
+    stats = { score: 0, eaten: {}, beamHit: false, total: 0, lit: false, night: 0, maxR: 0, playT: 0, shadeT: 0 };
     Sound.music.tune(stage.theme); Sound.music.mode(stage.boss ? 'boss' : 'play'); // every region has its own tune
     phase = C.dayPhase(0); sun = C.sunState(phase.dayT, stage.sunMax);
     setShadows(shadeCasts()); shadeAt = phase.dayT; shadeDark = false; shadeStale = false;
     const spawn = pickSpawn();
     // Level perks (level.js): a bigger start and less shrinking in sunlight, fixed for the whole run.
     const perk = Level.perksOf(Level.levelOf(Store.wallet.stats.xp).level);
-    runSun = perk.sun;
+    runSun = perk.sun; runPerk = perk;
     const r0 = Math.max(14, ...used.map(b => b.startR || 0)) * perk.startR;
     player = { x: spawn.x, y: spawn.y, r: r0, r0, vx: 0, vy: 0, lit: false, face: 0, look: Math.PI / 2, gulp: 0, bulge: 0 };
     tierDone = new Set(tierKinds().filter(fits).map(k => k.key)); tierNext = 0; camPulse = 0;
@@ -1356,7 +1391,7 @@
     }
     // Light shards (core SHARD): a pickup appears in sunlight near the player every so often; touching it is enough.
     if (!tut && !stage.boss && !phase.night && elapsed >= nextShard) {
-      nextShard = elapsed + C.SHARD.every;
+      nextShard = elapsed + C.SHARD.every * runPerk.shardEvery; // level perk: more often
       if (shards.filter(h => h.state === 0).length < C.SHARD.max) spawnShard();
     }
     for (const h of shards) {
@@ -1398,9 +1433,8 @@
     // the only slowdown is the few seconds after swallowing a zombie.
     const speed = curSpeed();
     // Velocity moves toward the target at a fixed rate: a quick start (ACCEL_S to full speed) and a short
-    // glide when the finger lifts (GLIDE_S to a stop). A grown body is heavier, so both stretch with size.
-    const heavy = 1 + Math.min(1, (player.r / player.r0 - 1) / 6) * 0.8;
-    const rate = speed / ((ml > 0.1 ? ACCEL_S : GLIDE_S) * heavy);
+    // glide when the finger lifts (GLIDE_S to a stop), the same at every size (TestFlight: a big body felt sluggish).
+    const rate = speed / (ml > 0.1 ? ACCEL_S : GLIDE_S);
     const dvx = mx * speed - player.vx, dvy = my * speed - player.vy, dv = Math.hypot(dvx, dvy);
     if (dv > 0) { const k = Math.min(dv, rate * dt) / dv; player.vx += dvx * k; player.vy += dvy * k; }
     player.x = Math.max(0, Math.min(WORLD, player.x + player.vx * dt));
@@ -1426,6 +1460,7 @@
     if (player.lit) { player.r = Math.max(10, player.r - (beamed ? 7 : 1.6) * runSun * dt); stats.lit = true; }
     if (player.lit && !stats.wasLit) Sound.sfx.lit(); // once per step into the light
     stats.wasLit = player.lit;
+    stats.playT += dt; if (!player.lit) stats.shadeT += dt; // the end screen's "time in shade" tile
 
     const tryEat = (o, ox, oy, exclude) => {
       const dist = Math.hypot(ox - player.x, oy - player.y);
@@ -1450,16 +1485,18 @@
       o.state = 2; player.bulge = 1; gulped = true;
       lastEat = elapsed; starving = false; starveT = 0; hungerTick = 0; // fed again
       if (TYPES[o.type] && TYPES[o.type].bad) { // a zombie: chills you — slow for a few seconds, no growth, no points, combo gone
-        slowUntil = elapsed + TYPES[o.type].slow; combo = 0; stats.yuck = (stats.yuck || 0) + 1;
-        Sound.sfx.yuck(); punch(1, '#9bd38a'); banner(`${face('surprised')} 으엑! 좀비는 먹는 게 아니에요… ${TYPES[o.type].slow}초 느려져요`, 2);
+        const chill = Math.max(0.5, TYPES[o.type].slow - runPerk.zombie); // level perk: a shorter chill
+        slowUntil = elapsed + chill; combo = 0; stats.yuck = (stats.yuck || 0) + 1;
+        Sound.sfx.yuck(); punch(1, '#9bd38a'); banner(`${face('surprised')} 으엑! 좀비는 먹는 게 아니에요… ${chill}초 느려져요`, 2);
         stats.eaten[o.type] = (stats.eaten[o.type] || 0) + 1; stats.total++;
         if (!Store.wallet.dex.includes(o.type)) discoverDex(o.type);
         continue;
       }
       // combo: another swallow within COMBO.window stacks the score multiplier
-      combo = elapsed < comboUntil ? combo + 1 : 1; comboUntil = elapsed + C.COMBO.window; stats.maxCombo = Math.max(stats.maxCombo || 0, combo);
+      combo = elapsed < comboUntil ? combo + 1 : 1; comboUntil = elapsed + C.COMBO.window + runPerk.combo; stats.maxCombo = Math.max(stats.maxCombo || 0, combo);
       const mult = C.comboMult(combo);
       if (combo >= 3) Sound.sfx.combo(combo);
+      if (combo >= 5 && combo % 5 === 0) streak(combo);
       const v = o.worth || o.r; // a courtyard wall is swallowed at its size but grows and scores little (worth)
       Sound.sfx.gulp(Math.min(1, o.r / player.r));
       if (v > player.r * 0.45 && !o.boss) punch(1);
@@ -1473,7 +1510,7 @@
         Store.update(Shop.grant(Store.wallet, { gems: BONUS_GEMS }));
         Sound.sfx.coin(); banner(`${ico('bolt')} 번개 미션 성공! 보석 ${BONUS_GEMS}개 · 300점`, 2.5); punch(3, '#ffd25c');
       }
-      if (o.boss) { Sound.sfx.level(); banner(`${ico('crown')} 보스를 삼켰어요!`, 3); punch(3, '#e3b3ff'); }
+      if (o.boss) { bossDown = elapsed; Sound.sfx.level(); banner(`${ico('crown')} ${withObject(stage.boss.name)} 삼켰어요! 판 끝!`, 3); punch(3, '#e3b3ff'); } // the run ends right after (update)
       stats.score = score;
       stats.eaten[o.type] = (stats.eaten[o.type] || 0) + 1;
       stats.total++;
@@ -1503,7 +1540,7 @@
     cam.x += (player.x - cam.x) * Math.min(1, dt * 6);
     cam.y += (player.y - cam.y) * Math.min(1, dt * 6);
 
-    if (gameT >= 1) finish();
+    if (gameT >= 1 || (bossDown !== null && elapsed >= bossDown + BOSS_END_S)) finish(); // a boss level ends once its boss is down
   }
 
   // ---------- render ----------
@@ -1546,7 +1583,7 @@
   // Eaten things are sucked into the mouth (front of the body, MOUTH_H·r up): slow at first, then a rush,
   // curling a little, lifting to the mouth and shrinking to nothing right as they reach it.
   const SWALLOW_S = 0.5, MOUTH_H = 0.5;
-  const ACCEL_S = 0.12, GLIDE_S = 0.3; // seconds to full speed / to a stop, before the size factor
+  const ACCEL_S = 0.12, GLIDE_S = 0.3; // seconds to full speed / to a stop, at every size
   // Two beats, so it reads as going *into* the mouth: first it flies to the mouth while shrinking to the mouth's
   // size (small things keep theirs), then it slides in past the lips and shrinks away inside the body.
   const MOUTH_FIT = 0.45, ARRIVE = 0.8; // open mouth radius as a share of the player's r; share of the time spent arriving
@@ -1615,7 +1652,7 @@
     if (boss && boss.state === 0) {
       const big = boss.r < player.r * C.EAT_RATIO;
       $('boss-pill').classList.toggle('ready', big);
-      $('boss-pill').innerHTML = `${ico('crown')} ${big ? '등불지기를 그늘에서 꿀꺽!' : `${(boss.r / C.EAT_RATIO / 4).toFixed(1)}m 넘게 크면 꿀꺽`}`;
+      $('boss-pill').innerHTML = `${ico('crown')} ${big ? `${withObject(stage.boss.name)} 그늘에서 꿀꺽!` : `${(boss.r / C.EAT_RATIO / 4).toFixed(1)}m 넘게 크면 꿀꺽`}`;
     }
     hudStatus();
     $('sun').style.left = (Math.min(elapsed / runDuration, 1) * 100) + '%';
@@ -1772,7 +1809,10 @@
   // Level card: current level and title, perks in effect, and the road of rewards ahead (opened from the title chip).
   function openLevel() {
     const L = Level.levelOf(Store.wallet.stats.xp), perk = Level.perksOf(L.level);
-    const marks = [...new Set([5, 10, 15, 20, 30].concat(Shop.SKINS.filter(s => s.level).map(s => s.level)))].sort((a, b) => a - b);
+    // the strongest step of each perk kind is what applies (a +15% start replaces the +10% before it)
+    const inEffect = ['startR', 'sun', 'combo', 'shard', 'shardEvery', 'zombie'].map(k => perk.got.filter(p => p[k] !== undefined).pop()).filter(Boolean).sort((a, b) => a.level - b.level);
+    const marks = [...new Set(Level.PERKS.map(p => p.level).concat(Level.TITLES.map(([l]) => l).filter(l => l > 1),
+      Shop.SKINS.filter(s => s.level).map(s => s.level), [25, 50, 75, 100]))].sort((a, b) => a - b);
     const road = marks.map(lv => {
       const skin = Shop.SKINS.find(s => s.level === lv), items = [`보석 ${Level.reward(lv)}개`];
       Level.PERKS.filter(p => p.level === lv).forEach(p => items.push(p.text));
@@ -1780,10 +1820,10 @@
       if (skin) items.push(skin.name);
       return `<div class="lvstep${lv > L.level ? ' lock' : ''}"><span class="lvn">Lv.${lv}</span>${skin ? swatch(skin, false) : ''}<ul>${items.map(x => `<li>${x}</li>`).join('')}</ul></div>`;
     }).join('');
-    $('level-body').innerHTML = `<div class="lvhead">Lv.${L.level} <small>${Level.titleOf(L.level)}</small></div>
+    $('level-body').innerHTML = `<div class="lvhead">Lv.${L.level} <small>${Level.titleOf(L.level)}${L.max ? ' · 만렙' : ''}</small></div>
       <div class="xpbar" style="border-color:#c9d3f2;background:#dfe6f7"><i style="width:${L.into / L.next * 100}%"></i></div>
-      <p>다음 레벨까지 경험치 ${(L.next - L.into).toLocaleString()} · 판을 끝까지 하면 삼킨 수 + 별당 ${Level.XP_PER_STAR}을 받아요.</p>
-      <h4>지금 받는 혜택</h4>${perk.got.length ? `<ul>${perk.got.map(p => `<li>${p.text}</li>`).join('')}</ul>` : '<p>Lv.5부터 혜택이 생겨요.</p>'}
+      <p>${L.max ? `만렙 Lv.${Level.MAX_LEVEL}이에요. 모든 혜택을 다 받고 있어요.` : `다음 레벨까지 경험치 ${(L.next - L.into).toLocaleString()} · 판을 끝까지 하면 삼킨 수 + 별당 ${Level.XP_PER_STAR}을 받아요. 만렙은 Lv.${Level.MAX_LEVEL}.`}</p>
+      <h4>지금 받는 혜택</h4>${inEffect.length ? `<ul>${inEffect.map(p => `<li>${p.text}</li>`).join('')}</ul>` : '<p>Lv.5부터 혜택이 생겨요.</p>'}
       <h4>레벨 보상</h4><div class="lvroad">${road}</div>`;
     show('levelinfo');
   }
@@ -1855,7 +1895,7 @@
 
   function show(id) {
     if (id && id !== 'pause') { Sound.music.mode('title'); Sound.music.rush(false); if (id === 'title') Sound.music.tune('town'); } // menus get the quiet arrangement
-    for (const o of ['title', 'select', 'pause', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo', 'twist', 'cont', 'daily', 'missions']) $(o).classList.toggle('hidden', o !== id);
+    for (const o of ['title', 'select', 'pause', 'cheer', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo', 'twist', 'cont', 'daily', 'missions']) $(o).classList.toggle('hidden', o !== id);
     $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
     if (id !== null) $('tutorial').classList.add('hidden');
   }
@@ -1863,7 +1903,7 @@
   // Every icon is a picture (img/): UI marks are SVG, maps and collection-book kinds are 3D renders.
   const ico = name => `<img class="ico" src="img/ui/${name}.svg" alt="">`;
   // HUD chips stay short ("900점", "고양이 0/3", "불빛 피하기"); the full wording lives on the level card and the end screen.
-  const hudGoal = g => g.kind === 'score' ? `${g.n.toLocaleString()}점` : g.kind === 'eat' ? NAMES[g.what][0] : g.kind === 'noBeam' ? '불빛 피하기' : goalLabel(g);
+  const hudGoal = g => g.kind === 'score' ? `${g.n.toLocaleString()}점` : g.kind === 'eat' ? (g.name || NAMES[g.what][0]) : g.kind === 'noBeam' ? '불빛 피하기' : goalLabel(g);
   const face = name => `<img class="ico face" src="img/ui/face-${name}.svg" alt="">`;
   const dexIco = e => `<img class="ico dex" src="${e.img}" alt="">`;
   const mapIco = theme => `<img class="ico map" src="img/map/${theme}.png" alt="">`;
@@ -1964,10 +2004,11 @@
     $('twist-head').textContent = boss ? '보스 등장!' : '새로운 규칙!';
     $('twist-card').classList.toggle('boss', boss);
     $('twist-ico').src = `img/ui/${twistIco[s.twist]}.svg`;
-    $('twist-name').textContent = tw.name;
-    $('twist-text').textContent = tw.text;
+    // the boss card is the map's own boss (stages BOSSES): its name, its line, how to approach it
+    $('twist-name').textContent = boss ? `보스: ${s.boss.name}` : tw.name;
+    $('twist-text').textContent = boss ? s.boss.text : tw.text;
     const tips = tw.tips.slice();
-    if (boss) tips.splice(1, 0, `크기가 ${(s.boss.r / C.EAT_RATIO / 4).toFixed(1)}m를 넘으면 삼킬 수 있어요.`);
+    if (boss) { tips[0] = s.boss.tip; tips.splice(1, 0, `크기가 ${(s.boss.r / C.EAT_RATIO / 4).toFixed(1)}m를 넘으면 삼킬 수 있어요.`); }
     $('twist-tips').innerHTML = tips.map(t => `<li>${t}</li>`).join('');
     $('twist-demo').classList.toggle('hidden', s.twist !== 'golden');
     show('twist');
@@ -2018,6 +2059,15 @@
     state = 'play'; show(null); $('snow').classList.toggle('hidden', !(stage.look && stage.look.snow));
   }
 
+  let cheerNext = null, cheerTimer = 0; // the celebration step hands over to the details (endRun)
+  $('cheer').addEventListener('pointerup', () => { if (cheerNext) cheerNext(); });
+  // A slanted gold banner through the middle of the screen: "5연속!", "10연속!" ...
+  function streak(n) {
+    const el = $('streak'); el.textContent = `${n}연속!`;
+    el.classList.remove('hidden', 'go'); void el.offsetWidth; el.classList.add('go');
+    el.onanimationend = () => el.classList.add('hidden');
+  }
+
   function endRun(got) {
     $('snow').classList.add('hidden'); $('rain').classList.add('hidden');
     state = 'end';
@@ -2060,17 +2110,26 @@
     $('end-gems').innerHTML = notes.join(' · ');
     $('end-gems').classList.toggle('hidden', !notes.length);
 
-    $('end-title').innerHTML = !cleared ? '아쉬워요, 다시 도전!' : n === 3 ? `완벽한 밤이었어요! ${ico('sparkle')}` : '밤이 끝났어요';
-    $('end-face').src = `img/ui/face-${['sleepy', 'determined', 'happy', 'excited'][n]}.svg`; // the character reacts to the stars
+    const title = !cleared ? '아쉬워요, 다시 도전!' : n === 3 ? `완벽한 밤이었어요! ${ico('sparkle')}` : '밤이 끝났어요';
+    const face = `img/ui/face-${['sleepy', 'determined', 'happy', 'excited'][n]}.svg`; // the character reacts to the stars
+    $('end-title').innerHTML = title; $('end-face').src = face;
     $('end-stars').innerHTML = starText(n);
     $('result').textContent = `${stats.total}개 삼킴 · ${score.toLocaleString()}점`;
+    const shadePct = stats.playT ? Math.round(stats.shadeT / stats.playT * 100) : 0;
+    $('end-tiles').innerHTML = [[`+${xp.toLocaleString()}`, '경험치'], [`${stats.maxCombo || 0}`, '최고 콤보'], [`${shadePct}%`, '그늘에 있던 시간']]
+      .map(([v, l]) => `<div class="tile"><b>${v}</b><small>${l}</small></div>`).join('');
+    // step one: the celebration (face, title, stars); step two on a tap or after a moment
+    $('cheer-face').src = face; $('cheer-title').innerHTML = title; $('cheer-stars').innerHTML = starText(n);
+    $('cheer-sub').textContent = !cleared ? (endedBy === 'hunger' ? '너무 오래 굶었어요' : '별 하나가 모자랐어요') : n === 3 ? '별 셋 모두!' : `${stats.total}개 삼켰어요`;
     $('end-goals').innerHTML = stage.goals.map((g, k) =>
       `<div><span class="mark">${ico(got[k] ? 'star' : 'star-off')}</span><span>${goalLabel(g)}</span></div>`).join('');
     $('best').textContent = `${stage.name} 최고 기록 ${bestScore[stage.id].toLocaleString()}점`;
     const next = stageIndex + 1;
     $('btn-next').classList.toggle('hidden', !(next < list.length && C.isUnlocked(listIds, next, bestStars)));
-    show('end');
-    showXp(xpBefore, xp); // after show: the bar only animates once it is on screen
+    show('cheer');
+    clearTimeout(cheerTimer);
+    cheerNext = () => { if (state !== 'end' || $('cheer').classList.contains('hidden')) return; show('end'); showXp(xpBefore, xp); }; // after show: the bar only animates once it is on screen
+    cheerTimer = setTimeout(cheerNext, 2600);
     if (n) Sound.sfx.win(); else Sound.sfx.lose();
     if (lv.to > lv.from) setTimeout(() => Sound.sfx.level(), 700);
   }
@@ -2118,7 +2177,7 @@
       const own = (!s.product && !s.reward) || w.owned.includes(s.id), on = w.equipped === s.id, price = s.product && Store.price(s.product);
       const ev = s.reward && EVENTS.find(e => e.id === s.reward), set = Dex.setFor(s.id), secret = s.hidden && !own;
       const label = on ? '장착 중' : own ? '장착하기' : ev ? `${mapIco(ev.theme)} 이벤트 별 ${ev.reward.stars}개`
-        : set ? `${ico('book')} ${set.name}` : s.level ? `${ico('sparkle')} Lv.${s.level}` : price || '준비 중';
+        : set ? `${ico('book')} ${set.name}` : s.level ? `${ico('sparkle')} Lv.${s.level}` : s.gems ? `${price ? price + '<br>' : ''}<span class="gem">${GEM}${s.gems}</span>` : price || '준비 중';
       return `<button class="item${on ? ' on' : ''}" data-skin="${s.id}">
         ${swatch(s, secret)}<span class="nm">${secret ? '???' : s.name}</span><span class="pr${own ? ' own' : ''}">${label}</span></button>`;
     }).join('');
@@ -2157,11 +2216,24 @@
       : s.level ? `${ico('sparkle')} Lv.${s.level}에 받아요 (지금 Lv.${Level.levelOf(w.stats.xp).level})`
       : price ? `${price} 구매하기` : '준비 중';
     act.classList.toggle('off', on || (!own && !price));
+    // a paid skin's second way in: gems (shop.js buySkin); greyed while the purse is short
+    const gb = $('skin-box-gems'), forGems = !own && !!s.gems;
+    gb.classList.toggle('hidden', !forGems);
+    if (forGems) { gb.innerHTML = `<span class="gem">${GEM}${s.gems}</span>개로 사기` + (w.gems >= s.gems ? '' : ` (${(s.gems - w.gems).toLocaleString()}개 부족)`); gb.classList.toggle('off', w.gems < s.gems); }
   }
   function openSkinBox(id) { skinBoxId = id; renderSkinBox(); $('skin-box').classList.remove('hidden'); }
   function closeSkinBox() { skinBoxId = null; $('skin-box').classList.add('hidden'); }
   $('skin-box-close').addEventListener('pointerup', closeSkinBox);
   $('skin-box').addEventListener('pointerup', e => { if (e.target.id === 'skin-box') closeSkinBox(); }); // tap outside the box
+  $('skin-box-gems').addEventListener('pointerup', () => {
+    const s = skinById(skinBoxId);
+    if (!s || busy || $('skin-box-gems').classList.contains('off')) return;
+    const w = Shop.buySkin(Store.wallet, s.id);
+    if (!w) return;
+    Store.update(Shop.equip(w, s.id)); renderGems(); renderShop();
+    $('shop-msg').textContent = `${GEM}${s.gems}개로 ${withObject(s.name)} 샀어요.`;
+    closeSkinBox();
+  });
   $('skin-box-act').addEventListener('pointerup', async () => {
     const s = skinById(skinBoxId);
     if (!s || busy || $('skin-box-act').classList.contains('off')) return;
