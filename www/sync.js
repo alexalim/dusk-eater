@@ -38,6 +38,10 @@
       pendingTickets: dw.pendingTickets,
       daily: (dw.daily.last > aw.daily.last || (dw.daily.last === aw.daily.last && dw.daily.n >= aw.daily.n)) ? dw.daily : aw.daily,
       challenge: dw.challenge.date !== aw.challenge.date ? (dw.challenge.date > aw.challenge.date ? dw.challenge : aw.challenge) : newer.challenge,
+      // the monthly quest: the later month, or within a month the save with more points; a badge won anywhere stays won
+      monthly: dw.monthly.month !== aw.monthly.month ? (dw.monthly.month > aw.monthly.month ? dw.monthly : aw.monthly)
+        : { month: dw.monthly.month, points: Math.max(dw.monthly.points, aw.monthly.points), claimed: dw.monthly.claimed || aw.monthly.claimed },
+      monthBadges: union(aw.monthBadges, dw.monthBadges),
     });
     return {
       stars: maxEach(account.stars, device.stars),

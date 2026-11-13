@@ -74,9 +74,10 @@ with sync_playwright() as p:
     g0 = wallet(pg)['gems']
     for _ in range(3): pg.tap('#missions-body .claim.ready[data-m]'); frames_wait(pg)
     pg.tap('#btn-chest'); frames_wait(pg)
-    w4 = wallet(pg)
-    rec('C4', 'missions fill, pay once each, and the chest opens after all three', badge == '3' and w4['challenge']['chest'] and len(w4['challenge']['claimed']) == 3 and w4['gems'] > g0,
-        f'badge={badge!r} claimed={w4["challenge"]["claimed"]} chest={w4["challenge"]["chest"]} gems {g0}->{w4["gems"]}')
+    w4 = wallet(pg); mcard = pg.inner_text('.mcard')
+    rec('C4', 'missions fill, pay once each, the chest opens after all three, and the monthly quest card counts five points', badge == '3' and w4['challenge']['chest'] and len(w4['challenge']['claimed']) == 3 and w4['gems'] > g0
+        and w4['monthly']['points'] == 5 and '5 / 30' in mcard and '퀘스트' in mcard,
+        f'badge={badge!r} claimed={w4["challenge"]["claimed"]} chest={w4["challenge"]["chest"]} gems {g0}->{w4["gems"]} monthly={w4.get("monthly")}')
     pg.tap('#btn-missions-back'); frames_wait(pg)
 
     rec('C0', 'no page errors', not errs, '; '.join(errs[:3]))

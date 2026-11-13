@@ -359,4 +359,21 @@ with sync_playwright() as p:
               '| in-beam', sum(1 for b in bad if b[1]), '| edge-dist', sorted(b[2] for b in bad))
         rec('S9', f'shadow pixels match rule stage{si} t={t}s', rate >= 0.97, f'{rate*100:.1f}% of {total} pts; ' + ' | '.join(det))
     b.close()
+
+    # S20 first run: the onboarding cards (progress bar, the character's bubble, one button) end on the level map; never shown again
+    b = p.chromium.launch(args=GL)
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+    pg.add_init_script(TIMER); pg.add_init_script('window.__DUSK_TEST__.onboard = true')
+    pg.goto(URL); pg.wait_for_timeout(700); pg.evaluate(f'{A}.ready'); frames_wait(pg)
+    shown = pg.is_visible('#onboard'); bars = []; says = []
+    for k in range(4):
+        bars.append(pg.evaluate("document.querySelectorAll('#ob-bar i.on').length")); says.append(pg.inner_text('#ob-say'))
+        last = pg.inner_text('#btn-ob'); pg.tap('#btn-ob'); frames_wait(pg)
+    on_map = pg.is_visible('#select') and not pg.is_visible('#onboard'); sel = pg.evaluate("document.querySelector('.node.sel') && document.querySelector('.node.sel').dataset.i")
+    pg.reload(); pg.wait_for_timeout(700); pg.evaluate(f'{A}.ready'); frames_wait(pg)
+    again = pg.is_visible('#onboard')
+    rec('S20', 'first run: 4 onboarding cards with a filling bar and the character talking, 시작하기 opens the map on level 1, not shown again',
+        shown and bars == [1, 2, 3, 4] and len(set(says)) == 4 and last == '시작하기' and on_map and sel == '0' and not again and not errs, f'bars={bars} last={last!r} map={on_map} sel={sel} again={again} errs={errs}')
+    b.close()
 print('SUMMARY', sum(r[2] for r in res), '/', len(res))

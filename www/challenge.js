@@ -17,6 +17,22 @@
   ];
   const REWARDS = [{ gems: 15 }, { tickets: { time: 1 } }, { gems: 25 }];
   const CHEST = { gems: 40, tickets: { time: 1, size: 1 } };
+  // The monthly quest (Duolingo-style): every mission reward claimed this month is a point, the chest two. MONTH_GOAL points
+  // win the month's badge (w.monthBadges keeps 'YYYY-MM') and MONTH_GEMS, once. State: w.monthly = { month, points, claimed }.
+  const MONTH_GOAL = 30, MONTH_GEMS = 100;
+  const monthOf = day => day.slice(0, 7);
+  const monthly = (w, day) => (w.monthly && w.monthly.month === monthOf(day) ? w.monthly : { month: monthOf(day), points: 0, claimed: false });
+  const addPoints = (w, day, n) => { const m = monthly(w, day); return Object.assign({}, w, { monthly: Object.assign({}, m, { points: m.points + n }) }); };
+  function monthStatus(w, day) {
+    const m = monthly(w, day), d = new Date(day + 'T12:00:00'), last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return Object.assign({}, m, { goal: MONTH_GOAL, gems: MONTH_GEMS, done: m.points >= MONTH_GOAL, daysLeft: last - d.getDate() + 1, label: `${d.getMonth() + 1}월` });
+  }
+  // The month's prize, once its points are in: the badge and the gems.
+  function claimMonth(w, day, grant) {
+    const m = monthStatus(w, day);
+    if (!m.done || m.claimed) return w;
+    return Object.assign(grant(w, { gems: MONTH_GEMS }), { monthly: Object.assign({}, monthly(w, day), { claimed: true }), monthBadges: (w.monthBadges || []).concat(m.month) });
+  }
 
   // The day's three missions, picked from the date so every phone agrees.
   function today(day) {
@@ -53,19 +69,20 @@
     const m = status(w, day).find(x => x.id === id);
     if (!m || !m.done || m.claimed) return w;
     const b = board(w, day);
-    return Object.assign(grant(w, m.reward), { challenge: Object.assign({}, b, { claimed: b.claimed.concat(id) }) });
+    return addPoints(Object.assign(grant(w, m.reward), { challenge: Object.assign({}, b, { claimed: b.claimed.concat(id) }) }), day, 1);
   }
 
   // The chest opens once all three are claimed.
   function openChest(w, day, grant) {
     const b = board(w, day);
     if (b.chest || status(w, day).some(m => !m.claimed)) return w;
-    return Object.assign(grant(w, CHEST), { challenge: Object.assign({}, b, { chest: true }) });
+    return addPoints(Object.assign(grant(w, CHEST), { challenge: Object.assign({}, b, { chest: true }) }), day, 2);
   }
 
-  const waiting = (w, day) => status(w, day).filter(m => m.done && !m.claimed).length + (status(w, day).every(m => m.claimed) && !board(w, day).chest ? 1 : 0);
+  const waiting = (w, day) => status(w, day).filter(m => m.done && !m.claimed).length + (status(w, day).every(m => m.claimed) && !board(w, day).chest ? 1 : 0)
+    + (monthStatus(w, day).done && !monthStatus(w, day).claimed ? 1 : 0);
 
-  const api = { POOL, REWARDS, CHEST, today, record, status, claim, openChest, waiting };
+  const api = { POOL, REWARDS, CHEST, MONTH_GOAL, MONTH_GEMS, today, record, status, claim, openChest, waiting, monthStatus, claimMonth };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DuskChallenge = api;
 })(this);

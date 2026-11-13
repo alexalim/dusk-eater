@@ -51,6 +51,18 @@ test('daily challenges: three a day, the same for a given date, filled by runs, 
   assert.equal(Ch.openChest(w, day, S.grant), w);
   assert.equal(Ch.waiting(w, day), 0);
   assert.ok(Ch.status(w, '2026-11-07').every(m => !m.done && !m.claimed), 'a new day is a fresh board');
+  // the monthly quest: three claims and the chest are five points; the badge and its gems come at the goal, once; a new month starts over
+  assert.deepEqual(w.monthly, { month: '2026-11', points: 5, claimed: false });
+  const ms = Ch.monthStatus(w, day);
+  assert.deepEqual([ms.goal, ms.done, ms.daysLeft, ms.label], [Ch.MONTH_GOAL, false, 25, '11월']);
+  assert.equal(Ch.claimMonth(w, day, S.grant), w, 'not yet');
+  let m = Object.assign({}, w, { monthly: { month: '2026-11', points: Ch.MONTH_GOAL, claimed: false } });
+  assert.equal(Ch.waiting(m, day), 1, 'the month prize waits too');
+  const g = m.gems; m = Ch.claimMonth(m, day, S.grant);
+  assert.equal(m.gems, g + Ch.MONTH_GEMS); assert.deepEqual(m.monthBadges, ['2026-11']); assert.ok(m.monthly.claimed);
+  assert.equal(Ch.claimMonth(m, day, S.grant), m, 'once');
+  assert.equal(Ch.monthStatus(m, '2026-12-01').points, 0, 'December starts at zero');
+  assert.equal(Ch.monthStatus(m, '2026-12-01').daysLeft, 31);
 });
 
 test('size missions keep the best run; counts add up across runs', () => {
@@ -69,4 +81,10 @@ test('normalize keeps the new fields sane; merge takes the further check-in and 
   const m = Y.merge(save({ daily: { n: 2, last: '2026-11-04' }, tickets: { time: 1 } }, 2), save({ daily: { n: 4, last: '2026-11-06' }, tickets: { time: 3 } }, 1));
   assert.deepEqual(m.wallet.daily, { n: 4, last: '2026-11-06' });
   assert.deepEqual(m.wallet.tickets, { time: 1 }, 'tickets follow the newer save, like gems');
+  // the monthly quest survives normalize and merges without losing a badge
+  const mn = S.normalize({ monthly: { month: '2026-11', points: 7.5, claimed: 1 }, monthBadges: ['2026-10', 'junk', '2026-10'] });
+  assert.deepEqual([mn.monthly, mn.monthBadges], [{ month: '2026-11', points: 0, claimed: false }, ['2026-10']], 'a fraction is not a point count; junk months are dropped');
+  const mm = Y.merge(save({ monthly: { month: '2026-11', points: 4, claimed: false }, monthBadges: ['2026-10'] }, 2), save({ monthly: { month: '2026-11', points: 9, claimed: true }, monthBadges: ['2026-09'] }, 1));
+  assert.deepEqual([mm.wallet.monthly, mm.wallet.monthBadges.sort()], [{ month: '2026-11', points: 9, claimed: true }, ['2026-09', '2026-10']], 'same month: the most points; badges from both phones');
+  assert.deepEqual(Y.merge(save({ monthly: { month: '2026-12', points: 1, claimed: false } }, 1), save({ monthly: { month: '2026-11', points: 30, claimed: true } }, 2)).wallet.monthly, { month: '2026-12', points: 1, claimed: false }, 'the later month wins');
 });

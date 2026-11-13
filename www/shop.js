@@ -64,7 +64,8 @@
 
   function emptyWallet() {
     return { gems: 0, owned: [], equipped: DEFAULT_SKIN, credited: [], pending: 0, dex: [], dexClaimed: [], stats: {}, badges: [],
-      tickets: {}, pendingTickets: [], daily: { n: 0, last: '' }, challenge: { date: '', progress: {}, claimed: [], chest: false } };
+      tickets: {}, pendingTickets: [], daily: { n: 0, last: '' }, challenge: { date: '', progress: {}, claimed: [], chest: false },
+      monthly: { month: '', points: 0, claimed: false }, monthBadges: [] }; // the monthly quest (challenge.js)
   }
 
   // Accept whatever was saved; anything malformed falls back to an empty field.
@@ -91,8 +92,11 @@
     const progress = {};
     if (c.progress && typeof c.progress === 'object') for (const [k, v] of Object.entries(c.progress)) if (Number.isFinite(v) && v > 0) progress[k] = v;
     const challenge = { date: typeof c.date === 'string' ? c.date : '', progress, claimed: [...new Set(strs(c.claimed))], chest: c.chest === true };
+    const mo = w.monthly && typeof w.monthly === 'object' ? w.monthly : {};
+    const monthly = { month: typeof mo.month === 'string' ? mo.month : '', points: int(mo.points), claimed: mo.claimed === true };
+    const monthBadges = [...new Set(strs(w.monthBadges))].filter(m => /^\d{4}-\d{2}$/.test(m));
     return { gems: int(w.gems), owned, equipped, credited: strs(w.credited).slice(-CREDIT_LOG), pending: int(w.pending), dex, dexClaimed, stats, badges,
-      tickets, pendingTickets, daily, challenge };
+      tickets, pendingTickets, daily, challenge, monthly, monthBadges };
   }
 
   const skinFor = product => SKINS.find(s => s.product === product);

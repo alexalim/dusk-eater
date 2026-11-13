@@ -28,9 +28,14 @@ with sync_playwright() as p:
     # W1 level select: a region's ten levels sit in two rows of five; 2, 5, 8 and 10 carry their twist marker
     pg.tap('#btn-title'); frames_wait(pg)
     if pg.is_visible('.pager .chip[data-p="-1"]:not(.off)'): pg.tap('.pager .chip[data-p="-1"]'); frames_wait(pg)
+    # the ten levels run down a winding path: every node on its own row, swinging left and right of the middle
     tops = pg.evaluate("[...new Set([...document.querySelectorAll('.levels .node')].map(n => Math.round(n.getBoundingClientRect().top)))].length")
+    lefts = pg.evaluate("[...document.querySelectorAll('.levels .node')].map(n => Math.round(n.getBoundingClientRect().left + n.getBoundingClientRect().width / 2))")
+    swing = max(lefts) - min(lefts)
     marked = pg.evaluate("[...document.querySelectorAll('.levels .node')].map((n, i) => n.querySelector('.tw') ? i + 1 : 0).filter(Boolean)")
-    rec('W1', '10 levels in 2 rows of 5; twist markers on 2, 5, 8, 10', tops == 2 and marked == [2, 5, 8, 10], f'rows={tops} marked={marked}')
+    road = pg.evaluate("[!!document.querySelector('.levels svg.path polyline'), !!document.querySelector('.levels .me'), !!document.querySelector('.node.sel .say'), !!document.querySelector('.pager .region')]")
+    rec('W1', '10 levels down a winding path (10 rows, swinging left/right) with a road, the character by the current level, a bubble on the chosen one, a region card; twist markers on 2, 5, 8, 10',
+        tops == 10 and swing >= 120 and marked == [2, 5, 8, 10] and all(road), f'rows={tops} swing={swing} marked={marked} road={road}')
     # W7 starting a twist level shows its card first (name, tips; the boss card says how big to grow); its button starts the run
     cards = []
     for k in (1, 9):
@@ -292,6 +297,17 @@ with sync_playwright() as p:
         rain[0] and rain[1] == 'rain' and rain[2] >= 10 and rain[3] and rain[4] is False and par[0] >= 10 and par[1] and par[2] == 1 and gone == 0
         and blk[0] and blk[1] == 2 and blk[2] and blk[3] == 0 and x1 > x0 + 50 and left == 0,
         f'rain={rain} parade={par} gone={gone} blackout={blk} front {x0:.0f}->{x1:.0f} left={left}')
+
+    # W21 no smoke after the run: a bite in the last seconds must not keep the green smoke puffing over the screens that follow
+    # (elapsed stops at the end, so the "still slowed" test used to stay true forever)
+    pg.evaluate(f'{A}.start(0)'); pg.evaluate(f'{A}.skipTo({A}.runDuration - 0.5)'); frames_wait(pg, 2)
+    pg.evaluate(f'''(() => {{ const s = {A}.s, z = s.objects.find(o => o.type === 'zombie' && o.state === 0); z.state = 1; z.ft = 0.99; }})()''')
+    frames_wait(pg, 3); bitten = pg.evaluate(f'{A}.s.player.slow')
+    pg.evaluate(f'{A}.skipTo({A}.runDuration + 0.1)'); frames_wait(pg, 6)
+    pg.evaluate("document.querySelector('#burst').innerHTML = ''"); frames_wait(pg, 20)
+    after = pg.evaluate(f"[{A}.s.state, {A}.s.player.slow, document.querySelectorAll('#burst .smoke').length]")
+    rec('W21', 'green smoke stops with the run: bitten at the end, the screens after it get no new puffs',
+        bitten is True and after[0] != 'play' and after[1] is False and after[2] == 0, f'bitten={bitten} after={after}')
 
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune

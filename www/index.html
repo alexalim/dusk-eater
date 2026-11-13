@@ -96,6 +96,9 @@
     animation: spark .7s cubic-bezier(.2,.8,.3,1) forwards; }
   @keyframes spark { 0% { transform: translate(0, 0) scale(1) rotate(0); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(.2) rotate(200deg); opacity: 0; } }
   #banner.pop { animation: popin .45s cubic-bezier(.2, 1.6, .4, 1); }
+  /* Feedback panels (Duolingo-style): a star lands in a bigger gold panel, a warning in a red one. */
+  #banner.good { font-size: 17px; padding: 10px 20px; box-shadow: 0 4px 0 #c9931d; max-width: min(92vw, 360px); }
+  #banner.bad { background: #ff6b6b; color: #fff; box-shadow: 0 4px 0 #b83a3a; }
   @keyframes popin { 0% { transform: translateX(-50%) scale(.6); } 100% { transform: translateX(-50%) scale(1); } }
   #twist-demo { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #3a3360; margin: 2px 0 4px; }
   #twist-demo img { width: 44px; height: 44px; filter: sepia(1) saturate(5) hue-rotate(-8deg) brightness(1.15) drop-shadow(0 0 6px #ffd25c); }
@@ -164,6 +167,9 @@
   #title .corner { position: absolute; top: calc(env(safe-area-inset-top) + 12px); left: max(16px, env(safe-area-inset-left));
     right: max(16px, env(safe-area-inset-right)); display: flex; justify-content: space-between; }
   #title .corner .left { display: flex; gap: 8px; }
+  #title .strip { position: absolute; top: calc(env(safe-area-inset-top) + 62px); left: max(16px, env(safe-area-inset-left)); display: flex; gap: 8px; flex-wrap: wrap; }
+  #title .strip .chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; font-size: 13px; }
+  #title .strip .chip .ico { width: 16px; height: 16px; } #title .strip .chip .ico.map { width: 18px; height: 18px; }
   /* Player level: a chip with a thin progress bar on the title, a fuller bar on the end screen. */
   .chip.lv { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 64px; padding: 4px 12px; }
   .lvbar, .xpbar { position: relative; height: 6px; border-radius: 999px; background: rgba(255,255,255,.18); overflow: hidden; }
@@ -171,6 +177,22 @@
   .xpbox { width: min(100%, 300px); display: flex; flex-direction: column; gap: 6px; }
   .xprow { display: flex; justify-content: space-between; font-family: var(--display); font-size: 16px; }
   #end-xp-gain { color: var(--star); }
+  /* Onboarding: progress bar, the character talking, one card, one button. */
+  #onboard { justify-content: flex-start; gap: 18px; background: radial-gradient(circle at 50% 30%, #3b2070 0%, #170a2e 70%); }
+  .obtop { width: min(100%, 340px); display: flex; align-items: center; gap: 14px; }
+  .obbar { flex: 1; display: flex; gap: 6px; } .obbar i { flex: 1; height: 8px; border-radius: 999px; background: rgba(255,255,255,.18); transition: background .3s; } .obbar i.on { background: var(--star); }
+  .obtop .skip { font-size: 13px; color: var(--muted); cursor: pointer; }
+  .obtalk { display: flex; align-items: center; gap: 12px; width: min(100%, 340px); margin-top: 12px; }
+  .obtalk .face-big { width: 108px; height: 108px; flex: none; }
+  .bubble { position: relative; flex: 1; padding: 12px 14px; border-radius: 16px; background: #fff; color: #2a1a05; font: 17px var(--display); text-align: left; line-height: 1.4; word-break: keep-all; }
+  .bubble::before { content: ''; position: absolute; left: -8px; top: 50%; transform: translateY(-50%); border: 8px solid transparent; border-right-color: #fff; border-left: 0; }
+  .obcard { width: min(100%, 340px); box-sizing: border-box; padding: 20px 18px; border-radius: 20px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
+    display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .obcard .ico.big { width: 72px; height: 72px; }
+  .obcard p { font-size: 16px; color: var(--text); line-height: 1.6; max-width: none; }
+  .ob-days { display: flex; gap: 6px; } .ob-days span { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.12); font: 13px var(--display); }
+  .ob-days span.on { background: var(--star); color: #2a1a05; }
+  #onboard .btns { width: min(100%, 300px); margin-top: auto; }
   /* Celebration step: a dark violet glow, the face popping in, the stars landing one after another. */
   #cheer { background: radial-gradient(circle at 50% 38%, #3b2070 0%, #170a2e 65%); justify-content: center; gap: 18px; }
   #cheer .cheer-face { width: 168px; height: 168px; animation: cheerpop .6s cubic-bezier(.2, 1.6, .4, 1) both; }
@@ -182,10 +204,10 @@
   @keyframes cheerpop { 0% { transform: scale(.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   @keyframes starin { 0% { transform: scale(0) rotate(-40deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
   /* Details step: three stat tiles (experience, best combo, time in shade). */
-  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: min(100%, 320px); }
-  .tile { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 14px; padding: 10px 4px 8px; }
-  .tile b { display: block; font-family: var(--display); font-weight: 400; font-size: 21px; color: var(--star); line-height: 1.1; }
-  .tile small { font-size: 12px; color: var(--muted); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: min(100%, 320px); }
+  .stat { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 14px; padding: 10px 4px 8px; }
+  .stat b { display: block; font-family: var(--display); font-weight: 400; font-size: 21px; color: var(--star); line-height: 1.1; }
+  .stat small { font-size: 12px; color: var(--muted); }
   /* Streak banner: a slanted gold slab that slides through the middle of the screen at every fifth combo. */
   #streak { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%) rotate(-8deg); padding: 8px 26px; border-radius: 10px;
     background: var(--star); color: #2a1a05; font: 32px var(--display); letter-spacing: 1px; box-shadow: 0 6px 0 #c9931d; pointer-events: none; z-index: 4; opacity: 0; }
@@ -242,14 +264,43 @@
   .mission .claim.ready { background: var(--star); color: #2a1a05; cursor: pointer; animation: wiggle 1.6s ease-in-out infinite; }
   .chestrow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #fff6d6; box-shadow: 0 0 0 2px #ffc83d inset; margin-bottom: 10px; }
   .chestrow .ico { width: 36px; height: 36px; }
+  /* The monthly quest card on top of the missions: a purple panel with its own bar, and the badges already won. */
+  .mcard { padding: 14px; border-radius: 18px; background: linear-gradient(135deg, #6a3fd6, #a883f0); color: #fff; box-shadow: 0 4px 0 #3f2a8a; margin: 6px 0 12px; }
+  .mcard .mhead { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--display); font-size: 19px; }
+  .mcard .mhead small { font-size: 12px; opacity: .85; }
+  .mcard p { margin: 6px 0 8px; color: #fff; font-size: 13px; line-height: 1.5; }
+  .mcard p .gem svg, .mcard .mrow .gem svg { width: 1em; height: 1em; vertical-align: -0.12em; }
+  .mcard .bar { display: block; height: 12px; border-radius: 999px; background: rgba(255,255,255,.25); overflow: hidden; }
+  .mcard .bar i { display: block; height: 100%; background: linear-gradient(90deg, #ffd25c, #fff0b0); }
+  .mcard .mrow { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 13px; }
+  .mcard .claim { background: rgba(255,255,255,.2); color: #fff; }
+  .mcard .claim.ready { background: var(--star); color: #2a1a05; }
+  .mcard .claim .ico { width: 16px; height: 16px; vertical-align: -3px; }
+  .mcard .mwon { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .mbadge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.18); font: 12px var(--display); }
+  .mbadge .ico { width: 16px; height: 16px; }
+  .mtitle { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0 8px; } .mtitle b { font-size: 16px; } .mtitle small { color: #8a8fb0; font-size: 12px; }
   .info-body h4 { margin: 12px 0 4px; font-size: 16px; }
   .info-body p { margin: 6px 0; max-width: none; font-size: 14px; color: #3a3360; } /* dark text: the window is light */
   .btns { display: flex; flex-direction: column; gap: 10px; align-items: stretch; margin-top: 6px; }
-  /* Level picker: one page of numbered levels, paged with ‹ ›, plus a detail sheet for the chosen level. */
-  #select { gap: 12px; }
-  #map { width: min(100%, 380px); display: flex; flex-direction: column; gap: 10px; flex: none; }
-  .levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; } /* a region's 10 levels as two rows of 5 */
-  .node { position: relative; }
+  /* Level picker (Duolingo-style): a region card pinned on top, its ten levels as round nodes down a winding path with the
+     character sitting by the level you are on, and the chosen level's sheet docked at the bottom. */
+  #select { gap: 12px; padding-bottom: 46vh; justify-content: flex-start; } /* the docked sheet covers the bottom */
+  #map { width: min(100%, 380px); display: flex; flex-direction: column; gap: 14px; flex: none; }
+  .levels { position: relative; height: calc(var(--rows) * 66px + 12px); margin-top: 26px; }
+  .levels .path { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .levels .path polyline { fill: none; stroke: rgba(255,255,255,.22); stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .levels .path polyline.done { stroke: rgba(255,210,92,.55); }
+  .node { position: absolute; left: calc(50% + var(--x) * 1%); top: calc(var(--k) * 66px); transform: translateX(-50%); width: 58px; height: 58px; border-radius: 50%;
+    box-shadow: 0 5px 0 rgba(0,0,0,.3); }
+  .node.boss { width: 72px; height: 72px; top: calc(var(--k) * 66px - 7px); }
+  .node .say { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); padding: 5px 11px; border-radius: 10px; background: #fff; color: #2a1a05;
+    font: 13px var(--display); white-space: nowrap; box-shadow: 0 2px 0 rgba(0,0,0,.25); animation: bob 1.3s ease-in-out infinite; }
+  .node .say::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #fff; border-bottom: 0; }
+  @keyframes bob { 50% { transform: translateX(-50%) translateY(-4px); } }
+  .levels .me { position: absolute; width: 50px; height: 50px; top: calc(var(--k) * 66px + 4px); left: calc(50% + var(--x) * 1% + var(--side) * 56px); transform: translateX(-50%); pointer-events: none; }
+  #select .sheet { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: min(100%, 420px); max-height: 44vh; overflow-y: auto; z-index: 3;
+    border-radius: 22px 22px 0 0; background: #221747; box-shadow: 0 -6px 24px rgba(0,0,0,.45); padding-bottom: calc(env(safe-area-inset-bottom) + 14px); }
   .node .tw { position: absolute; top: -6px; right: -4px; width: 20px; height: 20px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
   .node.boss:not(.locked) { background: linear-gradient(#e2b8ff, #b78cff); box-shadow: 0 0 0 2px #ffd25c inset; }
   .node.hard:not(.locked) { box-shadow: 0 0 0 2px #ff8a5c inset; }
@@ -258,11 +309,11 @@
   .node.boss.hard:not(.locked)::after { content: '아주 어려움'; background: #ff6bd0; }
   .sheet .hardnote { font-size: 13px; font-family: var(--display); color: #ffb08a; }
   .sheet .twist { font-size: 13px; line-height: 1.45; padding: 8px 10px; border-radius: 12px; background: rgba(255,210,92,.12); color: var(--text); }
-  .node { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; height: 46px;
-    border-radius: 14px; border: 0; padding: 0; font: inherit; cursor: pointer; color: #2a1a05; background: var(--node); }
+  .node { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    border: 0; padding: 0; font: inherit; cursor: pointer; color: #2a1a05; background: var(--node); }
   .node.harbor { background: #8fc3e0; }
   .node.city { background: #a9b8d6; } .node.park { background: #ff9ec4; } .node.snow { background: #e3eef9; } .node.farm { background: #b6d98a; }
-  .node .num { font-size: 15px; font-weight: 900; line-height: 1; }
+  .node .num { font-size: 18px; font-weight: 900; line-height: 1; }
   .node .stars { font-size: 10px; letter-spacing: 0; color: #2a1a05; }
   .node .stars .off { color: rgba(42,26,5,.25); }
   .node.sel { box-shadow: 0 0 0 3px var(--star), 0 0 16px rgba(255,210,92,.55); }
@@ -286,9 +337,12 @@
   .tabs .chip.on { background: var(--star); color: #2a1a05; }
   .event-note { font-size: 13px; font-weight: 700; color: var(--star); text-align: left; word-break: keep-all; }
   .node.xmas { background: #e05a5a; color: #fff6e8; } .node.xmas .stars, .node.xmas .stars .off { color: #fff6e8; }
-  .pager { display: flex; justify-content: space-between; align-items: center; font-weight: 800; }
-  .region { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-  .region small { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .pager { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px; border-radius: 18px; font-weight: 800;
+    background: linear-gradient(135deg, #6a3fd6, #a883f0); color: #fff; box-shadow: 0 4px 0 #3f2a8a; position: sticky; top: 0; z-index: 2; }
+  .pager .chip { background: rgba(255,255,255,.2); color: #fff; }
+  .region { display: flex; flex-direction: column; align-items: center; gap: 1px; flex: 1; min-width: 0; }
+  .region b { font-family: var(--display); font-weight: 400; font-size: 18px; }
+  .region small { font-size: 12px; color: rgba(255,255,255,.85); font-weight: 700; }
   .pager .chip.off { opacity: .35; }
   .sheet { box-sizing: border-box; width: min(100%, 380px); display: flex; flex-direction: column; gap: 8px; text-align: left;
     padding: 16px; border-radius: 16px; background: var(--card); }
@@ -461,6 +515,7 @@
 <div id="tutorial" class="hidden"><img class="face" src="img/ui/face-happy.svg" alt=""><span class="step" id="tut-step"></span><span id="tut-text"></span><br><span class="skip" id="tut-skip">설명 건너뛰기</span></div>
 <div id="title" class="overlay">
   <div class="corner"><span class="left"><span class="chip round" id="btn-info" aria-label="정보">i</span><span class="chip lv" id="title-level"></span></span><span class="chip" id="btn-account">계정 · 친구</span></div>
+  <div class="strip"><span class="chip gem gem-count"></span><span class="chip" id="title-streak"></span><span class="chip" id="title-region"></span></div><!-- status row: gems, check-ins, where you are -->
   <img class="logo" src="logo.svg" alt="">
   <h1>Dusk Eater</h1>
   <p class="tagline">어둠을 냠냠 먹고 쑥쑥 자라는 아이예요.<br>그늘에 숨어 꿀꺽, 해가 지면 온 동네가 내 거예요!</p>
@@ -471,6 +526,13 @@
     <div class="tile" id="btn-badges"><img src="img/ui/medal.svg" alt="">배지<span class="badge" id="badges-badge"></span></div>
     <div class="tile" id="btn-missions"><img src="img/ui/check.svg" alt="">미션<span class="badge" id="missions-badge"></span></div>
   </div>
+</div>
+<!-- First run (Duolingo-style): four cards, the character talking in a bubble, a progress bar on top, one button. -->
+<div id="onboard" class="overlay hidden">
+  <div class="obtop"><div class="obbar" id="ob-bar"></div><span class="skip" id="ob-skip">건너뛰기</span></div>
+  <div class="obtalk"><img class="face-big" id="ob-face" src="img/ui/face-happy.svg" alt=""><div class="bubble" id="ob-say"></div></div>
+  <div class="obcard"><img class="ico big" id="ob-ico" src="img/ui/moon.svg" alt=""><p id="ob-body"></p><div class="ob-days hidden" id="ob-days"></div></div>
+  <div class="btns"><div class="btn hero" id="btn-ob">계속</div></div>
 </div>
 <div id="daily" class="overlay hidden">
   <div class="dexwin">
@@ -554,7 +616,7 @@
   <h2 id="end-title">밤이 끝났어요</h2>
   <div class="stars" id="end-stars"></div>
   <p class="big" id="result"></p>
-  <div class="tiles" id="end-tiles"></div>
+  <div class="stats" id="end-tiles"></div>
   <div class="xpbox" id="end-xp"><div class="xprow"><span id="end-lv"></span><span id="end-xp-gain"></span></div><div class="xpbar"><i id="end-xp-fill"></i></div></div>
   <div class="goal-list" id="end-goals"></div>
   <p id="best"></p>
@@ -857,8 +919,9 @@
       el.classList.toggle('muted', on && shown); if (on) shown = true;
     }
   }
-  function banner(html, secs) {
+  function banner(html, secs, kind) { // kind: 'good' = a bigger gold panel (stars), 'bad' = a red warning panel (light, hunger, a zombie)
     const b = $('banner'); b.innerHTML = html; bannerUntil = elapsed + secs;
+    b.classList.toggle('good', kind === 'good'); b.classList.toggle('bad', kind === 'bad');
     b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); // bounce in every time
   }
   // Impact ("타격감"): a flash, a camera shake, a split second of slow motion and a spray of sparks.
@@ -1314,9 +1377,10 @@
   // ---------- update ----------
   // `view` = world units across the shorter screen side; grows with the player.
   const cam = { x: 0, y: 0, view: 400 };
-  // World units across the shorter screen side. Starts close (about 1.6x nearer than the old 250+6.2r), so a fresh
-  // body fills the screen like Hole.io's, and pulls back as it grows; pinch (view.zoom, kept between runs) scales it.
-  const targetView = () => (100 + player.r * 7.8) * view.zoom;
+  // World units across the shorter screen side. Starts close, so a fresh body (r 14) fills the screen like Hole.io's,
+  // and pulls back as it grows, at half the old slope (7.8 per unit of r): a tester found a 25 m body's view "too wide
+  // for how fast you move" and could not see what was next to them. Pinch (view.zoom, kept between runs) scales it.
+  const targetView = () => (154 + player.r * 3.9) * view.zoom;
 
   function beams() {
     const list = guards.filter(g => g.state === 0);
@@ -1458,7 +1522,10 @@
     if (beamed) stats.beamHit = true;
     player.lit = beamed || !isShaded(player, null);
     if (player.lit) { player.r = Math.max(10, player.r - (beamed ? 7 : 1.6) * runSun * dt); stats.lit = true; }
-    if (player.lit && !stats.wasLit) Sound.sfx.lit(); // once per step into the light
+    if (player.lit && !stats.wasLit) { // once per step into the light; the first two times a run also say so in words
+      Sound.sfx.lit();
+      if (!tut && (stats.litWarn = (stats.litWarn || 0) + 1) <= 2) banner(`${face('surprised')} 햇빛이에요! 그늘로 숨어요`, 1.4, 'bad');
+    }
     stats.wasLit = player.lit;
     stats.playT += dt; if (!player.lit) stats.shadeT += dt; // the end screen's "time in shade" tile
 
@@ -1487,7 +1554,7 @@
       if (TYPES[o.type] && TYPES[o.type].bad) { // a zombie: chills you — slow for a few seconds, no growth, no points, combo gone
         const chill = Math.max(0.5, TYPES[o.type].slow - runPerk.zombie); // level perk: a shorter chill
         slowUntil = elapsed + chill; combo = 0; stats.yuck = (stats.yuck || 0) + 1;
-        Sound.sfx.yuck(); punch(1, '#9bd38a'); banner(`${face('surprised')} 으엑! 좀비는 먹는 게 아니에요… ${chill}초 느려져요`, 2);
+        Sound.sfx.yuck(); punch(1, '#9bd38a'); banner(`${face('surprised')} 으엑! 좀비는 먹는 게 아니에요… ${chill}초 느려져요`, 2, 'bad');
         stats.eaten[o.type] = (stats.eaten[o.type] || 0) + 1; stats.total++;
         if (!Store.wallet.dex.includes(o.type)) discoverDex(o.type);
         continue;
@@ -1526,7 +1593,7 @@
     if (done > (stats.doneSeen || 0)) { // a mission just completed: name it and hit
       const k = C.evaluateStars(stage.goals, stats).findIndex((v, i) => v && !(stats.doneList || [])[i]);
       stats.doneList = C.evaluateStars(stage.goals, stats);
-      Sound.sfx.star(); banner(`${ico('star')} 별 획득! ${k >= 0 ? goalLabel(stage.goals[k]) : ''}`, 1.6); punch(2, '#ffd25c');
+      Sound.sfx.star(); banner(`${ico('star')} 별 획득! ${k >= 0 ? goalLabel(stage.goals[k]) : ''}`, 1.6, 'good'); punch(2, '#ffd25c');
     }
     stats.doneSeen = done;
     if (phase.night && !stats.nightSeen) { stats.nightSeen = true; Sound.sfx.night(); Sound.music.mode('night'); }
@@ -1548,8 +1615,10 @@
     if (!R || !stage) return;
     // Hint rings for things the player could eat right now (nearby only).
     const hints = [];
-    player.slow = elapsed < slowUntil; // the renderer: queasy green jelly
-    player.fast = elapsed < fastUntil; // wide eyes, quick breath
+    // Only while playing: `elapsed` stops at the end of a run, so a bite in its last seconds would otherwise keep
+    // the body queasy and the green smoke puffing over the end screen and every menu after it (tester report).
+    player.slow = state === 'play' && elapsed < slowUntil; // the renderer: queasy green jelly
+    player.fast = state === 'play' && elapsed < fastUntil; // wide eyes, quick breath
     player.bubble = elapsed < bubbleUntil ? bubbleR() : 0; player.magnet = elapsed < magnetUntil ? (elapsed * 1.5) % 1 : -1;
     // particles at the body (it is always mid-screen): green smoke while poisoned, cyan glints trailing while fast
     if (player.slow && t - lastPuff > 0.12) { lastPuff = t; spark('#9bd38a', (Math.random() - .5) * 40, -40 - Math.random() * 40, 12 + Math.random() * 10, 'smoke'); }
@@ -1781,12 +1850,25 @@
   function renderMissions() {
     const w = Store.wallet, day = dayKey(), list = Challenge.status(w, day), all = list.every(m => m.claimed);
     const chest = w.challenge.date === day && w.challenge.chest;
-    $('missions-body').innerHTML = `<p>판을 끝까지 하면 자동으로 채워져요. 매일 자정에 바뀌어요.</p>
+    // the monthly quest on top (Duolingo-style): points from every mission reward this month, the month's badge at the goal
+    const mo = Challenge.monthStatus(w, day), hoursLeft = Math.max(1, Math.ceil((new Date(day + 'T24:00:00') - today()) / 36e5));
+    const won = (w.monthBadges || []).map(m => `<span class="mbadge">${ico('medal')} ${+m.slice(5)}월</span>`).join('');
+    $('missions-body').innerHTML = `<div class="mcard"><div class="mhead"><b>${mo.label} 퀘스트</b><small>${mo.daysLeft}일 남음</small></div>
+        <p>이달에 미션 보상을 ${mo.goal}개 받으면 ${mo.label}의 배지와 <span class="gem">${GEM}${mo.gems}</span></p>
+        <span class="bar"><i style="width:${Math.min(100, mo.points / mo.goal * 100)}%"></i></span>
+        <div class="mrow"><small>${mo.points} / ${mo.goal}</small><span class="claim${mo.done && !mo.claimed ? ' ready' : ''}" id="btn-month">${mo.claimed ? '받음' : mo.done ? '배지 받기' : `${ico('medal')} ${mo.label}의 배지`}</span></div>
+        ${won ? `<div class="mwon">${won}</div>` : ''}</div>
+      <div class="mtitle"><b>오늘의 미션</b><small>자정까지 ${hoursLeft}시간</small></div>
       <div class="chestrow">${ico('gift')}<span style="flex:1"><b>세 개 모두 받으면 보물 상자</b><br><small>${rewardText(Challenge.CHEST)}</small></span>
         <span class="mission"><span class="claim${all && !chest ? ' ready' : ''}" id="btn-chest">${chest ? '받음' : all ? '열기' : `${list.filter(m => m.claimed).length}/3`}</span></span></div>` +
       list.map(m => `<div class="mission"><span class="top"><span>${m.text}</span>
         <span class="claim${m.done && !m.claimed ? ' ready' : ''}" data-m="${m.id}">${m.claimed ? '받음' : m.done ? '받기' : rewardText(m.reward)}</span></span>
-        <span class="bar"><i style="width:${m.got / m.n * 100}%"></i></span><small>${m.got} / ${m.n}</small></div>`).join('');
+        <span class="bar"><i style="width:${m.got / m.n * 100}%"></i></span><small>${m.got} / ${m.n}</small></div>`).join('') +
+      '<p><small>판을 끝까지 하면 자동으로 채워져요. 매일 자정에 바뀌어요.</small></p>';
+    $('btn-month').addEventListener('pointerup', () => {
+      const w2 = Challenge.claimMonth(Store.wallet, dayKey(), Shop.grant);
+      if (w2 !== Store.wallet) { Store.update(w2); Sound.sfx.level(); }
+    });
     $('missions-body').querySelectorAll('.claim[data-m]').forEach(el => el.addEventListener('pointerup', () => {
       let w2 = Challenge.claim(Store.wallet, dayKey(), el.dataset.m, Shop.grant);
       if (w2 === Store.wallet) return;
@@ -1804,7 +1886,14 @@
   function renderLevel() {
     const L = Level.levelOf(Store.wallet.stats.xp);
     $('title-level').innerHTML = `Lv.${L.level}<span class="lvbar"><i style="width:${L.into / L.next * 100}%"></i></span>`;
+    // the title's status row: gems (gem-count), check-in days, the region you are in
+    renderGems();
+    $('title-streak').innerHTML = `${ico('gift')} 출석 ${Store.wallet.daily.n}일`;
+    const at = STAGES[Math.min(STAGES.length - 1, lastUnlockedMain())], ri = Math.floor((at.n - 1) / REGION_SIZE);
+    $('title-region').innerHTML = `${mapIco(REGIONS[ri].theme)} ${ri + 1}. ${at.name.replace(/^\d+\. /, '')}`;
   }
+  // The furthest open level on the main ladder (the title shows its region even while an event list is selected).
+  function lastUnlockedMain() { let i = 0; while (i + 1 < STAGES.length && C.isUnlocked(STAGES.map(s => s.id), i + 1, bestStars)) i++; return i; }
 
   // Level card: current level and title, perks in effect, and the road of rewards ahead (opened from the title chip).
   function openLevel() {
@@ -1895,7 +1984,7 @@
 
   function show(id) {
     if (id && id !== 'pause') { Sound.music.mode('title'); Sound.music.rush(false); if (id === 'title') Sound.music.tune('town'); } // menus get the quiet arrangement
-    for (const o of ['title', 'select', 'pause', 'cheer', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo', 'twist', 'cont', 'daily', 'missions']) $(o).classList.toggle('hidden', o !== id);
+    for (const o of ['title', 'onboard', 'select', 'pause', 'cheer', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo', 'twist', 'cont', 'daily', 'missions']) $(o).classList.toggle('hidden', o !== id);
     $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
     if (id !== null) $('tutorial').classList.add('hidden');
   }
@@ -1923,7 +2012,7 @@
     return i;
   }
 
-  function openSelect() {
+  function openSelect(scrollTo = false) {
     state = 'menu'; $('snow').classList.add('hidden'); // the snowfall is part of the world, not of the menus
     const live = liveEvents();
     if (listKey !== 'main' && !live.some(ev => ev.id === listKey)) { useList('main'); selected = lastUnlocked(); page = Math.floor(selected / pageSize()); }
@@ -1934,12 +2023,21 @@
     const progress = ev ? `<div class="event-note">${ev.title}${testBuild && !activeEvents(today()).includes(ev) ? ' (테스트 미리보기)' : ''} · 별 ${eventStars(ev)}/${list.length * 3} — ` +
       (Store.wallet.owned.includes(reward.id) ? `${reward.name} 획득!` : `별 ${ev.reward.stars}개를 모으면 ${reward.name}`) + '</div>' : '';
     const size = pageSize(), from = page * size, pages = Math.ceil(list.length / size);
+    // The path: node k sits at row k, swung left and right of the middle (PATH_X, percent of the half width).
+    const here = lastUnlocked(), onPage = here >= from && here < from + size;
     const cells = list.slice(from, from + size).map((s, k) => {
-      const i = from + k, open = C.isUnlocked(listIds, i, bestStars);
+      const i = from + k, open = C.isUnlocked(listIds, i, bestStars), stars = bestStars[s.id] || 0;
       const tw = s.twist ? `<img class="tw" src="img/ui/${twistIco[s.twist]}.svg" alt="">` : '';
-      return `<button class="node ${s.theme}${open ? '' : ' locked'}${i === selected ? ' sel' : ''}${s.twist === 'boss' ? ' boss' : ''}${s.hard ? ' hard' : ''}" data-i="${i}" aria-label="${s.name}">
-        ${open ? `<span class="num">${s.n}</span><span class="stars">${starText(bestStars[s.id] || 0)}</span>` : LOCK}${tw}</button>`;
+      const say = i === selected && open ? `<span class="say">${stars === 3 ? '완벽!' : stars ? '다시 도전?' : '출발!'}</span>` : '';
+      return `<button class="node ${s.theme}${open ? '' : ' locked'}${i === selected ? ' sel' : ''}${s.twist === 'boss' ? ' boss' : ''}${s.hard ? ' hard' : ''}" data-i="${i}" aria-label="${s.name}" style="--k:${k};--x:${PATH_X[k % PATH_X.length]}">
+        ${open ? `<span class="num">${s.n}</span><span class="stars">${starText(stars)}</span>` : LOCK}${tw}${say}</button>`;
     }).join('');
+    // the road between the nodes (gold up to the level you are on), and the character sitting by that level
+    const pt = k => `${50 + PATH_X[k % PATH_X.length] / 2},${k * 66 + 29}`;
+    const doneTo = onPage ? here - from : (here >= from + size ? size - 1 : -1);
+    const road = `<svg class="path" viewBox="0 0 100 ${size * 66 + 12}" preserveAspectRatio="none"><polyline points="${Array.from({ length: size }, (_, k) => pt(k)).join(' ')}"/>` +
+      (doneTo > 0 ? `<polyline class="done" points="${Array.from({ length: doneTo + 1 }, (_, k) => pt(k)).join(' ')}"/>` : '') + '</svg>';
+    const me = onPage ? `<img class="me" src="img/ui/face-happy.svg" alt="" style="--k:${here - from};--x:${PATH_X[(here - from) % PATH_X.length]};--side:${PATH_X[(here - from) % PATH_X.length] > 0 ? -1 : 1}">` : '';
     // Ladder pages are regions: name, icon, stars collected there; a locked region says how it opens.
     const region = ev ? null : REGIONS[page];
     const got = list.slice(from, from + size).reduce((a, s) => a + (bestStars[s.id] || 0), 0);
@@ -1947,7 +2045,7 @@
       `<small>${C.isUnlocked(listIds, from, bestStars) ? `${ico('star')} ${got}/${size * 3}` : `${from}레벨을 깨면 열려요`}</small></span>` : `<span>${mapIco(ev.theme)} ${ev.title}</span>`;
     const pager = pages > 1 ? `<div class="pager"><span class="chip${page ? '' : ' off'}" data-p="-1">‹</span>${title}` +
       `<span class="chip${page < pages - 1 ? '' : ' off'}" data-p="1">›</span></div>` : '';
-    $('map').innerHTML = `${tabs}${progress}${pager}<div class="levels">${cells}</div>`;
+    $('map').innerHTML = `${tabs}${progress}${pager}<div class="levels" style="--rows:${size}">${road}${cells}${me}</div>`;
     $('map').querySelectorAll('.node').forEach(n =>
       n.addEventListener('pointerup', () => { selected = +n.dataset.i; openSelect(); }));
     $('map').querySelectorAll('.tabs .chip').forEach(el => el.addEventListener('pointerup', () => {
@@ -1959,9 +2057,12 @@
     }));
     renderSheet();
     show('select');
+    if (scrollTo) { const n = $('map').querySelector('.node.sel'); if (n) n.scrollIntoView({ block: 'center' }); }
   }
-  // Open the map on the page that holds the selected level.
-  function openSelectAt(i) { selected = i; page = Math.floor(i / pageSize()); openSelect(); }
+  // Where the ten nodes of a page swing, left and right of the middle, in percent of the half width.
+  const PATH_X = [0, 26, 36, 26, 0, -26, -36, -26, 0, 24];
+  // Open the map on the page that holds the selected level, scrolled to it.
+  function openSelectAt(i) { selected = i; page = Math.floor(i / pageSize()); openSelect(true); }
 
   // Boosts picked on the sheet for the next departure only; paid when the run starts.
   const chosen = new Set();
@@ -2117,7 +2218,7 @@
     $('result').textContent = `${stats.total}개 삼킴 · ${score.toLocaleString()}점`;
     const shadePct = stats.playT ? Math.round(stats.shadeT / stats.playT * 100) : 0;
     $('end-tiles').innerHTML = [[`+${xp.toLocaleString()}`, '경험치'], [`${stats.maxCombo || 0}`, '최고 콤보'], [`${shadePct}%`, '그늘에 있던 시간']]
-      .map(([v, l]) => `<div class="tile"><b>${v}</b><small>${l}</small></div>`).join('');
+      .map(([v, l]) => `<div class="stat"><b>${v}</b><small>${l}</small></div>`).join('');
     // step one: the celebration (face, title, stars); step two on a tap or after a moment
     $('cheer-face').src = face; $('cheer-title').innerHTML = title; $('cheer-stars').innerHTML = starText(n);
     $('cheer-sub').textContent = !cleared ? (endedBy === 'hunger' ? '너무 오래 굶었어요' : '별 하나가 모자랐어요') : n === 3 ? '별 셋 모두!' : `${stats.total}개 삼켰어요`;
@@ -2306,14 +2407,38 @@
     if (snd) { Sound.setOn('sfx', snd.sfx !== false); Sound.setOn('music', snd.music !== false); renderSound(); }
     Account.init(accountHooks); // signs back in and syncs in the background; the game never waits for it
   })();
+  // First run: the character explains the one rule and its dangers over four cards (ONBOARD), then the map opens on level 1.
+  // Shown once (dusk-onboarded) and only to a player with no stars yet; automated checks opt in with __DUSK_TEST__.onboard.
+  const ONBOARD = [
+    { face: 'happy', ico: 'moon', say: '안녕! 나는 그늘에서만 먹을 수 있어.', body: '건물이나 나무의 그림자 속에 있는 것만 꿀꺽! 먹을 수 있는 것에는 주황 고리가 떠요.' },
+    { face: 'surprised', ico: 'eclipse', say: '햇빛은 조심해야 해.', body: '햇빛에 서면 몸이 줄어요. 등불지기의 노란 불빛에서는 더 빨리 줄어요. 보라 고리가 있는 좀비는 먹으면 느려져요.' },
+    { face: 'excited', ico: 'grow', say: '먹을수록 커져!', body: '커지면 자동차도, 집도 삼킬 수 있어요. 해가 지면 온 동네가 그늘이라 뭐든 먹을 수 있어요. 90초 안에 별 목표를 채워요.' },
+    { face: 'determined', ico: 'gift', say: '매일 한 판 어때?', body: '매일 들어오면 출석 선물이 점점 커지고, 오늘의 미션으로 보석도 모아요.', days: true },
+  ];
+  let obStep = 0;
+  function renderOnboard() {
+    const c = ONBOARD[obStep];
+    $('ob-bar').innerHTML = ONBOARD.map((_, k) => `<i class="${k <= obStep ? 'on' : ''}"></i>`).join('');
+    $('ob-face').src = `img/ui/face-${c.face}.svg`; $('ob-say').textContent = c.say; $('ob-ico').src = `img/ui/${c.ico}.svg`; $('ob-body').textContent = c.body;
+    $('ob-days').classList.toggle('hidden', !c.days);
+    if (c.days) $('ob-days').innerHTML = ['월', '화', '수', '목', '금', '토', '일'].map((d, k) => `<span class="${k === (new Date().getDay() + 6) % 7 ? 'on' : ''}">${d}</span>`).join('');
+    $('btn-ob').textContent = obStep === ONBOARD.length - 1 ? '시작하기' : '계속';
+  }
+  const onboarded = () => { try { return !!localStorage.getItem('dusk-onboarded'); } catch (e) { return true; } };
+  function openOnboard() { obStep = 0; renderOnboard(); state = 'onboard'; show('onboard'); }
+  function endOnboard() { try { localStorage.setItem('dusk-onboarded', '1'); } catch (e) { /* no storage: shown again next time, harmless */ } state = 'menu'; openSelectAt(0); }
+  $('btn-ob').addEventListener('pointerup', () => { if (obStep < ONBOARD.length - 1) { obStep++; renderOnboard(); } else endOnboard(); });
+  $('ob-skip').addEventListener('pointerup', endOnboard);
+
   const whenReady = f => () => ready.then(f);
   // Saved progress and the store usually load at once; if not, say so instead of a start button that seems dead.
   const slow = setTimeout(() => { $('btn-title').classList.add('wait'); $('btn-title').textContent = '불러오는 중…'; }, 400);
   ready.then(() => {
     clearTimeout(slow); $('btn-title').classList.remove('wait'); $('btn-title').textContent = '시작';
     // the day's check-in greets you on the title screen, once a day
-    const T = window.__DUSK_TEST__; // automated checks opt in with { daily: true }, so the popup doesn't cover their title screen
-    if (state === 'title' && Shop.dailyDue(Store.wallet, dayKey()) && (!T || T.daily)) openDaily();
+    const T = window.__DUSK_TEST__; // automated checks opt in with { daily: true } / { onboard: true }, so popups don't cover their title screen
+    if (state === 'title' && !onboarded() && !Object.keys(bestStars).length && (!T || T.onboard)) openOnboard();
+    else if (state === 'title' && Shop.dailyDue(Store.wallet, dayKey()) && (!T || T.daily)) openDaily();
   });
 
   $('btn-shop-title').addEventListener('pointerup', whenReady(() => openShop('title')));
