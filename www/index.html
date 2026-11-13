@@ -148,6 +148,16 @@
   #stats .right { display: flex; align-items: center; gap: 10px; }
   #btn-pause { pointer-events: auto; width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
     background: rgba(20,18,38,.6); color: var(--text); font: 14px var(--display); }
+  /* The spit button: bottom right, under the thumb; dim until a swallow loads it, the pips show the shots left. */
+  #btn-spit { pointer-events: auto; position: fixed; right: calc(env(safe-area-inset-right) + 18px); bottom: calc(env(safe-area-inset-bottom) + 26px);
+    width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); padding: 0; cursor: pointer; touch-action: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: rgba(20,18,38,.55); opacity: .5; transition: opacity .2s, scale .12s; }
+  #btn-spit.ready { opacity: 1; background: radial-gradient(circle at 50% 35%, #7a4fd1, #3b2070); box-shadow: 0 0 14px rgba(183,140,255,.6); }
+  #btn-spit:active { scale: .9; }
+  #btn-spit .ico { width: 26px; height: 26px; margin: 0; }
+  #btn-spit i { display: inline-block; width: 7px; height: 7px; margin: 0 2px; border-radius: 50%; background: rgba(255,255,255,.22); }
+  #btn-spit i.on { background: var(--star); }
+  #btn-spit::after { content: '뱉기'; position: absolute; left: 50%; bottom: -18px; transform: translateX(-50%); font: 11px var(--display); color: var(--muted); white-space: nowrap; }
   #tutorial { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 24px);
     width: min(calc(100% - 32px), 360px); box-sizing: border-box; padding: 14px 16px; border-radius: 16px;
     background: rgba(20,18,38,.82); color: var(--text); font-size: 16px; font-weight: 700; line-height: 1.45;
@@ -529,6 +539,7 @@
     <div id="boost-pill" class="pill hidden"></div>
     <div id="bonus-pill" class="pill hidden"></div>
   </div>
+  <button id="btn-spit" aria-label="뱉기"></button>
   <div id="warn" role="status" aria-label="햇빛이에요! 몸이 줄어들어요"></div>
   <div id="banner">미션 완료! 밤이 일찍 와요 <img class="ico" src="img/ui/moon.svg" alt=""></div>
   <div id="dex-new"></div>
@@ -985,6 +996,35 @@
       $('burst').appendChild(sp);
     }
   }
+  // ---------- spitting ----------
+  function renderAmmo() {
+    const b = $('btn-spit'); b.classList.toggle('ready', ammo > 0);
+    b.innerHTML = `<img class="ico" src="img/ui/moon.svg" alt="">${[0, 1, 2].map(i => `<i class="${i < ammo ? 'on' : ''}"></i>`).join('')}`;
+  }
+  function spit() {
+    if (state !== 'play' || ammo <= 0) return;
+    ammo--; renderAmmo();
+    player.r = Math.max(10, player.r * (1 - SPIT_SHRINK)); // it costs a little of the body
+    const a = player.face;
+    spits.push({ x: player.x + Math.cos(a) * player.r, y: player.y + Math.sin(a) * player.r, vx: Math.cos(a) * SPIT_SPEED, vy: Math.sin(a) * SPIT_SPEED, r: Math.max(5, player.r * 0.22), until: elapsed + SPIT_S });
+    Sound.sfx.spit(); player.gulp = 1; punch(1, '#b78cff'); yum('퉤!');
+  }
+  function updateSpits(dt) {
+    for (const s of spits) {
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      if (s.x < 0 || s.x > WORLD || s.y < 0 || s.y > waterY) { s.until = 0; continue; }
+      const z = zombies.find(o => o.state === 0 && Math.hypot(o.x - s.x, o.y - s.y) < o.r + s.r);
+      if (z) { // knocked back the way the spit flies (kept on the map) and stunned
+        const d = Math.hypot(s.vx, s.vy) || 1;
+        z.x = Math.max(10, Math.min(WORLD - 10, z.x + s.vx / d * KNOCK)); z.y = Math.max(10, Math.min(waterY - 10, z.y + s.vy / d * KNOCK));
+        z.stunUntil = elapsed + STUN_S; z.dirty = true; s.until = 0; stats.spitHits = (stats.spitHits || 0) + 1;
+        Sound.sfx.yuck(); banner(`${face('excited')} 퉤! 좀비가 날아갔어요`, 1.5); continue;
+      }
+      const g = guards.find(g => g.state === 0 && !g.boss && Math.hypot(g.x - s.x, g.y - s.y) < g.r + s.r);
+      if (g) { g.darkUntil = elapsed + DOUSE_S; s.until = 0; stats.spitHits = (stats.spitHits || 0) + 1; shadeStale = true; Sound.sfx.shard('cloud'); banner(`${face('happy')} 등불이 꺼졌어요! ${DOUSE_S}초 동안 빛이 없어요`, 1.8); }
+    }
+    spits = spits.filter(s => elapsed < s.until);
+  }
   function punch(level, color) {
     punches++;
     shake = Math.max(shake, [0, 0.35, 0.7, 1.1][level]);
@@ -1017,6 +1057,10 @@
   // Hunger (core HUNGER): time of the last swallow, the current state for the HUD, and how long the body has sat at its smallest
   let lastEat = 0, hunger = null, hungerTick = 0, starving = false, starveT = 0, endedBy = null;
   let combo = 0, comboUntil = 0, slowUntil = 0; // swallow chain (core COMBO) and the zombie slowdown
+  // Spitting (tester: "you only collect and dodge; nothing comes back out"): every swallow loads a shot, up to AMMO_MAX;
+  // a spit flies the way the body faces, knocks a zombie back and stuns it, or puts a keeper's lamp out for a while.
+  const AMMO_MAX = 3, SPIT_SPEED = 520, SPIT_S = 0.6, SPIT_SHRINK = 0.02, STUN_S = 3, DOUSE_S = 4, KNOCK = 120;
+  let ammo = 0, spits = [];
   let bossDown = null; // when the boss was swallowed; the run ends BOSS_END_S later (long enough for the gulp and the banner)
   const BOSS_END_S = 1.6;
   // Mid-run event (core EVENTS): what is on, when it ends, when this run's one event is due, and the pools it uses
@@ -1356,6 +1400,7 @@
     buildWorld(Date.now() & 0xffff);
     elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; continued = false; nextGold = 4; rush = false; rushTick = 0; Sound.music.rush(false); bonus = null;
     lastEat = 0; hunger = null; hungerTick = 0; starving = false; starveT = 0; endedBy = null; combo = 0; comboUntil = 0; slowUntil = 0; bossDown = null;
+    ammo = 0; spits = []; renderAmmo();
     mapEvent = null; eventDone = false; runners = []; $('rain').classList.add('hidden');
     $('snow').classList.toggle('hidden', !(stage.look && stage.look.snow)); // it snows all run on winter maps
     shards = []; nextShard = C.SHARD.from; lastShardKind = null; fastUntil = bubbleUntil = magnetUntil = 0; dashTick = 0;
@@ -1439,7 +1484,7 @@
   const targetView = () => (154 + player.r * 3.9) * view.zoom;
 
   function beams() {
-    const list = guards.filter(g => g.state === 0);
+    const list = guards.filter(g => g.state === 0 && !(g.darkUntil > elapsed)); // a doused lamp throws no light
     if (lighthouse) list.push(lighthouse);
     return list;
   }
@@ -1503,12 +1548,13 @@
     if (mapEvent) { if (elapsed > mapEvent.until) endEvent(); else stepEvent(dt); }
     // Zombies shuffle about slowly, picking a new heading every few seconds or when they bump into a building.
     for (const o of zombies) {
-      if (o.state !== 0) continue;
+      if (o.state !== 0 || o.stunUntil > elapsed) continue; // a spat-at zombie lies still for a while
       o.t = (o.t || 0) - dt; if (o.t <= 0) { o.rot = rnd() * Math.PI * 2; o.t = 2 + rnd() * 3; }
       const nx = o.x + Math.cos(o.rot) * 9 * dt, ny = o.y + Math.sin(o.rot) * 9 * dt;
       if (nx < 10 || nx > WORLD - 10 || ny < 10 || ny > waterY - 10 || insideAnyBuilding(nx, ny, 6)) { o.t = 0; continue; }
       o.x = nx; o.y = ny; o.dirty = true;
     }
+    if (spits.length) updateSpits(dt);
     // Light shards (core SHARD): a pickup appears in sunlight near the player every so often; touching it is enough.
     if (!tut && !stage.boss && !phase.night && elapsed >= nextShard) {
       nextShard = elapsed + C.SHARD.every * runPerk.shardEvery; // level perk: more often
@@ -1638,6 +1684,7 @@
       stats.score = score;
       stats.eaten[o.type] = (stats.eaten[o.type] || 0) + 1;
       stats.total++;
+      if (!o.boss && ammo < AMMO_MAX) { ammo++; renderAmmo(); } // another shot to spit
       if (phase.night) stats.night++;
       stats.maxR = Math.max(stats.maxR, player.r);
       if (!Store.wallet.dex.includes(o.type)) discoverDex(o.type); // saved now, so a killed app keeps the find
@@ -1695,13 +1742,14 @@
       const c = centerOf(b);
       // a courtyard wall gets a small ring, and only close by: hundreds of segments all ringed at once is noise
       if (b.wall && Math.hypot(c.x - player.x, c.y - player.y) > 110 + player.r) continue;
-      if ((b.wall && player.r >= WALL_OVER) || looms(b) || isShaded(c, b)) hints.push({ x: c.x, y: c.y, r: b.wall ? b.r + 2 : Math.hypot(b.w, b.d) / 2 });
+      if ((b.wall && player.r >= WALL_OVER) || looms(b) || isShaded(c, b)) hints.push({ x: c.x, y: c.y, r: b.wall ? b.r + 2 : Math.hypot(b.w, b.d) / 2, steady: !b.wall }); // a building's ring is thin and still (render3d calmHints)
     }
     const golden = stage.twist === 'golden' ? objects.filter(o => o.state === 0 && o.goldUntil > elapsed) : [];
     if (stage.twist === 'golden') for (const o of objects) o.glow = o.state === 0 && o.goldUntil > elapsed; // painted gold by the renderer
     const jolt = shake * cam.view * 0.035; shake = Math.max(0, shake - 1 / 20); // about a third of a second
     R.draw({ t, phase, sun, player, view: cam.view, camX: cam.x + (Math.random() - 0.5) * jolt, camY: cam.y + (Math.random() - 0.5) * jolt, swallowPos, hints, fp: state === 'title' ? 0 : view.t,
-      clouds, golden, eclipse, shards: shards.filter(h => h.state === 0).map(h => ({ kind: h.kind, x: h.x, y: h.y, blink: h.until - elapsed < 3 })) });
+      clouds, golden, eclipse, shards: shards.filter(h => h.state === 0).map(h => ({ kind: h.kind, x: h.x, y: h.y, blink: h.until - elapsed < 3 })),
+      spits: spits.map(s => ({ x: s.x, y: s.y, r: s.r })), dark: guards.filter(g => g.darkUntil > elapsed) });
     $('vignette').classList.toggle('hidden', !phase.night && !eclipse && !(mapEvent && mapEvent.kind === 'blackout'));
     canvas.classList.toggle('eclipse', eclipse);
     if (state === 'play') renderHud();
@@ -2469,7 +2517,7 @@
   // Shown once (dusk-onboarded) and only to a player with no stars yet; automated checks opt in with __DUSK_TEST__.onboard.
   const ONBOARD = [
     { face: 'happy', ico: 'moon', say: '안녕! 나는 그늘에서만 먹을 수 있어.', body: '건물이나 나무의 그림자 속에 있는 것만 꿀꺽! 먹을 수 있는 것에는 주황 고리가 떠요.' },
-    { face: 'surprised', ico: 'eclipse', say: '햇빛은 조심해야 해.', body: '햇빛에 서면 몸이 줄어요. 등불지기의 노란 불빛에서는 더 빨리 줄어요. 보라 고리가 있는 좀비는 먹으면 느려져요.' },
+    { face: 'surprised', ico: 'eclipse', say: '햇빛은 조심해야 해.', body: '햇빛에 서면 몸이 줄어요. 등불지기의 노란 불빛에서는 더 빨리 줄어요. 보라 고리가 있는 좀비는 먹으면 느려져요. 먹은 건 오른쪽 아래 뱉기 버튼으로 퉤! 좀비는 날아가고 등불은 꺼져요.' },
     { face: 'excited', ico: 'grow', say: '먹을수록 커져!', body: '커지면 자동차도, 집도 삼킬 수 있어요. 해가 지면 온 동네가 그늘이라 뭐든 먹을 수 있어요. 90초 안에 별 목표를 채워요.' },
     { face: 'determined', ico: 'gift', say: '매일 한 판 어때?', body: '매일 들어오면 출석 선물이 점점 커지고, 오늘의 미션으로 보석도 모아요.', days: true },
   ];
@@ -2559,6 +2607,7 @@
     else popups();
   });
 
+  $('btn-spit').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); spit(); }); // never a drag on the canvas under it
   $('btn-shop-title').addEventListener('pointerup', whenReady(() => openShop('title')));
   $('btn-shop-map').addEventListener('pointerup', () => openShop('select'));
   $('btn-select-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
@@ -2735,7 +2784,7 @@
   if (window.__DUSK_TEST__) {
     window.__DUSK_TEST__.api = { start, openDaily, isShaded, get punches() { return punches; }, get tiers() { return [...tierDone]; }, get camPulse() { return camPulse; }, centerOf, input, skipTo: sec => { elapsed = sec; lastEat = sec; tut = null; shadeStale = true; }, view,
       hungerSet: (since, starved = 0) => { lastEat = elapsed - since; starveT = starved; }, get hunger() { return hunger; },
-      get combo() { return combo; }, get slowUntil() { return slowUntil; },
+      get combo() { return combo; }, get slowUntil() { return slowUntil; }, spit, get ammo() { return ammo; }, get spits() { return spits; }, inBeam,
       get shards() { return shards; }, spawnShard, startEvent, endEvent, get mapEvent() { return mapEvent; }, get effects() { return { fast: fastUntil, bubble: bubbleUntil, magnet: magnetUntil }; }, get speedNow() { return curSpeed(); }, watchFrames, useList, get listKey() { return listKey; }, get tut() { return tut; }, R, Store, Shop, ready,
       get runDuration() { return runDuration; },
       freeze: () => { state = 'paused'; }, get spawnFallbacks() { return spawnFallbacks; },

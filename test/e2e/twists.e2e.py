@@ -309,6 +309,44 @@ with sync_playwright() as p:
     rec('W21', 'green smoke stops with the run: bitten at the end, the screens after it get no new puffs',
         bitten is True and after[0] != 'play' and after[1] is False and after[2] == 0, f'bitten={bitten} after={after}')
 
+    # W23 looming: a body clearly bigger than a sunlit building (1.3x its r) eats it and gets its ring; one that merely fits (just over
+    # EAT_RATIO) still needs real shade (tester on build 55: "bigger than the buildings, nothing to eat")
+    pg.evaluate(f'{A}.start(0)'); pg.evaluate(f'{A}.skipTo(20)'); frames_wait(pg, 2)
+    def sunlit_building(k):
+        return pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player, b = s.buildings.find(b => b.state === 0 && !b.wall && !{A}.isShaded({A}.centerOf(b), b));
+            if (!b) return null; const c = {A}.centerOf(b); p.r = b.r * {k}; p.x = c.x; p.y = c.y; p.vx = p.vy = 0; window.__lb = b; return [b.r, p.r]; }})()''')
+    fit = sunlit_building(1.22); frames_wait(pg, 4)
+    fit_state = pg.evaluate('window.__lb.state')
+    loom = sunlit_building(1.35); frames_wait(pg, 4)
+    loom_state = pg.evaluate('window.__lb.state')
+    rec('W23', 'a body 1.3x bigger than a sunlit building eats it (its own shade); one that only just fits does not',
+        fit is not None and fit_state == 0 and loom is not None and loom_state != 0, f'fit={fit} state={fit_state} loom={loom} state={loom_state}')
+
+    # W24 spitting: swallows load up to 3 shots (the button shows them); a spit shrinks the body a little and flies the way it faces;
+    # it knocks a zombie back and stuns it, douses a keeper's lamp for a few seconds (no beam, no light); with no shots nothing happens
+    pg.evaluate(f'{A}.start(0)'); pg.evaluate(f'{A}.skipTo(20)'); frames_wait(pg, 2)
+    pg.evaluate(f'{A}.input.active = false; {A}.input.dx = {A}.input.dy = 0; {A}.input.keys.clear()')  # an earlier case may have left a drag going: the body must stand still and keep its facing
+    empty = pg.evaluate(f'''(() => {{ const s = {A}.s, r = s.player.r; {A}.spit(); return [{A}.ammo, {A}.spits.length, s.player.r === r]; }})()''')
+    pg.evaluate(f'''(() => {{ const s = {A}.s; for (const o of s.objects.filter(o => o.state === 0 && o.type !== 'zombie' && o.r < s.player.r * 0.6).slice(0, 5)) {{ o.state = 1; o.ft = 0.99; }} }})()''')
+    frames_wait(pg, 4); pips = pg.evaluate(f"[{A}.ammo, document.querySelectorAll('#btn-spit i.on').length]")
+    # a zombie dead ahead, close
+    hit = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player, z = s.objects.find(o => o.type === 'zombie' && o.state === 0);
+        p.face = 0; p.vx = p.vy = 0; z.x = p.x + p.r + 40; z.y = p.y; z.dirty = true; const r0 = p.r; {A}.spit(); return [z.x, r0, p.r < r0, {A}.spits.length]; }})()''')
+    frames_wait(pg, 12)
+    z1 = pg.evaluate(f'''(() => {{ const s = {A}.s, z = s.objects.find(o => o.type === 'zombie' && o.state === 0 && o.stunUntil > s.elapsed); return z ? [z.x, Math.round(z.stunUntil - s.elapsed)] : null; }})()''')
+    # a keeper dead ahead (level 4 is the first with keepers; a new run starts with no shots, so two swallows first): its light goes out
+    pg.evaluate(f'{A}.start(3)'); pg.evaluate(f'{A}.skipTo(20)'); frames_wait(pg, 2)
+    pg.evaluate(f'''(() => {{ const s = {A}.s; for (const o of s.objects.filter(o => o.state === 0 && o.type !== 'zombie' && o.r < s.player.r * 0.6).slice(0, 2)) {{ o.state = 1; o.ft = 0.99; }} }})()''')
+    frames_wait(pg, 4)
+    lamp = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player, g = s.guards.find(g => g.state === 0 && !g.boss && !g.pool); if (!g) return null;
+        p.face = 0; g.x = p.x + p.r + 40; g.y = p.y; g.dir = Math.PI; const inb = {A}.inBeam(p.x + p.r + 10, p.y, null), before = {A}.ammo; {A}.spit(); window.__lg = g; return [inb, before]; }})()''')
+    frames_wait(pg, 12)
+    dark = pg.evaluate(f'''(() => {{ const s = {A}.s, g = window.__lg; return [g.darkUntil > s.elapsed, {A}.inBeam(s.player.x + s.player.r + 10, s.player.y, null), {A}.ammo]; }})()''')
+    rec('W24', 'spit: no shot without a swallow; 5 swallows load 3 pips; a spit shrinks the body, knocks a zombie back and stuns it, puts a keeper\'s lamp out',
+        empty == [0, 0, True] and pips == [3, 3] and hit[2] and hit[3] == 1 and z1 is not None and z1[0] > hit[0] + 60 and z1[1] >= 2
+        and lamp is not None and lamp[0] is True and lamp[1] >= 1 and dark[0] is True and dark[1] is False and dark[2] == lamp[1] - 1,  # the run may have eaten more on its own: one shot spent
+        f'empty={empty} pips={pips} hit={hit} zombie-after={z1} lamp-before={lamp} after={dark}')
+
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune
     rec('W0', 'no page errors', not errs, '; '.join(errs[:3]))

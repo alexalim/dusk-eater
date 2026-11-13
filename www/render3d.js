@@ -411,6 +411,12 @@
     const hintGeo = new T.RingGeometry(1.15, 1.4, 28); hintGeo.rotateX(-Math.PI / 2);
     const hintMat = new T.MeshBasicMaterial({ color: 0xffb35c, transparent: true, opacity: 0.7, depthWrite: false });
     const hints = new T.InstancedMesh(hintGeo, hintMat, MAX_HINTS);
+    // Buildings get a calm ring: thin, faint and still. A building-sized ring that pulses reads as the building
+    // blinking (TestFlight: "the buildings on map 1 flicker") once a big body may eat most of the map.
+    const calmGeo = new T.RingGeometry(1.08, 1.16, 36); calmGeo.rotateX(-Math.PI / 2);
+    const calmMat = new T.MeshBasicMaterial({ color: 0xffb35c, transparent: true, opacity: 0.32, depthWrite: false });
+    const calmHints = new T.InstancedMesh(calmGeo, calmMat, MAX_HINTS);
+    calmHints.renderOrder = 4; calmHints.count = 0; calmHints.frustumCulled = false; scene.add(calmHints);
     hints.renderOrder = 4;
     // the same ring in violet under things that are edible but bad for you (zombies): a warning, not an invitation
     const badMat = new T.MeshBasicMaterial({ color: 0xc766ff, transparent: true, opacity: 0.85, depthWrite: false });
@@ -421,6 +427,11 @@
     // Light shards (pickups): a spinning crystal over a pale ring with a thin pillar, colored by kind, instanced.
     const MAX_SHARDS = 4, SHARD_COL = { bolt: 0x7debff, cloud: 0xe3d7ff, magnet: 0xff7ad9 };
     const shardGem = new T.InstancedMesh(new T.OctahedronGeometry(1), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 }), MAX_SHARDS);
+    // Spat darkness: small deep-violet blobs with a pale rim, flying low (f.spits).
+    const MAX_SPITS = 8;
+    const spitBlob = new T.InstancedMesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x2a0b55 }), MAX_SPITS);
+    const spitRim = new T.InstancedMesh(unit.sphere, new T.MeshBasicMaterial({ color: 0xb78cff, transparent: true, opacity: 0.45, depthWrite: false }), MAX_SPITS);
+    spitBlob.count = spitRim.count = 0; spitBlob.frustumCulled = spitRim.frustumCulled = false; scene.add(spitBlob, spitRim);
     const shardRing = new T.InstancedMesh(goldGeo, new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false }), MAX_SHARDS);
     const shardBeam = new T.InstancedMesh(new T.CylinderGeometry(1, 1, 1, 10, 1, true),
       new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide }), MAX_SHARDS);
@@ -1003,7 +1014,7 @@
         g.mesh.scale.setScalar(s * (g.k || 1));
       }
       for (const { src, mesh } of world.beamMeshes) {
-        const alive = src.state === undefined || src.state === 0;
+        const alive = (src.state === undefined || src.state === 0) && !(f.dark && f.dark.includes(src)); // a doused lamp shows no beam
         mesh.visible = alive;
         if (!alive) continue;
         mesh.position.set(src.x, 0.9, src.y);
@@ -1106,6 +1117,13 @@
         dummy.position.set(h.x, 45, h.y); dummy.rotation.set(0, t, 0); dummy.scale.set(6, 90, 6); dummy.updateMatrix(); shardBeam.setMatrixAt(i, dummy.matrix); shardBeam.setColorAt(i, c);
       });
       for (const m of [shardGem, shardRing, shardBeam]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+      const spitsL = f.spits || [];
+      spitBlob.count = spitRim.count = Math.min(MAX_SPITS, spitsL.length);
+      spitsL.slice(0, MAX_SPITS).forEach((s, i) => {
+        dummy.position.set(s.x, s.r * 0.9, s.y); dummy.rotation.set(t * 7, t * 5, 0); dummy.scale.set(s.r * 1.1, s.r * 0.8, s.r * 0.9); dummy.updateMatrix(); spitBlob.setMatrixAt(i, dummy.matrix);
+        dummy.scale.multiplyScalar(1.25); dummy.updateMatrix(); spitRim.setMatrixAt(i, dummy.matrix);
+      });
+      spitBlob.instanceMatrix.needsUpdate = spitRim.instanceMatrix.needsUpdate = true;
       goldBeam.count = goldRings.count;
       for (let i = 0; i < goldBeam.count; i++) {
         const w = Math.max(golden[i].r * 0.9, 8);
@@ -1115,20 +1133,20 @@
       goldBeam.instanceMatrix.needsUpdate = true;
 
       // Hints: pulse rings under things the player could eat right now.
-      let n = 0, nb = 0;
+      let n = 0, nb = 0, nc = 0;
       const pulse = 0.5 + Math.sin(t * 6) * 0.5;
       for (const item of f.hints) {
-        const im = item.bad ? badHints : hints, k = item.bad ? nb : n;
+        const im = item.bad ? badHints : item.steady ? calmHints : hints, k = item.bad ? nb : item.steady ? nc : n;
         if (k >= (item.bad ? 64 : MAX_HINTS)) continue;
         dummy.position.set(item.x, 1.0, item.y);
         dummy.rotation.set(0, 0, 0);
-        dummy.scale.setScalar(item.r * (1 + pulse * 0.08));
+        dummy.scale.setScalar(item.r * (item.steady ? 1 : 1 + pulse * 0.08));
         dummy.updateMatrix();
         im.setMatrixAt(k, dummy.matrix);
-        if (item.bad) nb++; else n++;
+        if (item.bad) nb++; else if (item.steady) nc++; else n++;
       }
-      hints.count = n; badHints.count = nb;
-      hints.instanceMatrix.needsUpdate = badHints.instanceMatrix.needsUpdate = true;
+      hints.count = n; badHints.count = nb; calmHints.count = nc;
+      hints.instanceMatrix.needsUpdate = badHints.instanceMatrix.needsUpdate = calmHints.instanceMatrix.needsUpdate = true;
       hintMat.opacity = 0.35 + pulse * 0.45; badMat.opacity = 0.6 + pulse * 0.35; // the warning ring never fades far
 
       renderer.render(scene, fp ? fpCamera : camera);
