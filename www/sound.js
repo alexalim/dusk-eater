@@ -110,8 +110,8 @@
 
   const sfx = {
     voice: voiceOf, get lastVoices() { return lastVoices.slice(); },
-    gulp(size = 0) {
-      const f = (720 - size * 420) * R(0.92, 1.08);
+    gulp(size = 0, combo = 0) { // a combo climbs: each swallow in the chain is a step higher, up to a fifth
+      const f = (720 - size * 420) * R(0.92, 1.08) * Math.pow(2, Math.min(7, Math.max(0, combo - 1)) / 12);
       tone(f, f * 0.35, 0.13, { type: 'sine', vol: 0.55 });
       tone(f * 2.1, f * 0.9, 0.06, { type: 'triangle', vol: 0.12 });
     },

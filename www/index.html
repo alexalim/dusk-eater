@@ -126,6 +126,17 @@
   @keyframes smoke { 0% { transform: translate(0, 0) scale(.6); opacity: .7; } 100% { transform: translate(var(--dx), var(--dy)) scale(1.7); opacity: 0; } }
   #burst i.glint { border-radius: 50%; box-shadow: 0 0 6px var(--c); animation: glint .5s ease-out forwards; }
   @keyframes glint { 0% { transform: translate(0, 0) scale(1.3); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(.1); opacity: 0; } }
+  /* "냠"/"꿀꺽!" words and hearts that pop off the body: text particles, so they override the square #burst i look */
+  #burst i.yum, #burst i.heart { width: auto; height: auto; margin: 0; background: none; border-radius: 0; white-space: nowrap; transform: translate(-50%, -50%);
+    font: 900 18px var(--display); color: var(--c); -webkit-text-stroke: 1px rgba(60,20,90,.55); text-shadow: 0 2px 0 rgba(0,0,0,.25); }
+  #burst i.yum { animation: yum .8s cubic-bezier(.2,.9,.3,1) forwards; }
+  @keyframes yum { 0% { transform: translate(-50%, -50%) scale(.4) rotate(0); opacity: 0; } 25% { transform: translate(calc(-50% + var(--dx) * .5), calc(-50% + var(--dy) * .55)) scale(1.25) rotate(var(--rot)); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(var(--rot)); opacity: 0; } }
+  /* a heart from one square and two circles, tilted 45 degrees */
+  #burst i.heart { width: var(--s); height: var(--s); background: var(--c); border-radius: 0 0 3px 0; animation: heart 1s ease-out both; }
+  #burst i.heart::before, #burst i.heart::after { content: ''; position: absolute; width: var(--s); height: var(--s); border-radius: 50%; background: var(--c); }
+  #burst i.heart::before { left: 0; top: calc(var(--s) / -2); } #burst i.heart::after { left: calc(var(--s) / 2); top: 0; }
+  @keyframes heart { 0% { transform: translate(-50%, -50%) rotate(-45deg) scale(.3); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy) - 30px)) rotate(-45deg) scale(1.1); opacity: 0; } }
   #combo { position: absolute; right: 6px; top: calc(100% + 3px); white-space: nowrap; font: 13px var(--display); color: #7debff; text-shadow: 0 1px 0 rgba(0,0,0,.5); }
   #combo.pop { animation: pop .25s ease-out; }
   #hunger-pill.starve { background: #c0392b; border-color: #fff; color: #fff; animation: rushpulse .4s ease-in-out infinite alternate; }
@@ -154,7 +165,8 @@
   /* Tall content scrolls instead of squeezing blocks into each other; Korean wraps between words. */
   .overlay > * { flex-shrink: 0; }
   .overlay p { word-break: keep-all; }
-  .overlay .logo { width: 132px; height: 132px; } /* the logo has its own halo; no extra glow behind it */
+  .overlay .logo { width: 132px; height: 132px; animation: float 3.2s ease-in-out infinite; } /* the logo has its own halo; no extra glow behind it */
+  @keyframes float { 50% { transform: translateY(-7px) rotate(-2deg); } }
   .overlay h1 { margin: 0; font-size: 38px; letter-spacing: 1px; color: var(--accent); }
   .overlay h2 { margin: 0; font-size: 26px; color: var(--accent); }
   .overlay p { margin: 0; max-width: 320px; line-height: 1.55; font-size: 15px; color: var(--muted); }
@@ -162,6 +174,12 @@
   .btn { padding: 14px 34px; border-radius: 999px; background: var(--accent);
     color: #1a0f2e; font-weight: 800; font-size: 18px; cursor: pointer; }
   .btn.ghost { background: transparent; color: var(--text); border: 2px solid rgba(244,239,230,.35); }
+  /* Soft touch: anything tappable squishes under the finger, and cards bounce in when a screen opens. */
+  .btn, .tile, .node, .claim, .skin, .pack, .tabs .chip { transition: scale .12s ease-out; }
+  .btn:active, .tile:active, .node:active, .claim:active, .skin:active, .pack:active, .tabs .chip:active { scale: .94; }
+  .obcard, .pager, .dexwin, .stats .stat, #levelinfo .card, .mcard { animation: popcard .42s cubic-bezier(.34, 1.56, .64, 1) both; }
+  .stats .stat:nth-child(2) { animation-delay: .06s; } .stats .stat:nth-child(3) { animation-delay: .12s; }
+  @keyframes popcard { 0% { transform: scale(.86); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   /* Title: one big start button, the side menus as a row of tiles, account and info in the top corners. */
   #title { gap: 12px; }
   #title .corner { position: absolute; top: calc(env(safe-area-inset-top) + 12px); left: max(16px, env(safe-area-inset-left));
@@ -943,6 +961,30 @@
     sp.addEventListener('animationend', () => sp.remove());
     $('burst').appendChild(sp);
   }
+  // Little words that pop off the body as it eats ("냠", "꿀꺽!"), in pastel colors, at most one every 90 ms so a
+  // crowd of small things does not become a wall of text; hearts fly out at every fifth combo.
+  const YUM = ['#ffd6e7', '#fff1a8', '#e0d0ff', '#c8f3ff'];
+  let lastYum = 0, yumN = 0;
+  function yum(word) {
+    if (performance.now() - lastYum < 90) return; lastYum = performance.now(); // real time: slow frames must not swallow the words
+    const sp = document.createElement('i'), side = (yumN++ % 2 ? 1 : -1);
+    sp.className = 'yum'; sp.textContent = word;
+    sp.style.setProperty('--dx', `${side * (30 + Math.random() * 40)}px`); sp.style.setProperty('--dy', `${-70 - Math.random() * 50}px`);
+    sp.style.setProperty('--c', YUM[yumN % YUM.length]); sp.style.setProperty('--rot', `${side * (6 + Math.random() * 10)}deg`);
+    sp.addEventListener('animationend', () => sp.remove());
+    $('burst').appendChild(sp);
+  }
+  function hearts() {
+    for (let i = 0; i < 7; i++) {
+      const sp = document.createElement('i'), a = -Math.PI / 2 + (i - 3) * 0.38, d = 70 + Math.random() * 50;
+      sp.className = 'heart'; // drawn in CSS (a square and two circles): no emoji anywhere in the game
+      sp.style.setProperty('--dx', `${Math.cos(a) * d}px`); sp.style.setProperty('--dy', `${Math.sin(a) * d}px`);
+      sp.style.setProperty('--c', i % 2 ? '#ff9fc4' : '#ffd6e7'); sp.style.setProperty('--s', `${16 + Math.random() * 10}px`);
+      sp.style.animationDelay = `${i * 0.03}s`;
+      sp.addEventListener('animationend', () => sp.remove());
+      $('burst').appendChild(sp);
+    }
+  }
   function punch(level, color) {
     punches++;
     shake = Math.max(shake, [0, 0.35, 0.7, 1.1][level]);
@@ -967,6 +1009,11 @@
   const RUSH_S = 10;
   let rush = false, rushTick = 0;
   const WALL_OVER = 18; // a body this big goes through a courtyard wall even in sunlight (the walls are low)
+  // A body that looms over a building (clearly bigger than it) throws it into shade itself, so it can be eaten in full sun:
+  // a tester "bigger than the buildings" found nothing to eat on an open map before night. 1.3 leaves a gap above
+  // EAT_RATIO (a building that merely fits still needs real shade). Walls keep their own rule above.
+  const LOOM = 1.3;
+  const looms = b => b.type === 'building' && !b.wall && player.r >= b.r * LOOM;
   // Hunger (core HUNGER): time of the last swallow, the current state for the HUD, and how long the body has sat at its smallest
   let lastEat = 0, hunger = null, hungerTick = 0, starving = false, starveT = 0, endedBy = null;
   let combo = 0, comboUntil = 0, slowUntil = 0; // swallow chain (core COMBO) and the zombie slowdown
@@ -1263,7 +1310,7 @@
       const px = Math.max(b.x, Math.min(b.x + b.w, player.x)), py = Math.max(b.y, Math.min(b.y + b.d, player.y));
       let nx = player.x - px, ny = player.y - py, d = Math.hypot(nx, ny);
       if (d >= R) continue;
-      if (b.r < player.r * C.EAT_RATIO && ((b.wall && player.r >= WALL_OVER) || isShaded(centerOf(b), b))) continue;
+      if (b.r < player.r * C.EAT_RATIO && ((b.wall && player.r >= WALL_OVER) || looms(b) || isShaded(centerOf(b), b))) continue;
       if (d < 1e-6) { // center already inside: leave by the nearest wall
         const out = [[player.x - b.x, -1, 0], [b.x + b.w - player.x, 1, 0], [player.y - b.y, 0, -1], [b.y + b.d - player.y, 0, 1]]
           .sort((a, c) => a[0] - c[0])[0];
@@ -1542,7 +1589,7 @@
       const dist = Math.hypot(ox - player.x, oy - player.y);
       if (dist > player.r + o.r) return;
       const golden = o.goldUntil > elapsed; // golden friends may be taken in full sun; so may a low wall, by a big enough body
-      const over = o.wall && player.r >= WALL_OVER;
+      const over = (o.wall && player.r >= WALL_OVER) || looms(o);
       if (C.canEat(player.r, o.r, golden || over || isShaded({ x: ox, y: oy }, exclude), dist)) startSwallow(o, ox, oy);
     };
     for (const o of objects) if (o.state === 0) tryEat(o, o.x, o.y, o); // its own crown's shade doesn't count
@@ -1572,9 +1619,10 @@
       combo = elapsed < comboUntil ? combo + 1 : 1; comboUntil = elapsed + C.COMBO.window + runPerk.combo; stats.maxCombo = Math.max(stats.maxCombo || 0, combo);
       const mult = C.comboMult(combo);
       if (combo >= 3) Sound.sfx.combo(combo);
-      if (combo >= 5 && combo % 5 === 0) streak(combo);
+      if (combo >= 5 && combo % 5 === 0) { streak(combo); hearts(); }
       const v = o.worth || o.r; // a courtyard wall is swallowed at its size but grows and scores little (worth)
-      Sound.sfx.gulp(Math.min(1, o.r / player.r));
+      Sound.sfx.gulp(Math.min(1, o.r / player.r), combo);
+      yum(v > player.r * 0.45 ? '꿀꺽!' : combo >= 3 ? '냠냠냠!' : combo === 2 ? '냠냠!' : '냠');
       if (v > player.r * 0.45 && !o.boss) punch(1);
       player.r = C.grow(player.r, v);
       const gold = o.goldUntil > elapsed;
@@ -1629,6 +1677,7 @@
     player.slow = state === 'play' && elapsed < slowUntil; // the renderer: queasy green jelly
     player.fast = state === 'play' && elapsed < fastUntil; // wide eyes, quick breath
     player.bubble = elapsed < bubbleUntil ? bubbleR() : 0; player.magnet = elapsed < magnetUntil ? (elapsed * 1.5) % 1 : -1;
+    player.cheer = state === 'play' && elapsed < comboUntil ? Math.min(1, combo / 4) : 0; // the renderer: pink cheeks and a squint while a combo is going
     // particles at the body (it is always mid-screen): green smoke while poisoned, cyan glints trailing while fast
     if (player.slow && t - lastPuff > 0.12) { lastPuff = t; spark('#9bd38a', (Math.random() - .5) * 40, -40 - Math.random() * 40, 12 + Math.random() * 10, 'smoke'); }
     if (player.fast && t - lastPuff > 0.07) { lastPuff = t; spark('#7debff', -player.vx * 0.25 + (Math.random() - .5) * 24, -player.vy * 0.25 + (Math.random() - .5) * 24, 5 + Math.random() * 5, 'glint'); }
@@ -1646,7 +1695,7 @@
       const c = centerOf(b);
       // a courtyard wall gets a small ring, and only close by: hundreds of segments all ringed at once is noise
       if (b.wall && Math.hypot(c.x - player.x, c.y - player.y) > 110 + player.r) continue;
-      if ((b.wall && player.r >= WALL_OVER) || isShaded(c, b)) hints.push({ x: c.x, y: c.y, r: b.wall ? b.r + 2 : Math.hypot(b.w, b.d) / 2 });
+      if ((b.wall && player.r >= WALL_OVER) || looms(b) || isShaded(c, b)) hints.push({ x: c.x, y: c.y, r: b.wall ? b.r + 2 : Math.hypot(b.w, b.d) / 2 });
     }
     const golden = stage.twist === 'golden' ? objects.filter(o => o.state === 0 && o.goldUntil > elapsed) : [];
     if (stage.twist === 'golden') for (const o of objects) o.glow = o.state === 0 && o.goldUntil > elapsed; // painted gold by the renderer

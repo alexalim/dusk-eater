@@ -979,6 +979,7 @@
           if (o.state === 1) { const p = f.swallowPos(o); x = p.x; y = p.y; s = p.s; lift = p.lift; }
           if (o.state === 2) s = 0;
           if (o.glow) { s *= 1.2; lift += o.r * (0.6 + Math.sin(t * 6 + o.x) * 0.4); }
+          if (o.state === 0 && o.r <= 12 && (o.vx || o.vy)) lift += Math.abs(Math.sin(t * 11 + o.x * 0.1)) * o.r * 0.16; // small walkers hop along
           const r = o.r * s;
           dummy.position.set(x, part.y * r + lift, y);
           dummy.rotation.set(0, -o.rot, 0);
@@ -1037,7 +1038,7 @@
       body.position.set(player.x, R * BODY_Y, player.y);
       body.scale.set(R * (1 + bulge * 0.12), R * BODY_SY * breathe * (1 - bulge * 0.06), R * (1 + bulge * 0.12));
       if (player.slow) { const w = Math.sin(t * 14); body.scale.x *= 1 + w * 0.08; body.scale.z *= 1 - w * 0.08; body.scale.y *= 1 + Math.sin(t * 14 + 1) * 0.06; } // poisoned: a wobbling jelly
-      body.rotation.set(0, -L, 0);
+      body.rotation.set(0, -L, Math.sin(t * 1.7) * 0.035); // a slow idle sway, like humming to itself
       const grown = Math.min(1, Math.max(0, (player.r / (player.r0 || player.r) - 1) / 4));
       bodyMat.color.copy(bodyColor).lerp(glowColor, grown * 0.25);
       if (player.slow) bodyMat.color.lerp(tmpCol.set(0x9bd38a), 0.45); // queasy green while a zombie bite slows it
@@ -1059,23 +1060,27 @@
       onBody(player, L, MOUTH_EL, 0.08, throat.position);
       throat.rotation.copy(mouth.rotation);
       throat.scale.set(R * 0.06, mouth.scale.y * (0.45 + gulp * 0.35), mouth.scale.z * (0.5 + gulp * 0.3));
-      // Eyes: wide half-lidded ovals with a glint; they squeeze shut happily (^^) for a moment after each gulp.
-      const happy = Math.min(1, bulge * 1.6), wide = player.fast ? 1 : 0; // fast: the lids lift and the eyes open wide, bright
+      // Eyes: wide half-lidded ovals with a glint; they squeeze shut happily (^^) for a moment after each gulp, and
+      // stay a little squinted while a combo is going (player.cheer 0..1). A blink every few seconds keeps it alive.
+      const cheer = player.cheer || 0, blink = (t + 1.3) % 4.1 < 0.11 ? 1 : 0;
+      const happy = Math.max(Math.min(1, bulge * 1.6), cheer * 0.55), wide = player.fast ? 1 : 0; // fast: the lids lift and the eyes open wide, bright
       eyes.forEach(({ e, p, lid }, k) => {
         onBody(player, L + (k ? 1 : -1) * 0.4, 0.66 + gulp * 0.1, 0.0, e.position);
         e.rotation.set(0, -L, 0);
-        e.scale.set(R * 0.1, R * (0.14 + wide * 0.06 - happy * 0.1), R * 0.19);
+        e.scale.set(R * 0.1, R * (0.14 + wide * 0.06 - happy * 0.1) * (1 - blink * 0.85), R * 0.19);
         // the lid: a body-colored cap over the upper part of the eye, so the eye reads as a flat-topped half-moon
         onBody(player, L + (k ? 1 : -1) * 0.4, 0.78 + gulp * 0.1 + wide * 0.1, 0.03, lid.position);
         lid.rotation.set(0, -L, 0);
         lid.scale.set(R * 0.11, R * 0.09, R * 0.22);
         onBody(player, L + (k ? 1 : -1) * 0.36, 0.64 + gulp * 0.1, 0.09, p.position);
-        p.scale.setScalar(R * (0.045 + wide * 0.02) * (1 - happy));
+        p.scale.setScalar(R * (0.045 + wide * 0.02) * (1 - happy) * (1 - blink));
       });
+      // Cheeks: a faint violet glow at rest that warms to a pink blush, bigger, while a combo is going.
+      cheekMat.color.set(0xb78cff).lerp(tmpCol.set(0xff9fc4), cheer); cheekMat.opacity = 0.22 + cheer * 0.45;
       cheeks.forEach((m, i) => {
         onBody(player, L + (i ? 1 : -1) * 0.66, 0.5, 0.0, m.position);
         m.rotation.set(0, -L, 0);
-        m.scale.set(R * 0.05, R * 0.06, R * 0.12);
+        m.scale.set(R * 0.05, R * (0.06 + cheer * 0.03), R * (0.12 + cheer * 0.05));
         m.visible = k < 0.6;
       });
 
