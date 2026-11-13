@@ -992,7 +992,7 @@
           if (o.glow) { s *= 1.2; lift += o.r * (0.6 + Math.sin(t * 6 + o.x) * 0.4); }
           if (o.state === 0 && o.r <= 12 && (o.vx || o.vy)) lift += Math.abs(Math.sin(t * 11 + o.x * 0.1)) * o.r * 0.16; // small walkers hop along
           const r = o.r * s;
-          dummy.position.set(x, part.y * r + lift, y);
+          dummy.position.set(x, part.y * r + lift + (o.zf || 0), y); // zf: per-object height hair against z-fighting
           dummy.rotation.set(0, -o.rot, 0);
           if (part.o) { dummy.translateX(part.o[0] * r); dummy.translateZ(part.o[1] * r); }
           dummy.scale.set(part.s[0] * r || 1e-6, part.s[1] * r || 1e-6, part.s[2] * r || 1e-6);

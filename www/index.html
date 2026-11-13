@@ -239,6 +239,11 @@
   .stat { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 14px; padding: 10px 4px 8px; }
   .stat b { display: block; font-family: var(--display); font-weight: 400; font-size: 21px; color: var(--star); line-height: 1.1; }
   .stat small { font-size: 12px; color: var(--muted); }
+  /* What the run swallowed, as pictures with counts (tester: "write what and how many"); the book's renders are the icons */
+  .eatrow { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; width: min(100%, 340px); }
+  .eatrow span { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px 3px 5px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); font-size: 13px; color: var(--text); }
+  .eatrow img { width: 22px; height: 22px; margin: 0; }
+  .eatrow .ico.ui { width: 16px; height: 16px; margin: 0 2px; }
   /* Streak banner: a slanted gold slab that slides through the middle of the screen at every fifth combo. */
   #streak { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%) rotate(-8deg); padding: 8px 26px; border-radius: 10px;
     background: var(--star); color: #2a1a05; font: 32px var(--display); letter-spacing: 1px; box-shadow: 0 6px 0 #c9931d; pointer-events: none; z-index: 4; opacity: 0; }
@@ -304,7 +309,10 @@
   .mcard .bar { display: block; height: 12px; border-radius: 999px; background: rgba(255,255,255,.25); overflow: hidden; }
   .mcard .bar i { display: block; height: 100%; background: linear-gradient(90deg, #ffd25c, #fff0b0); }
   .mcard .mrow { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 13px; }
-  .mcard .claim { background: rgba(255,255,255,.2); color: #fff; }
+  /* the badge pill sits on the purple card: a glassy outline, not a grey box (tester: "11월의 배지 뒷배경") */
+  .mcard .claim { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; font-family: var(--display); font-size: 13px;
+    background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.45); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
+  .mcard .claim .ico { width: 16px; height: 16px; margin: 0; }
   .mcard .claim.ready { background: var(--star); color: #2a1a05; }
   .mcard .claim .ico { width: 16px; height: 16px; vertical-align: -3px; }
   .mcard .mwon { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -405,6 +413,10 @@
   .gem { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .gem svg { width: 16px; height: 16px; }
   .topbar { width: min(100%, 380px); display: flex; justify-content: space-between; align-items: center; }
+  /* On the level map the bar stays put while the road scrolls under it, so "처음으로" is always one tap away
+     (tester: the map opens at the newest level and the way back had scrolled off the top). */
+  #select .topbar { position: sticky; top: calc(env(safe-area-inset-top) - 24px); z-index: 4; padding: 8px 10px; margin: -8px -10px 0; box-sizing: content-box;
+    border-radius: 16px; background: rgba(23,10,46,.88); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
   .chip { padding: 8px 14px; border-radius: 999px; background: var(--card); color: var(--text); font-weight: 800; font-size: 14px; cursor: pointer; }
   #shop { justify-content: flex-start; }
   #shop h3 { margin: 6px 0 0; width: min(100%, 380px); text-align: left; font-size: 15px; color: var(--muted); }
@@ -654,6 +666,7 @@
   <div class="stars" id="end-stars"></div>
   <p class="big" id="result"></p>
   <div class="stats" id="end-tiles"></div>
+  <div class="eatrow" id="end-eaten"></div>
   <div class="xpbox" id="end-xp"><div class="xprow"><span id="end-lv"></span><span id="end-xp-gain"></span></div><div class="xpbar"><i id="end-xp-fill"></i></div></div>
   <div class="goal-list" id="end-goals"></div>
   <p id="best"></p>
@@ -1123,11 +1136,30 @@
   function addObj(type, x, y, extra) {
     const t = TYPES[type];
     const color = t.colors ? t.colors[(rnd() * t.colors.length) | 0] : t.color;
-    objects.push(Object.assign({ type, x, y, r: t.r, color, state: 0, ft: 0, rot: 0 }, extra));
+    // zf: a hair of height per object (under 0.3 units, invisible) so two that still share a spot never draw coplanar faces
+    objects.push(Object.assign({ type, x, y, r: t.r, color, state: 0, ft: 0, rot: 0, zf: (objects.length % 7) * 0.045 }, extra));
   }
 
   const DENSITY = 1.5; // streets are busy: every theme's scatter counts, times this
   const ZOMBIES = 6;   // per map, not scaled by DENSITY (buildWorld): a trap you can see coming, not a crowd
+  // Scattered things keep a little room from each other: two of a kind (or two props) on the same spot draw their
+  // flat tops at the same height and flicker (TestFlight: "items overlap and blink", 전통시장 stalls and fruit boxes).
+  // People may still stand under a tree crown or a parasol: that shade is the game. Hard limits, never a lost item:
+  // a spot that stays crowded through most of the tries falls back to the old free placement.
+  const CANOPY = new Set(['tree', 'pine', 'persimmon', 'ginkgo', 'palm', 'xtree', 'parasol', 'tent']);
+  function crowded(type, x, y) {
+    const r = TYPES[type].r, person = PEOPLE.has(type);
+    for (const o of objects) {
+      const reach = r + o.r, d = Math.abs(o.x - x) < reach && Math.abs(o.y - y) < reach ? Math.hypot(o.x - x, o.y - y) : Infinity;
+      if (d === Infinity) continue;
+      if (o.type === type) { if (d < reach * 0.9) return true; continue; }
+      const oPerson = PEOPLE.has(o.type);
+      if (person && oPerson) { if (d < reach * 0.5) return true; continue; }
+      if (CANOPY.has(type) || CANOPY.has(o.type)) continue; // a body under a crown, or a crown over a crate
+      if (d < reach * (person || oPerson ? 0.5 : 0.7)) return true; // two props, or someone standing inside a stall
+    }
+    return false;
+  }
   function scatter(list, zoneTop, zoneBottom) {
     const R = (a, b) => a + rnd() * (b - a);
     for (const [type, n0] of list) {
@@ -1136,6 +1168,7 @@
       while (placed < n && tries++ < n * 20) {
         const x = R(10, WORLD - 10), y = R(zoneTop + 10, zoneBottom - 10);
         if (insideAnyBuilding(x, y, TYPES[type].r + 2)) continue;
+        if (tries < n * 12 && crowded(type, x, y)) continue; // the last tries take any free ground, so counts never drop
         const extra = {};
         if (type === 'container') { extra.color = CONTAINER_COLORS[(rnd() * CONTAINER_COLORS.length) | 0]; extra.rot = rnd() < 0.5 ? 0 : Math.PI / 2; }
         if (type === 'boat') extra.rot = rnd() * Math.PI;
@@ -1252,10 +1285,14 @@
     }
     // Open lots get the theme's props: [type, count (a fraction is a chance), 'center' to place it mid-lot].
     for (const [x0, y0, inner] of parks) {
-      for (const [type, n, at] of stage.parkItems || []) {
+      for (const [type, n, at] of (stage.parkItems || []).slice().sort((a, b) => !!b[2] - !!a[2])) { // centre pieces first, so scattered ones keep clear of them
         const k = n < 1 ? (rnd() < n ? 1 : 0) : n;
         for (let i = 0; i < k; i++) {
-          const x = at ? x0 + inner / 2 : x0 + R(15, inner - 15), y = at ? y0 + inner / 2 : y0 + R(15, inner - 15);
+          let x = at ? x0 + inner / 2 : x0 + R(15, inner - 15), y = at ? y0 + inner / 2 : y0 + R(15, inner - 15);
+          for (let t = 0; !at && t < 8 && crowded(type, x, y); t++) { // a free spot in the lot if there is one (never one inside a building)
+            const nx = x0 + R(15, inner - 15), ny = y0 + R(15, inner - 15);
+            if (!insideAnyBuilding(nx, ny, TYPES[type].r)) { x = nx; y = ny; }
+          }
           if (!insideAnyBuilding(x, y, TYPES[type].r)) addObj(type, x, y);
         }
       }
@@ -2325,6 +2362,11 @@
     const shadePct = stats.playT ? Math.round(stats.shadeT / stats.playT * 100) : 0;
     $('end-tiles').innerHTML = [[`+${xp.toLocaleString()}`, '경험치'], [`${stats.maxCombo || 0}`, '최고 콤보'], [`${shadePct}%`, '그늘에 있던 시간']]
       .map(([v, l]) => `<div class="stat"><b>${v}</b><small>${l}</small></div>`).join('');
+    // the tally: the most-swallowed kinds as book pictures with counts, then zombies spat away and light shards picked up
+    const kinds = Object.entries(stats.eaten).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 7);
+    $('end-eaten').innerHTML = kinds.map(([t, n]) => { const e = Dex.ENTRIES.find(x => x.id === t); return `<span title="${kindName(t)}">${e ? `<img src="${e.img}" alt="${e.name}">` : kindName(t)}&times;${n}</span>`; }).join('')
+      + (stats.spitHits ? `<span>${ico('moon').replace('class="ico"', 'class="ico ui"')}퉤 ${stats.spitHits}</span>` : '')
+      + (stats.shards ? `<span>${ico('sparkle').replace('class="ico"', 'class="ico ui"')}빛 조각 ${stats.shards}</span>` : '');
     // step one: the celebration (face, title, stars); step two on a tap or after a moment
     $('cheer-face').src = face; $('cheer-title').innerHTML = title; $('cheer-stars').innerHTML = starText(n);
     $('cheer-sub').textContent = !cleared ? (endedBy === 'hunger' ? '너무 오래 굶었어요' : '별 하나가 모자랐어요') : n === 3 ? '별 셋 모두!' : `${stats.total}개 삼켰어요`;

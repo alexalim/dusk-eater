@@ -347,6 +347,18 @@ with sync_playwright() as p:
         and lamp is not None and lamp[0] is True and lamp[1] >= 1 and dark[0] is True and dark[1] is False and dark[2] == lamp[1] - 1,  # the run may have eaten more on its own: one shot spent
         f'empty={empty} pips={pips} hit={hit} zombie-after={z1} lamp-before={lamp} after={dark}')
 
+    # W25 no stacked props: on the market and park maps, no two stalls / fruit boxes / benches / kiosks (or a person inside one) share a spot,
+    # since same-height flat tops on one spot flicker (TestFlight, 전통시장); every object also carries a small height hair (zf)
+    stacked = {}
+    for lv in (0, 60, 69):
+        stacked[lv + 1] = pg.evaluate(f'''(() => {{ {A}.start({lv}); const P = ['stall', 'fruit', 'bench', 'kiosk', 'trash', 'grandma', 'person'], o = {A}.s.objects.filter(o => o.state === 0 && P.includes(o.type));
+          let n = 0; for (let a = 0; a < o.length; a++) for (let b = a + 1; b < o.length; b++) {{ const pp = ['grandma', 'person'];
+            if (pp.includes(o[a].type) && pp.includes(o[b].type) && o[a].type !== o[b].type) continue;
+            if (Math.hypot(o[a].x - o[b].x, o[a].y - o[b].y) < 0.3 * (o[a].r + o[b].r)) n++; }}
+          return [n, new Set({A}.s.objects.slice(0, 20).map(o => o.zf)).size]; }})()''')
+    rec('W25', 'no stacked props on the park and market maps; objects carry distinct height hairs',
+        all(v[0] == 0 and v[1] >= 5 for v in stacked.values()), f'{stacked}')
+
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune
     rec('W0', 'no page errors', not errs, '; '.join(errs[:3]))

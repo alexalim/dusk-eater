@@ -227,12 +227,15 @@ with sync_playwright() as p:
     rec('S19', 'big building is solid: the body stops at the wall (no deeper than 80% of its radius)',
         pressed[0] <= wall - pressed[1] * 0.8 + 1 and vx <= 0.5, f'wall={wall:.0f} x={pressed[0]:.1f} r={pressed[1]:.1f} vx_after={vx:.1f}')
     # S3 round end: stars + goal list + next button rule (fast frames can be ~16 ms, so leave 10 ms and wait 8)
+    pg.evaluate(f'''(() => {{ const s = {A}.s; for (const o of s.objects.filter(o => o.state === 0 && o.type !== 'zombie' && o.r < s.player.r * 0.6).slice(0, 3)) {{ o.state = 1; o.ft = 0.99; }} }})()'''); frames_wait(pg, 4)
     pg.evaluate(f'{A}.skipTo(119.99)'); frames_wait(pg, 8)
     decline_continue(pg)
     end_vis = pg.is_visible('#end'); goals = len(pg.query_selector_all('#end-goals > div'))
     stars = pg.evaluate("JSON.parse(localStorage.getItem('dusk-stars') || '{}')")
     nxt = pg.is_visible('#btn-next')
-    rec('S3', 'end screen, goals listed, stars saved, next hidden w/o star', end_vis and goals == 3 and 'L1' in stars and nxt == (stars['L1'] >= 1), f'stars={stars} next={nxt}')
+    tally = pg.evaluate("[...document.querySelectorAll('#end-eaten span')].map(s => [!!s.querySelector('img'), s.textContent.trim()])")  # what was swallowed, as pictures with counts
+    rec('S3', 'end screen, goals listed, stars saved, next hidden w/o star, a picture tally of what was swallowed',
+        end_vis and goals == 3 and 'L1' in stars and nxt == (stars['L1'] >= 1) and len(tally) >= 1 and all(img and '×' in txt for img, txt in tally), f'stars={stars} next={nxt} tally={tally}')
     # S6 memory: restart 12 times. Each building owns its geometry, so pin the map seed (Date.now) to compare like with like.
     pg.evaluate('window.__now = Date.now; Date.now = () => 4242')
     info = lambda: pg.evaluate(f'(() => {{ const m = {A}.R.debug.renderer.info.memory; return [m.geometries, m.textures]; }})()')
