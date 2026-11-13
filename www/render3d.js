@@ -27,7 +27,21 @@
   // A part is a unit geometry scaled by [sx, sy, sz] * object radius, lifted by y * r and
   // shifted by o = [forward, side] * r in the object's own frame. color 'inst' takes the object's
   // own color; glow parts ignore lighting (headlights).
-  const P = (geo, s, y, color, o, glow) => ({ geo, s, y, color, o, glow });
+  const P = (geo, s, y, color, o, glow, tex) => ({ geo, s, y, color, o, glow, tex });
+  // A painted sign board (tex = the words), unlit so it reads at night too: drawn once per word.
+  const signTextures = {};
+  function signTex(text) {
+    if (signTextures[text]) return signTextures[text];
+    // The box's top face maps the canvas's width along the part's forward (long) side, so the words run along the board.
+    const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff5d6'; g.fillRect(0, 0, 256, 128);
+    g.strokeStyle = '#7a1f1f'; g.lineWidth = 12; g.strokeRect(6, 6, 244, 116);
+    g.fillStyle = '#c8102e'; g.font = 'bold 92px -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 128, 68);
+    const t = new T.CanvasTexture(c); t.anisotropy = 4;
+    return (signTextures[text] = t);
+  }
   const HAIR = '#4a3426', SKIN = '#f6d2b0';
   // Prop parts drawn into the shadow map: the crown, canopy or body only (no trunks, poles, fruit or ornaments), the same
   // shapes the game's shade rule models (index.html SHADE, core propShadow). type -> part indices.
@@ -44,7 +58,9 @@
     zombie:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, '#8fe07a'), P('sphere', [0.3, 0.2, 0.34], 2.88, '#2a3a1e', [-0.12, 0]), // a bald green head with a tuft, so it reads green from above
                 P('box', [0.9, 0.22, 0.22], 1.9, '#8fe07a', [0.6, 0.35]), P('box', [0.9, 0.22, 0.22], 1.9, '#8fe07a', [0.6, -0.35]),
                 P('sphere', [0.13, 0.13, 0.13], 2.5, '#eaff5c', [0.48, 0.2], true), P('sphere', [0.13, 0.13, 0.13], 2.5, '#eaff5c', [0.48, -0.2], true),
-                P('cyl', [1.0, 0.07, 1.0], 3.45, '#d94fff', undefined, true), P('cyl', [0.72, 0.09, 0.72], 3.45, '#f3c6ff', undefined, true)], // a violet halo over the head: flat, so it shows from above
+                P('cyl', [1.0, 0.07, 1.0], 3.45, '#d94fff', undefined, true), P('cyl', [0.72, 0.09, 0.72], 3.45, '#f3c6ff', undefined, true), // a violet halo over the head: flat, so it shows from above
+                // a "좀비" sign on a post above the halo (TestFlight ask): the board lies flat so the word reads from the camera
+                P('cyl', [0.1, 1.3, 0.1], 4.0, '#6b4a2b', [-0.25, 0]), P('box', [3.0, 0.06, 1.6], 4.65, '#fff5d6', [-0.25, 0], true, '좀비')],
     cat:       [P('blob', [1.1, 0.6, 0.6], 0.6, 'inst'), P('sphere', [0.5, 0.48, 0.5], 1.05, 'inst', [1.0, 0]),
                 P('cone', [0.17, 0.4, 0.17], 1.55, 'inst', [1.05, 0.26]), P('cone', [0.17, 0.4, 0.17], 1.55, 'inst', [1.05, -0.26]),
                 P('cyl', [0.12, 1.0, 0.12], 1.0, 'inst', [-1.1, 0])],
@@ -637,7 +653,7 @@
       for (const [type, list] of Object.entries(byType)) {
         for (const part of PARTS[type]) {
           const c = part.color === 'inst' ? '#ffffff' : part.color;
-          const mat = part.glow ? new T.MeshBasicMaterial({ color: col(c) }) : lambert(c);
+          const mat = part.tex ? new T.MeshBasicMaterial({ map: signTex(part.tex) }) : part.glow ? new T.MeshBasicMaterial({ color: col(c) }) : lambert(c);
           const im = new T.InstancedMesh(low[part.geo], mat, list.length);
           im.receiveShadow = true;
           if (CASTERS[type] && CASTERS[type].includes(PARTS[type].indexOf(part))) im.castShadow = true; // shades the ground, as the rule says

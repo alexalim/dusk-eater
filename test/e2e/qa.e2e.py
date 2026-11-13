@@ -376,4 +376,35 @@ with sync_playwright() as p:
     rec('S20', 'first run: 4 onboarding cards with a filling bar and the character talking, 시작하기 opens the map on level 1, not shown again',
         shown and bars == [1, 2, 3, 4] and len(set(says)) == 4 and last == '시작하기' and on_map and sel == '0' and not again and not errs, f'bars={bars} last={last!r} map={on_map} sel={sel} again={again} errs={errs}')
     b.close()
+
+    # S21 update check: an older app sees the card (face, bubble, build numbers, two buttons) before any other popup; 나중에 remembers
+    # that build and the title's greetings follow; a build below `min` gets one button and the start button is covered
+    b = p.chromium.launch(args=GL)
+    REL = "{ build: 60, version: '1.0', min: 0, availableAt: '2026-01-01T00:00:00Z', url: 'itms-beta://beta.itunes.apple.com/v1/app/6828737098' }"
+    def launch(build, extra=''):
+        ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        pg.add_init_script(TIMER); pg.add_init_script(f'window.__DUSK_TEST__.onboard = true; window.__DUSK_TEST__.update = {{ build: {build}, info: Object.assign({REL}, {{{extra}}}) }}')
+        pg.goto(URL); pg.wait_for_timeout(700); pg.evaluate(f'{A}.ready'); frames_wait(pg, 6)
+        return pg, errs
+    pg, errs = launch(57)
+    soft = [pg.is_visible('#update'), pg.is_visible('#onboard'), pg.inner_text('#up-say'), pg.inner_text('#up-body'), pg.inner_text('#btn-update'), pg.is_visible('#btn-update-later')]
+    pg.tap('#btn-update'); opened = pg.evaluate('window.__DUSK_TEST__.opened')
+    pg.tap('#btn-update-later'); frames_wait(pg, 3)
+    later = [pg.is_visible('#update'), pg.is_visible('#onboard'), pg.evaluate("localStorage.getItem('dusk-update-skip')")]
+    pg.reload(); pg.wait_for_timeout(700); pg.evaluate(f'{A}.ready'); frames_wait(pg, 6)
+    again = pg.is_visible('#update')
+    pg.context.close()
+    pg, errs2 = launch(57, 'min: 58')  # too old to play
+    force = [pg.is_visible('#update'), pg.inner_text('#up-say'), pg.is_visible('#btn-update-later'), pg.is_visible('#btn-title')]
+    pg.context.close()
+    pg, errs3 = launch(60)  # up to date: straight to the usual greetings
+    same = [pg.is_visible('#update'), pg.is_visible('#onboard')]
+    pg.context.close()
+    rec('S21', 'update check: an old build sees the card first, 업데이트 opens TestFlight, 나중에 remembers the build and lets onboarding through; below min only 업데이트; current build sees nothing',
+        soft == [True, False, '새 버전이 나왔어!', soft[3], 'TestFlight에서 업데이트', True] and '60' in soft[3] and '57' in soft[3] and opened == 'itms-beta://beta.itunes.apple.com/v1/app/6828737098'
+        and later == [False, True, '60'] and not again and force[0] and force[1] == '업데이트가 필요해!' and force[2] is False and force[3] is False
+        and same == [False, True] and not errs and not errs2 and not errs3,
+        f'soft={soft} opened={opened} later={later} again={again} force={force} same={same} errs={errs + errs2 + errs3}')
+    b.close()
 print('SUMMARY', sum(r[2] for r in res), '/', len(res))

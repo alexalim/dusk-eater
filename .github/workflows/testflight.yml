@@ -24,6 +24,8 @@ jobs:
   upload:
     runs-on: macos-26
     timeout-minutes: 45
+    permissions:
+      contents: write # release.json on the `release` branch (the app's update check)
     env:
       KEYCHAIN: build.keychain-db
     steps:
@@ -131,6 +133,33 @@ jobs:
             -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
             -authenticationKeyID "${{ secrets.ASC_KEY_ID }}" \
             -authenticationKeyIssuerID "${{ secrets.ASC_ISSUER_ID }}"
+
+      # The app compares its build with this file at start (www/update.js) and offers the update. `min` (oldest build still
+      # allowed) and `url` are kept from the previous file: edit them on the `release` branch by hand when needed.
+      # availableAt is 20 minutes out so phones only hear about the build once Apple has processed it.
+      - name: Publish release.json for the in-app update check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BUILD: ${{ github.run_number }}
+        run: |
+          VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app/Info.plist")
+          cur=$(gh api "repos/$REPO/contents/release.json?ref=release" 2>/dev/null || echo '{}')
+          sha=$(printf '%s' "$cur" | jq -r '.sha // empty')
+          prev=$(printf '%s' "$cur" | jq -r '.content // empty' | base64 --decode 2>/dev/null); [ -n "$prev" ] || prev='{}'
+          at=$(date -u -v+20M +%Y-%m-%dT%H:%M:%SZ)
+          new=$(printf '%s' "$prev" | jq --argjson b "$BUILD" --arg v "$VERSION" --arg at "$at" \
+            '.ios = ((.ios // {}) + {build: $b, version: $v, availableAt: $at}) | .ios.min = (.ios.min // 0) | .ios.url = (.ios.url // "itms-beta://beta.itunes.apple.com/v1/app/6828737098")')
+          printf '%s\n' "$new"
+          if git ls-remote --exit-code --heads origin release > /dev/null; then
+            gh api -X PUT "repos/$REPO/contents/release.json" -f branch=release -f message="[chore] release.json: build $BUILD" \
+              -f content="$(printf '%s\n' "$new" | base64)" ${sha:+-f sha=$sha} > /dev/null
+          else # first time: an orphan branch holding only this file
+            blob=$(printf '%s\n' "$new" | git hash-object -w --stdin)
+            tree=$(printf '100644 blob %s\trelease.json\n' "$blob" | git mktree)
+            c=$(git -c user.name=github-actions -c user.email=github-actions@github.com commit-tree "$tree" -m "[chore] release.json: build $BUILD")
+            git push origin "$c:refs/heads/release"
+          fi
 
       - name: Clean up keychain and key files
         if: always()

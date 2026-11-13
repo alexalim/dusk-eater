@@ -193,6 +193,9 @@
   .ob-days { display: flex; gap: 6px; } .ob-days span { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.12); font: 13px var(--display); }
   .ob-days span.on { background: var(--star); color: #2a1a05; }
   #onboard .btns { width: min(100%, 300px); margin-top: auto; }
+  /* The update card: same character-and-card look as onboarding, centred, two buttons (one when the update is required). */
+  #update { gap: 18px; background: radial-gradient(circle at 50% 30%, #3b2070 0%, #170a2e 70%); }
+  #update .btns { width: min(100%, 300px); margin-top: 8px; }
   /* Celebration step: a dark violet glow, the face popping in, the stars landing one after another. */
   #cheer { background: radial-gradient(circle at 50% 38%, #3b2070 0%, #170a2e 65%); justify-content: center; gap: 18px; }
   #cheer .cheer-face { width: 168px; height: 168px; animation: cheerpop .6s cubic-bezier(.2, 1.6, .4, 1) both; }
@@ -534,6 +537,11 @@
   <div class="obcard"><img class="ico big" id="ob-ico" src="img/ui/moon.svg" alt=""><p id="ob-body"></p><div class="ob-days hidden" id="ob-days"></div></div>
   <div class="btns"><div class="btn hero" id="btn-ob">계속</div></div>
 </div>
+<div id="update" class="overlay hidden">
+  <div class="obtalk"><img class="face-big" id="up-face" src="img/ui/face-excited.svg" alt=""><div class="bubble" id="up-say"></div></div>
+  <div class="obcard"><img class="ico big" src="img/ui/gift.svg" alt=""><p id="up-body"></p></div>
+  <div class="btns"><div class="btn hero" id="btn-update">업데이트</div><div class="btn ghost" id="btn-update-later">나중에</div></div>
+</div>
 <div id="daily" class="overlay hidden">
   <div class="dexwin">
     <div class="dexhead"><span>출석 보상</span><span class="x" id="btn-daily-back" aria-label="닫기" style="margin-left: auto">×</span></div>
@@ -685,6 +693,7 @@
 <script src="config.js"></script>
 <script src="sync.js"></script>
 <script src="account.js"></script>
+<script src="update.js"></script>
 <script>
 (() => {
   'use strict';
@@ -1984,7 +1993,7 @@
 
   function show(id) {
     if (id && id !== 'pause') { Sound.music.mode('title'); Sound.music.rush(false); if (id === 'title') Sound.music.tune('town'); } // menus get the quiet arrangement
-    for (const o of ['title', 'onboard', 'select', 'pause', 'cheer', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo', 'twist', 'cont', 'daily', 'missions']) $(o).classList.toggle('hidden', o !== id);
+    for (const o of ['title', 'onboard', 'update', 'select', 'pause', 'cheer', 'end', 'no3d', 'shop', 'account', 'ranking', 'dex', 'badges', 'info', 'levelinfo', 'twist', 'cont', 'daily', 'missions']) $(o).classList.toggle('hidden', o !== id);
     $('hud').classList.toggle('hidden', id !== null && id !== 'pause');
     if (id !== null) $('tutorial').classList.add('hidden');
   }
@@ -2364,7 +2373,7 @@
   // ---------- cloud save ----------
   // updatedAt moves only on real changes (a finished run, a wallet that differs), never on loading or on
   // applying a merged save, so an old phone that is merely opened cannot win the "newest save" rule.
-  const Account = window.DuskAccount;
+  const Account = window.DuskAccount, Update = window.DuskUpdate;
   let meta = { updatedAt: 0, syncedAt: null }, applying = false, lastWallet = null;
   const touched = () => { meta.updatedAt = Date.now(); save('dusk-sync-meta', meta); if (Account.user) Account.sync(); };
   const accountHooks = {
@@ -2431,14 +2440,74 @@
   $('ob-skip').addEventListener('pointerup', endOnboard);
 
   const whenReady = f => () => ready.then(f);
+
+  // ---------- update check ----------
+  // While saves load, the app's build (App plugin) is compared with the newest one in release.json (DuskUpdate). A newer build
+  // asks once per build ("업데이트" / "나중에"); a build below the file's `min` has to update before playing. Offline, slow (4 s),
+  // or in the browser demo the game simply starts. Tests inject { build, info } as __DUSK_TEST__.update.
+  let appBuild = 0;
+  async function updateDecision() {
+    const T = window.__DUSK_TEST__ && window.__DUSK_TEST__.update;
+    const cap = window.Capacitor, App = cap && cap.Plugins && cap.Plugins.App;
+    let info = T ? T.info : null;
+    try {
+      if (T) appBuild = +T.build;
+      else {
+        if (!(cap && cap.isNativePlatform && cap.isNativePlatform()) || !App) return null;
+        appBuild = +(await App.getInfo()).build;
+        const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 4000);
+        const res = await fetch(Update.RELEASE_URL + '?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store', signal: ctl.signal }); // past the CDN cache every 5 min
+        clearTimeout(tm); if (!res.ok) return null;
+        info = (await res.json()).ios;
+      }
+    } catch (e) { return null; }
+    let skipped = 0; try { skipped = +localStorage.getItem('dusk-update-skip'); } catch (e) { /* no storage: ask again next time */ }
+    const u = Update.check(appBuild, info, Date.now(), skipped);
+    return u.kind === 'none' ? null : u;
+  }
+  const updateCheck = updateDecision(); // starts at load, alongside `ready`
+  let updateShown = null;
+  function openUpdate(u) {
+    const force = u.kind === 'force', store = Update.storeName(u.url);
+    updateShown = u;
+    $('up-face').src = `img/ui/face-${force ? 'determined' : 'excited'}.svg`;
+    $('up-say').textContent = force ? '업데이트가 필요해!' : '새 버전이 나왔어!';
+    $('up-body').textContent = force
+      ? `지금 버전(빌드 ${appBuild})은 더 쓸 수 없어요. ${store}에서 빌드 ${u.latest}로 업데이트하면 바로 이어서 할 수 있어요.`
+      : `새 빌드가 올라왔어요: ${appBuild} → ${u.latest}. ${store}에서 업데이트하면 새로 바뀐 것들을 볼 수 있어요.`;
+    $('btn-update').textContent = `${store}에서 업데이트`;
+    $('btn-update').classList.toggle('hidden', !u.url);
+    $('btn-update-later').classList.toggle('hidden', force);
+    state = 'update'; show('update');
+  }
+  // TestFlight / App Store links (itms-…) are custom schemes: the web view hands them to iOS, which opens the store app.
+  function openStore(url) {
+    const cap = window.Capacitor, Browser = cap && cap.Plugins && cap.Plugins.Browser;
+    if (window.__DUSK_TEST__) { window.__DUSK_TEST__.opened = url; return; }
+    if (/^https:/.test(url) && Browser) Browser.open({ url }).catch(() => { location.href = url; });
+    else location.href = url;
+  }
+  $('btn-update').addEventListener('pointerup', () => { if (updateShown && updateShown.url) openStore(updateShown.url); });
+  $('btn-update-later').addEventListener('pointerup', () => {
+    if (!updateShown || updateShown.kind === 'force') return;
+    try { localStorage.setItem('dusk-update-skip', String(updateShown.latest)); } catch (e) { /* asked again next launch */ }
+    updateShown = null; state = 'title'; show('title'); popups();
+  });
+
+  // The title screen's greetings, in order of urgency: an update, the first-run cards, the day's check-in.
+  function popups() {
+    const T = window.__DUSK_TEST__; // automated checks opt in with { daily: true } / { onboard: true }, so popups don't cover their title screen
+    if (state !== 'title') return;
+    if (!onboarded() && !Object.keys(bestStars).length && (!T || T.onboard)) openOnboard();
+    else if (Shop.dailyDue(Store.wallet, dayKey()) && (!T || T.daily)) openDaily();
+  }
   // Saved progress and the store usually load at once; if not, say so instead of a start button that seems dead.
   const slow = setTimeout(() => { $('btn-title').classList.add('wait'); $('btn-title').textContent = '불러오는 중…'; }, 400);
-  ready.then(() => {
+  ready.then(async () => {
     clearTimeout(slow); $('btn-title').classList.remove('wait'); $('btn-title').textContent = '시작';
-    // the day's check-in greets you on the title screen, once a day
-    const T = window.__DUSK_TEST__; // automated checks opt in with { daily: true } / { onboard: true }, so popups don't cover their title screen
-    if (state === 'title' && !onboarded() && !Object.keys(bestStars).length && (!T || T.onboard)) openOnboard();
-    else if (state === 'title' && Shop.dailyDue(Store.wallet, dayKey()) && (!T || T.daily)) openDaily();
+    const u = await updateCheck; // already settled in the common case; capped at 4 s by the fetch
+    if (u && (u.kind === 'force' || state === 'title')) openUpdate(u); // a required update interrupts even a run
+    else popups();
   });
 
   $('btn-shop-title').addEventListener('pointerup', whenReady(() => openShop('title')));
