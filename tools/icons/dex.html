@@ -12,6 +12,7 @@
   const geos = {
     box: new T.BoxGeometry(1, 1, 1), cyl: new T.CylinderGeometry(1, 1, 1, 24), sphere: new T.SphereGeometry(1, 24, 16),
     blob: new T.SphereGeometry(1, 20, 14), cone: new T.ConeGeometry(1, 1, 20), capsule: new T.CapsuleGeometry(1, 2, 8, 20),
+    rbox: DuskRender.GEO.rbox,
   };
   const mat = c => new T.MeshLambertMaterial({ color: new T.Color(c) });
   const mesh = (geo, c, s, p) => { const m = new T.Mesh(geos[geo], mat(c)); m.scale.set(...s); m.position.set(...p); return m; };

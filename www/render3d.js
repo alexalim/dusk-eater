@@ -6,7 +6,20 @@
   const TILT = 62 * Math.PI / 180; // steeper than before: more top-down, a little less wall
 
   const col = c => new T.Color(c);
+  // A unit box with rounded edges (tester: "everything looks like blocks"): a rounded square extruded with a bevel, centred
+  // and scaled back to 1 x 1 x 1 so it drops in wherever a box part was.
+  function roundedBox(curve, bevel) {
+    const h = 0.32, k = 0.1, sh = new T.Shape();
+    sh.moveTo(-h + k, -h); sh.lineTo(h - k, -h); sh.quadraticCurveTo(h, -h, h, -h + k); sh.lineTo(h, h - k); sh.quadraticCurveTo(h, h, h - k, h);
+    sh.lineTo(-h + k, h); sh.quadraticCurveTo(-h, h, -h, h - k); sh.lineTo(-h, -h + k); sh.quadraticCurveTo(-h, -h, -h + k, -h);
+    const g = new T.ExtrudeGeometry(sh, { depth: 0.64, curveSegments: curve, bevelEnabled: true, bevelThickness: 0.18, bevelSize: 0.18, bevelSegments: bevel });
+    g.center(); g.computeBoundingBox();
+    const z = g.boundingBox.getSize(new T.Vector3());
+    g.scale(1 / z.x, 1 / z.y, 1 / z.z);
+    return g;
+  }
   const unit = {
+    rbox: roundedBox(4, 3),
     box: new T.BoxGeometry(1, 1, 1),
     cyl: new T.CylinderGeometry(1, 1, 1, 14),
     sphere: new T.SphereGeometry(1, 14, 10),
@@ -18,6 +31,7 @@
   // instance, on screen or not, so these segment counts dominate the triangle budget.
   const low = {
     box: unit.box,
+    rbox: roundedBox(1, 1),
     cyl: new T.CylinderGeometry(1, 1, 1, 7),
     sphere: new T.SphereGeometry(1, 7, 5),
     blob: new T.SphereGeometry(1, 8, 5),
@@ -152,8 +166,9 @@
     surfer:    [P('box', [2.2, 0.08, 0.6], 0.1, '#ffd25c'), P('capsule', [0.45, 0.35, 0.45], 0.8, 'inst'), P('sphere', [0.42, 0.42, 0.42], 1.6, SKIN)],
     traveler:  human('#f4f1ea', [P('box', [0.55, 0.7, 0.35], 1.3, '#7d5a3a', [-0.55, 0])]),
     pot:       [P('blob', [0.8, 0.9, 0.8], 0.8, 'inst'), P('cyl', [0.35, 0.35, 0.35], 1.7, 'inst')],
-    camel:     [P('box', [1.6, 0.6, 0.6], 1.3, 'inst'), P('sphere', [0.45, 0.4, 0.45], 1.75, 'inst', [-0.2, 0]), P('box', [1.2, 1.0, 0.4], 0.5, 'inst'),
-                P('box', [0.25, 0.8, 0.25], 1.8, 'inst', [0.85, 0]), P('box', [0.45, 0.25, 0.3], 2.2, 'inst', [1.0, 0])],
+    camel:     [P('blob', [0.85, 0.36, 0.38], 1.3, 'inst'), P('sphere', [0.45, 0.4, 0.45], 1.75, 'inst', [-0.2, 0]),
+                P('cyl', [0.12, 0.8, 0.12], 1.8, 'inst', [0.85, 0]), P('blob', [0.28, 0.16, 0.18], 2.2, 'inst', [1.0, 0]),
+                P('cyl', [0.11, 1.0, 0.11], 0.5, 'inst', [0.5, 0.2]), P('cyl', [0.11, 1.0, 0.11], 0.5, 'inst', [0.5, -0.2]), P('cyl', [0.11, 1.0, 0.11], 0.5, 'inst', [-0.5, 0.2]), P('cyl', [0.11, 1.0, 0.11], 0.5, 'inst', [-0.5, -0.2])],
     palm:      [P('cyl', [0.2, 2.6, 0.2], 1.3, '#8a6a46'), P('box', [1.6, 0.08, 0.4], 2.6, 'inst'), P('box', [0.4, 0.08, 1.6], 2.6, 'inst'),
                 P('sphere', [0.3, 0.3, 0.3], 2.5, '#6b4a2a')],
     tent:      [P('cone', [1.1, 1.3, 1.1], 0.65, 'inst'), P('box', [0.5, 0.6, 0.06], 0.3, '#3a2a20', [0, 0.9])],
@@ -162,8 +177,9 @@
                 P('sphere', [0.35, 0.25, 0.35], 1.3, '#ffd25c')],
     caroler:   [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('cone', [0.5, 0.75, 0.5], 3.1, '#d62c3a'),
                 P('sphere', [0.18, 0.18, 0.18], 3.5, '#f7f9fc'), P('box', [0.6, 0.15, 0.62], 1.85, '#f7f9fc')],
-    reindeer:  [P('box', [1.6, 0.75, 0.7], 1.3, 'inst'), P('box', [1.3, 0.9, 0.5], 0.45, '#6b4228'), P('box', [0.5, 0.5, 0.42], 1.8, 'inst', [0.9, 0]),
-                P('box', [0.1, 0.5, 0.7], 2.25, '#d9c09a', [0.9, 0]), P('sphere', [0.13, 0.13, 0.13], 1.8, '#ff3b3b', [1.17, 0], true)],
+    reindeer:  [P('blob', [0.85, 0.42, 0.38], 1.3, 'inst'), P('sphere', [0.28, 0.28, 0.24], 1.8, 'inst', [0.9, 0]),
+                P('box', [0.1, 0.5, 0.7], 2.25, '#d9c09a', [0.9, 0]), P('sphere', [0.13, 0.13, 0.13], 1.8, '#ff3b3b', [1.17, 0], true),
+                P('cyl', [0.11, 0.9, 0.11], 0.45, '#6b4228', [0.5, 0.2]), P('cyl', [0.11, 0.9, 0.11], 0.45, '#6b4228', [0.5, -0.2]), P('cyl', [0.11, 0.9, 0.11], 0.45, '#6b4228', [-0.5, 0.2]), P('cyl', [0.11, 0.9, 0.11], 0.45, '#6b4228', [-0.5, -0.2])],
     xtree:     [P('cyl', [0.15, 0.6, 0.15], 0.3, '#7a5233'), P('cone', [1.0, 1.4, 1.0], 1.2, 'inst'), P('cone', [0.75, 1.1, 0.75], 2.0, 'inst'),
                 P('cone', [0.5, 0.8, 0.5], 2.7, 'inst'), P('sphere', [0.14, 0.14, 0.14], 3.15, '#ffe27a', [0, 0], true),
                 P('sphere', [0.09, 0.09, 0.09], 1.3, '#ff5d73', [0.8, 0.3], true), P('sphere', [0.09, 0.09, 0.09], 1.6, '#7fd1e8', [-0.5, 0.55], true),
@@ -174,12 +190,18 @@
     chicken:   [P('blob', [0.8, 0.7, 0.6], 0.7, 'inst'), P('sphere', [0.35, 0.35, 0.35], 1.3, 'inst', [0.5, 0]), P('box', [0.1, 0.25, 0.08], 1.65, '#e5533d', [0.5, 0]),
                 P('cone', [0.08, 0.2, 0.08], 1.3, '#f2a33a', [0.85, 0])],
     sheep:     [P('blob', [1.1, 0.75, 0.85], 0.95, 'inst'), P('sphere', [0.38, 0.38, 0.38], 1.15, '#3a3330', [1.0, 0]), P('box', [0.9, 0.5, 0.6], 0.25, '#3a3330')],
-    cow:       [P('box', [1.8, 0.8, 0.8], 1.0, 'inst'), P('box', [0.55, 0.82, 0.5], 1.0, '#2a2420', [-0.3, 0]), P('box', [0.5, 0.5, 0.45], 1.2, 'inst', [1.1, 0]),
-                P('box', [1.5, 0.6, 0.6], 0.3, '#2a2420')],
+    cow:       [P('blob', [0.95, 0.45, 0.45], 1.0, 'inst'), P('blob', [0.24, 0.455, 0.455], 1.0, '#2a2420', [-0.3, 0]), P('sphere', [0.3, 0.28, 0.28], 1.25, 'inst', [1.05, 0]),
+                P('cyl', [0.11, 0.6, 0.11], 0.3, '#2a2420', [0.5, 0.2]), P('cyl', [0.11, 0.6, 0.11], 0.3, '#2a2420', [0.5, -0.2]), P('cyl', [0.11, 0.6, 0.11], 0.3, '#2a2420', [-0.5, 0.2]), P('cyl', [0.11, 0.6, 0.11], 0.3, '#2a2420', [-0.5, -0.2])],
     tractor:   [P('box', [1.4, 0.8, 1.0], 0.7, 'inst'), P('box', [0.7, 0.7, 0.8], 1.45, '#9fc3e6', [-0.3, 0]), P('box', [0.8, 0.9, 1.25], 0.45, '#26262e', [-0.45, 0]),
                 P('box', [0.5, 0.5, 1.15], 0.25, '#26262e', [0.55, 0]), P('box', [0.06, 0.16, 0.6], 0.8, '#fff3c4', [0.72, 0], true)],
     haystack:  [P('cyl', [1.0, 1.1, 1.0], 0.55, 'inst'), P('cone', [1.02, 0.4, 1.02], 1.3, '#d9b55a')],
   };
+  // Every other chunky box part (a car body, a kiosk, a crate) gets rounded edges. Thin trims, rails and lamps stay boxes, and so
+  // do the kinds that cast gameplay shade (CASTERS), whose parts the shade rule models.
+  for (const [type, parts] of Object.entries(PARTS)) {
+    if (CASTERS[type]) continue;
+    for (const p of parts) if (p.geo === 'box' && !p.tex && Math.min(...p.s) >= 0.2) p.geo = 'rbox';
+  }
 
   // Canvas textures made once: wall windows by day, a lit-window pattern for night, a roof rim.
   // Day and night share one 4×4 cell layout so they use the same UVs.
@@ -1165,5 +1187,5 @@
     return { build, resize, draw, setSkin, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera } };
   }
 
-  root.DuskRender = { create, PARTS }; // PARTS also feeds tools/icons (collection-book pictures)
+  root.DuskRender = { create, PARTS, GEO: unit }; // PARTS and the unit shapes also feed tools/icons (collection-book pictures)
 })(this);

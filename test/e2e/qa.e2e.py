@@ -380,6 +380,24 @@ with sync_playwright() as p:
         shown and bars == [1, 2, 3, 4] and len(set(says)) == 4 and last == '시작하기' and on_map and sel == '0' and not again and not errs, f'bars={bars} last={last!r} map={on_map} sel={sel} again={again} errs={errs}')
     b.close()
 
+    # S22 first day: after the onboarding cards the day-1 check-in gift opens (the last card promises it); taking it pays the
+    # gems and the button then leads on to level 1 on the map
+    b = p.chromium.launch(args=GL)
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+    pg.add_init_script(TIMER); pg.add_init_script('window.__DUSK_TEST__.onboard = true; window.__DUSK_TEST__.daily = true')
+    pg.goto(URL); pg.wait_for_timeout(700); pg.evaluate(f'{A}.ready'); frames_wait(pg)
+    for k in range(4): pg.tap('#btn-ob'); frames_wait(pg)
+    gift = [pg.is_visible('#daily'), pg.is_visible('#select'), pg.inner_text('#btn-daily-claim')]
+    g0 = pg.evaluate(f'{A}.Store.wallet.gems'); pg.tap('#btn-daily-claim'); frames_wait(pg)
+    took = [pg.evaluate(f'{A}.Store.wallet.gems') - g0, pg.inner_text('#btn-daily-claim')]
+    pg.tap('#btn-daily-claim'); frames_wait(pg)
+    on_map = [pg.is_visible('#select'), pg.is_visible('#daily'), pg.evaluate("document.querySelector('.node.sel') && document.querySelector('.node.sel').dataset.i")]
+    rec('S22', 'first day: the check-in gift opens after the onboarding cards, pays day 1, then its button opens level 1 on the map',
+        gift == [True, False, '1일째 선물 받기'] and took == [10, '첫 판 하러 가기'] and on_map == [True, False, '0'] and not errs,
+        f'gift={gift} took={took} map={on_map} errs={errs}')
+    b.close()
+
     # S21 update check: an older app sees the card (face, bubble, build numbers, two buttons) before any other popup; 나중에 remembers
     # that build and the title's greetings follow; a build below `min` gets one button and the start button is covered
     b = p.chromium.launch(args=GL)

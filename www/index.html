@@ -239,6 +239,12 @@
   .stat { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 14px; padding: 10px 4px 8px; }
   .stat b { display: block; font-family: var(--display); font-weight: 400; font-size: 21px; color: var(--star); line-height: 1.1; }
   .stat small { font-size: 12px; color: var(--muted); }
+  /* each tile leads with a picture, and the rewards line is a row of picture pills (tester: icons, not prose) */
+  .stat .ico { display: block; width: 26px; height: 26px; margin: 0 auto 4px; }
+  #end-gems:not(.hidden) { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; width: min(100%, 340px); margin: 0; }
+  #end-gems > span { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px 4px 6px; border-radius: 999px; font-weight: 800;
+    background: rgba(255, 210, 92, .14); border: 1px solid rgba(255, 210, 92, .38); }
+  #end-gems .ico, #end-gems .gem svg { width: 20px; height: 20px; vertical-align: 0; } #end-gems .gem { gap: 2px; }
   /* What the run swallowed, as pictures with counts (tester: "write what and how many"); the book's renders are the icons */
   .eatrow { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; width: min(100%, 340px); }
   .eatrow span { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px 3px 5px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); font-size: 13px; color: var(--text); }
@@ -1981,6 +1987,7 @@
   const rewardText = r => [r.gems ? `<span class="gem">${GEM}${r.gems}</span>` : '', ...Object.entries(r.tickets || {}).map(([id, n]) =>
     `${Shop.BOOSTS.find(b => b.id === id).name} ${n}장`)].filter(Boolean).join(' · ');
   const rewardIco = r => r.gems ? `<span class="gem dayico">${GEM}</span>` : ico(Object.keys(r.tickets)[0] === 'time' ? 'clock' : 'grow');
+  let dailyThenMap = false; // opened right after the first-run cards: closing it goes on to level 1
   function renderDaily() {
     const w = Store.wallet, due = Shop.dailyDue(w, dayKey()), at = w.daily.n % Shop.DAILY.length;
     $('daily-days').innerHTML = Shop.DAILY.map((r, k) => {
@@ -1990,8 +1997,8 @@
       const label = r.gems ? `보석 ${r.gems}` : rewardText(r); // the icon above already shows the gem
       return `<div class="day${cls}"><b>${k + 1}일</b>${rewardIco(r)}<span>${label}</span></div>`;
     }).join('');
-    $('btn-daily-claim').classList.toggle('off', !due);
-    $('btn-daily-claim').textContent = due ? `${at + 1}일째 선물 받기` : '오늘은 받았어요. 내일 또 만나요!';
+    $('btn-daily-claim').classList.toggle('off', !due && !dailyThenMap);
+    $('btn-daily-claim').textContent = due ? `${at + 1}일째 선물 받기` : dailyThenMap ? '첫 판 하러 가기' : '오늘은 받았어요. 내일 또 만나요!';
   }
   function openDaily() { $('daily-msg').textContent = ''; renderDaily(); show('daily'); }
   function renderMissions() {
@@ -2343,19 +2350,21 @@
     if (gotReward) w = Shop.grantReward(w, ev.reward.skin);
     Store.update(w);
     const earned = Math.max(0, n - before) * Shop.GEMS_PER_STAR;
-    const notes = [];
-    if (earned) notes.push(`새 별 보상: 보석 ${earned}개`);
-    if (missionsDone > 0) notes.push(`${ico('check')} 오늘의 미션 ${missionsDone}개 완료! 미션에서 보상 받기`);
+    // rewards as picture pills: a picture and a few words each
+    const notes = [], gemPill = n => `<span class="gem">${GEM}+${n}</span>`;
+    if (earned) notes.push(`${gemPill(earned)} 새 별`);
+    if (missionsDone > 0) notes.push(`${ico('check')} 미션 ${missionsDone}개 완료`);
     if (lv.to > lv.from) {
       const perks = Level.PERKS.filter(p => p.level > lv.from && p.level <= lv.to).map(p => p.text);
       const title = Level.titleOf(lv.to) !== Level.titleOf(lv.from) ? [`칭호 '${Level.titleOf(lv.to)}'`] : [];
-      const extra = lvSkins.map(id => skinById(id).name).concat(perks, title);
-      notes.push(`${ico('sparkle')} 레벨 업! Lv.${lv.to} · 보석 ${lv.gems}개` + extra.map(x => ` · ${x}`).join(''));
+      notes.push(`${ico('sparkle')} 레벨 업 Lv.${lv.to}`, `${gemPill(lv.gems)} 레벨 선물`);
+      lvSkins.forEach(id => notes.push(`${ico('gift')} ${skinById(id).name}`));
+      perks.concat(title).forEach(x => notes.push(`${ico('grow')} ${x}`));
     }
-    if (gotReward) notes.push(`${ico('gift')} ${withObject(Shop.SKINS.find(k => k.id === ev.reward.skin).name)} 받았어요! 상점에서 입어 보세요.`);
+    if (gotReward) notes.push(`${ico('gift')} ${Shop.SKINS.find(k => k.id === ev.reward.skin).name}`);
     const fresh = Badges.BADGES.filter(b => Badges.earned(badgeCtx()).includes(b.id) && !runBadges.includes(b.id));
-    if (fresh.length) notes.push(`${ico('medal')} 새 배지: ${fresh.map(b => b.name).join(', ')}`);
-    $('end-gems').innerHTML = notes.join(' · ');
+    if (fresh.length) notes.push(`${ico('medal')} 새 배지 ${fresh.map(b => b.name).join(', ')}`);
+    $('end-gems').innerHTML = notes.map(x => `<span>${x}</span>`).join('');
     $('end-gems').classList.toggle('hidden', !notes.length);
 
     const title = !cleared ? '아쉬워요, 다시 도전!' : n === 3 ? `완벽한 밤이었어요! ${ico('sparkle')}` : '밤이 끝났어요';
@@ -2364,8 +2373,8 @@
     $('end-stars').innerHTML = starText(n);
     $('result').textContent = `${stats.total}개 삼킴 · ${score.toLocaleString()}점`;
     const shadePct = stats.playT ? Math.round(stats.shadeT / stats.playT * 100) : 0;
-    $('end-tiles').innerHTML = [[`+${xp.toLocaleString()}`, '경험치'], [`${stats.maxCombo || 0}`, '최고 콤보'], [`${shadePct}%`, '그늘에 있던 시간']]
-      .map(([v, l]) => `<div class="stat"><b>${v}</b><small>${l}</small></div>`).join('');
+    $('end-tiles').innerHTML = [['sparkle', `+${xp.toLocaleString()}`, '경험치'], ['bolt', `${stats.maxCombo || 0}`, '최고 콤보'], ['cloud', `${shadePct}%`, '그늘 시간']]
+      .map(([i, v, l]) => `<div class="stat">${ico(i)}<b>${v}</b><small>${l}</small></div>`).join('');
     // the tally: the most-swallowed kinds as book pictures with counts, then zombies spat away and light shards picked up
     const kinds = Object.entries(stats.eaten).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 7);
     $('end-eaten').innerHTML = kinds.map(([t, n]) => { const e = Dex.ENTRIES.find(x => x.id === t); return `<span title="${kindName(t)}">${e ? `<img src="${e.img}" alt="${e.name}">` : kindName(t)}&times;${n}</span>`; }).join('')
@@ -2578,7 +2587,14 @@
   }
   const onboarded = () => { try { return !!localStorage.getItem('dusk-onboarded'); } catch (e) { return true; } };
   function openOnboard() { obStep = 0; renderOnboard(); state = 'onboard'; show('onboard'); }
-  function endOnboard() { try { localStorage.setItem('dusk-onboarded', '1'); } catch (e) { /* no storage: shown again next time, harmless */ } state = 'menu'; openSelectAt(0); }
+  // The last card promises a check-in gift, so a first-day player gets it right away (tester: nothing to receive after the
+  // cards); closing the gift then opens the map on level 1 as before (dailyThenMap).
+  function endOnboard() {
+    try { localStorage.setItem('dusk-onboarded', '1'); } catch (e) { /* no storage: shown again next time, harmless */ }
+    const T = window.__DUSK_TEST__;
+    if (Shop.dailyDue(Store.wallet, dayKey()) && (!T || T.daily)) { dailyThenMap = true; state = 'title'; openDaily(); return; }
+    state = 'menu'; openSelectAt(0);
+  }
   $('btn-ob').addEventListener('pointerup', () => { if (obStep < ONBOARD.length - 1) { obStep++; renderOnboard(); } else endOnboard(); });
   $('ob-skip').addEventListener('pointerup', endOnboard);
 
@@ -2661,9 +2677,12 @@
   $('btn-info').addEventListener('pointerup', () => show('info'));
   $('btn-missions').addEventListener('pointerup', whenReady(() => { renderMissions(); show('missions'); }));
   $('btn-missions-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
-  $('btn-daily-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
+  $('btn-daily-back').addEventListener('pointerup', () => {
+    if (dailyThenMap) { dailyThenMap = false; state = 'menu'; openSelectAt(0); return; }
+    state = 'title'; show('title');
+  });
   $('btn-daily-claim').addEventListener('pointerup', () => {
-    if (!Shop.dailyDue(Store.wallet, dayKey())) return;
+    if (!Shop.dailyDue(Store.wallet, dayKey())) { if (dailyThenMap) { dailyThenMap = false; state = 'menu'; openSelectAt(0); } return; }
     const r = Shop.DAILY[Store.wallet.daily.n % Shop.DAILY.length];
     Store.update(Shop.claimDaily(Store.wallet, dayKey())); Sound.sfx.coin();
     $('daily-msg').innerHTML = `${rewardText(r)} 받았어요!`;
