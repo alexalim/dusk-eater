@@ -1248,12 +1248,21 @@
         blocks.push([x0, y0, inner]);
         const split = rnd() < stage.splitChance;
         const count = split ? 2 : 1;
+        // Heights make steps, not even rows (tester, build 61: every building the same height): most keep to the lower
+        // part of the map's range, about one in seven stands up to a third above it, and the two halves of a split lot
+        // differ by at least a third of the range. Shade follows the real height, so the rule is unchanged.
+        const [lo, hi] = stage.height, span = hi - lo;
+        const pick = () => (rnd() < 0.15 ? R(hi, hi + span / 3) : lo + span * Math.pow(rnd(), 1.5));
+        let prevH = null;
         for (let i = 0; i < count; i++) {
+          let h = pick();
+          if (prevH !== null && Math.abs(h - prevH) < span / 3) h = prevH > lo + span / 2 ? R(lo, prevH - span / 3) : R(prevH + span / 3, hi + span / 3);
+          prevH = h;
           const w = split ? R(55, inner / 2 - 12) : R(80, inner - 30);
           const d = split ? R(70, inner - 30) : R(80, inner - 30);
           const bx = split ? x0 + 8 + i * inner / 2 + rnd() * (inner / 2 - w - 16) : x0 + 10 + rnd() * (inner - w - 20);
           const by = y0 + 10 + rnd() * (inner - d - 20);
-          const b = { x: bx, y: by, w, d, h: R(stage.height[0], stage.height[1]), plain: !!stage.plainWalls,
+          const b = { x: bx, y: by, w, d, h, plain: !!stage.plainWalls,
                       roof: stage.roofs[(rnd() * stage.roofs.length) | 0], state: 0, ft: 0, type: 'building' };
           b.r = Math.hypot(w, d) / 2 * 0.75;
           buildings.push(b);
