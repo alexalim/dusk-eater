@@ -1,8 +1,8 @@
 {
   "ios": {
-    "build": 60,
+    "build": 61,
     "version": "1.0",
-    "availableAt": "2026-11-19T02:29:10Z",
+    "availableAt": "2026-11-19T04:40:07Z",
     "min": 0,
     "url": "itms-beta://beta.itunes.apple.com/v1/app/6828737098"
   }
