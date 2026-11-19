@@ -415,8 +415,12 @@
   .topbar { width: min(100%, 380px); display: flex; justify-content: space-between; align-items: center; }
   /* On the level map the bar stays put while the road scrolls under it, so "처음으로" is always one tap away
      (tester: the map opens at the newest level and the way back had scrolled off the top). */
-  #select .topbar { position: sticky; top: calc(env(safe-area-inset-top) - 24px); z-index: 4; padding: 8px 10px; margin: -8px -10px 0; box-sizing: content-box;
-    border-radius: 16px; background: rgba(23,10,46,.88); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  /* It runs edge to edge from the very top so the clock row never shows the road through it, and the region card pins just
+     under it instead of sliding behind it (tester, build 58: the header covered the screen). */
+  #select .topbar { position: sticky; top: calc(-24px - env(safe-area-inset-top)); z-index: 4; height: 36px; box-sizing: content-box;
+    padding: calc(env(safe-area-inset-top) + 8px) 0 8px; margin-top: calc(-24px - env(safe-area-inset-top));
+    background: #170a2e; box-shadow: 0 0 0 100vmax #170a2e; clip-path: inset(0 -100vmax); }
+  #select .pager { top: 36px; } /* sticky offsets count from inside the screen's top padding: bar 52 + gap 8 - padding 24 */
   .chip { padding: 8px 14px; border-radius: 999px; background: var(--card); color: var(--text); font-weight: 800; font-size: 14px; cursor: pointer; }
   #shop { justify-content: flex-start; }
   #shop h3 { margin: 6px 0 0; width: min(100%, 380px); text-align: left; font-size: 15px; color: var(--muted); }

@@ -36,6 +36,12 @@ with sync_playwright() as p:
     road = pg.evaluate("[!!document.querySelector('.levels svg.path polyline'), !!document.querySelector('.levels .me'), !!document.querySelector('.node.sel .say'), !!document.querySelector('.pager .region')]")
     rec('W1', '10 levels down a winding path (10 rows, swinging left/right) with a road, the character by the current level, a bubble on the chosen one, a region card; twist markers on 2, 5, 8, 10',
         tops == 10 and swing >= 120 and marked == [2, 5, 8, 10] and all(road), f'rows={tops} swing={swing} marked={marked} road={road}')
+    # W26 scrolled down the map, the top bar sits at the very top and the region card pins right under it, not behind it
+    pins = pg.evaluate("""(() => { const sc = document.querySelector('#select'); sc.scrollTop = sc.scrollHeight;
+      const t = document.querySelector('#select .topbar').getBoundingClientRect(), r = document.querySelector('.pager').getBoundingClientRect();
+      const out = [Math.round(t.top), Math.round(t.bottom), Math.round(r.top), sc.scrollTop > 0]; sc.scrollTop = 0; return out; })()""")
+    rec('W26', 'level map scrolled: top bar pinned at the top edge, region card pinned below it with no overlap',
+        pins[0] <= 0 and pins[2] >= pins[1] and pins[2] - pins[1] < 20 and pins[3], f'bar top/bottom, card top, scrolled = {pins}')
     # W7 starting a twist level shows its card first (name, tips; the boss card says how big to grow); its button starts the run
     cards = []
     for k in (1, 9):
