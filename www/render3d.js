@@ -314,6 +314,15 @@
     return g;
   }
 
+  // A low wall around the edge of a flat roof, in world units: w by d outside, 2 thick, 3 tall, standing on y = 0.
+  function parapetGeometry(w, d) {
+    const t = 2, s = new T.Shape([[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(([x, y]) => new T.Vector2(x, y)));
+    s.holes.push(new T.Path([[-w / 2 + t, -d / 2 + t], [-w / 2 + t, d / 2 - t], [w / 2 - t, d / 2 - t], [w / 2 - t, -d / 2 + t]].map(([x, y]) => new T.Vector2(x, y))));
+    const g = new T.ExtrudeGeometry(s, { depth: 3, bevelEnabled: false });
+    g.rotateX(-Math.PI / 2); g.userData.own = true;
+    return g;
+  }
+
   function create(canvas) {
     const renderer = new T.WebGLRenderer({ canvas, antialias: true });
     renderer.shadowMap.enabled = true;
@@ -635,10 +644,21 @@
           boom.position.set(0, 0.5 - 3 / b.h, 0.5 + 45 / 18);
           mesh.add(boom);
         } else { // one or two rooftop units; they cast no shadow, so the rule stays buildings-only
+          // A flat top gets a raised rim and a round water tank too, so it reads as a roof, not the top of a block
+          // (tester, build 53: everything looks like blocks). The wall box itself is the shade rule and stays as it is.
+          const flat = !ROOFS[look.roof] || (look.roof === 'gable' && b.h > (look.gableMax || 80));
+          if (flat) {
+            if (!mats[key].rim) mats[key].rim = lambert(col(b.roof).lerp(col('#ffffff'), 0.35));
+            const rim = new T.Mesh(parapetGeometry(b.w, b.d), mats[key].rim);
+            rim.scale.set(1 / b.w, 1 / b.h, 1 / b.d); rim.position.y = 0.5;
+            rim.receiveShadow = true;
+            mesh.add(rim);
+          }
           for (let k = 0; k <= hash % 2; k++) {
-            const prop = new T.Mesh(unit.box, propMat), sz = 9 + (hash >> (k + 2)) % 8;
-            prop.scale.set(sz / b.w, 5 / b.h, sz / b.d);
-            prop.position.set((((hash >> (k * 3)) % 5) - 2) * 0.12, 0.5 + 2.5 / b.h, (((hash >> (k * 3 + 4)) % 5) - 2) * 0.12);
+            const tank = flat && k === 0 && hash % 3 === 0, sz = 9 + (hash >> (k + 2)) % 8, h = tank ? 8 : 5;
+            const prop = new T.Mesh(tank ? unit.cyl : unit.rbox, propMat);
+            prop.scale.set((tank ? sz / 2 : sz) / b.w, h / b.h, (tank ? sz / 2 : sz) / b.d);
+            prop.position.set((((hash >> (k * 3)) % 5) - 2) * 0.12, 0.5 + h / 2 / b.h, (((hash >> (k * 3 + 4)) % 5) - 2) * 0.12);
             prop.receiveShadow = true;
             mesh.add(prop);
           }
