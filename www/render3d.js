@@ -419,14 +419,14 @@
     // Mouth: a small dark void (deep violet rim, near-black throat) — it eats darkness, so the mouth is a hole, not a red lip.
     const mouth = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x2a0b55 }));
     const throat = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x06030f }));
-    const eyeMat = new T.MeshBasicMaterial({ color: 0x241640 });
+    const eyeMat = new T.MeshBasicMaterial({ color: 0x1b1240 });
     const pupilMat = new T.MeshBasicMaterial({ color: 0xffffff });
-    // Eyes: wide, half-lidded (a body-colored lid covers the top of each eye) with one small glint — a sleepy dusk
-    // look, deliberately unlike tall glossy cartoon ovals.
+    // Eyes: big round glossy eyes set close together, a big glint up top and a small one below — a wide-eyed,
+    // hungry look. Kept round (not tall ovals) and the mouth stays a dark void, so it never reads as Kirby.
     const eyes = [0, 1].map(() => {
-      const e = new T.Mesh(unit.sphere, eyeMat), p = new T.Mesh(unit.sphere, pupilMat), lid = new T.Mesh(unit.sphere, armMat);
-      scene.add(e, p, lid);
-      return { e, p, lid };
+      const e = new T.Mesh(unit.sphere, eyeMat), p = new T.Mesh(unit.sphere, pupilMat), p2 = new T.Mesh(unit.sphere, pupilMat);
+      scene.add(e, p, p2);
+      return { e, p, p2 };
     });
     // Growth glow: a swirl of violet darkness shows through the body as it grows (a translucent shell over it).
     const swirl = (() => {
@@ -1140,39 +1140,40 @@
       swirl.offset.set(t * 0.05, 0); swirl.rotation = t * 0.4;
       armMat.color.copy(bodyMat.color).multiplyScalar(0.94);
       // First person looks over the top of the head; the eyes high on its front would peek over it.
-      eyes.forEach(o => { o.e.visible = o.p.visible = o.lid.visible = k < 0.6; });
+      eyes.forEach(o => { o.e.visible = o.p.visible = o.p2.visible = k < 0.6; });
       arms.forEach((m, k) => {
         onBody(player, L + (k ? 1 : -1) * (1.05 - gulp * 0.45), -0.28, 0.06, m.position);
         m.scale.set(R * 0.3, R * 0.24, R * 0.3);
       });
-      const MOUTH_EL = 0.28 - gulp * 0.06;
+      // Mouth: a small round "o" at rest that stretches into a big tall O while it sucks something in.
+      const MOUTH_EL = 0.26 - gulp * 0.16;
       onBody(player, L, MOUTH_EL, 0.02, mouth.position);
       mouth.rotation.set(0, -L, 0);
-      mouth.scale.set(R * 0.1, R * (0.14 + gulp * 0.4), R * (0.24 + gulp * 0.36));
+      mouth.scale.set(R * 0.1, R * (0.1 + gulp * 0.34), R * (0.13 + gulp * 0.24));
       onBody(player, L, MOUTH_EL, 0.08, throat.position);
       throat.rotation.copy(mouth.rotation);
       throat.scale.set(R * 0.06, mouth.scale.y * (0.45 + gulp * 0.35), mouth.scale.z * (0.5 + gulp * 0.3));
-      // Eyes: wide half-lidded ovals with a glint; they squeeze shut happily (^^) for a moment after each gulp, and
-      // stay a little squinted while a combo is going (player.cheer 0..1). A blink every few seconds keeps it alive.
+      // Eyes: big round glossy eyes; they squeeze shut happily (^^) for a moment after each gulp, and stay a little
+      // squinted while a combo is going (player.cheer 0..1). A blink every few seconds keeps it alive.
       const cheer = player.cheer || 0, blink = (t + 1.3) % 4.1 < 0.11 ? 1 : 0;
-      const happy = Math.max(Math.min(1, bulge * 1.6), cheer * 0.55), wide = player.fast ? 1 : 0; // fast: the lids lift and the eyes open wide, bright
-      eyes.forEach(({ e, p, lid }, k) => {
-        onBody(player, L + (k ? 1 : -1) * 0.4, 0.66 + gulp * 0.1, 0.0, e.position);
+      const happy = Math.max(Math.min(1, bulge * 1.6), cheer * 0.55), wide = player.fast ? 1 : 0; // fast: the eyes open even bigger
+      const EYE_EL = 0.7 + gulp * 0.08;
+      eyes.forEach(({ e, p, p2 }, k) => {
+        const a = L + (k ? 1 : -1) * 0.27, shut = (1 - happy) * (1 - blink);
+        onBody(player, a, EYE_EL, 0.0, e.position);
         e.rotation.set(0, -L, 0);
-        e.scale.set(R * 0.1, R * (0.14 + wide * 0.06 - happy * 0.1) * (1 - blink * 0.85), R * 0.19);
-        // the lid: a body-colored cap over the upper part of the eye, so the eye reads as a flat-topped half-moon
-        onBody(player, L + (k ? 1 : -1) * 0.4, 0.78 + gulp * 0.1 + wide * 0.1, 0.03, lid.position);
-        lid.rotation.set(0, -L, 0);
-        lid.scale.set(R * 0.11, R * 0.09, R * 0.22);
-        onBody(player, L + (k ? 1 : -1) * 0.36, 0.64 + gulp * 0.1, 0.09, p.position);
-        p.scale.setScalar(R * (0.045 + wide * 0.02) * (1 - happy) * (1 - blink));
+        e.scale.set(R * 0.09, R * (0.19 + wide * 0.04) * Math.max(0.15, shut), R * (0.14 + wide * 0.03));
+        onBody(player, a + (k ? 1 : -1) * 0.03, EYE_EL + 0.05, 0.08, p.position);
+        p.scale.setScalar(R * (0.08 + wide * 0.015) * shut);
+        onBody(player, a - (k ? 1 : -1) * 0.03, EYE_EL - 0.1, 0.06, p2.position);
+        p2.scale.setScalar(R * 0.04 * shut);
       });
       // Cheeks: a faint violet glow at rest that warms to a pink blush, bigger, while a combo is going.
       cheekMat.color.set(0xb78cff).lerp(tmpCol.set(0xff9fc4), cheer); cheekMat.opacity = 0.22 + cheer * 0.45;
       cheeks.forEach((m, i) => {
-        onBody(player, L + (i ? 1 : -1) * 0.66, 0.5, 0.0, m.position);
+        onBody(player, L + (i ? 1 : -1) * 0.62, 0.42, 0.0, m.position);
         m.rotation.set(0, -L, 0);
-        m.scale.set(R * 0.05, R * (0.06 + cheer * 0.03), R * (0.12 + cheer * 0.05));
+        m.scale.set(R * 0.05, R * (0.06 + cheer * 0.02), R * (0.12 + cheer * 0.04));
         m.visible = k < 0.6;
       });
 
