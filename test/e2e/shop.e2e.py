@@ -175,6 +175,23 @@ with sync_playwright() as p:
     rec('H13', 'a paid skin is also sold for gems: greyed while short, then 300 gems buy and equip it',
         '부족' in short[0] and short[1] and '300' in gbtn and w13['gems'] == 700 and 'starry' in w13['owned'] and w13['equipped'] == 'starry' and not errs6,
         f'short={short} btn={gbtn!r} gems={w13["gems"]} owned={w13["owned"]}')
+
+    # H14 summoning circles: listed under skins; the level one only says its level; 200 gems buy and wear the moon
+    # circle (the ground decal turns on in its color); tapping it again takes it off
+    pg6.tap('.item[data-circle=petal]'); frames_wait(pg6)
+    petal = pg6.evaluate("[document.querySelector('#skin-box-act').innerText, document.querySelector('#skin-box-act').classList.contains('off'), document.querySelector('#skin-box-gems').classList.contains('hidden')]")
+    pg6.tap('#skin-box-close'); frames_wait(pg6)
+    pg6.tap('.item[data-circle=moon]'); frames_wait(pg6)
+    pg6.tap('#skin-box-gems'); frames_wait(pg6, 4)
+    w14 = wallet(pg6)
+    deco = pg6.evaluate(f"(() => {{ const m = {A}.R.debug.circleMesh; return [m.visible, m.material.color.getHex()]; }})()")
+    pg6.tap('.item[data-circle=moon]'); frames_wait(pg6)
+    off_label = pg6.inner_text('#skin-box-act'); pg6.tap('#skin-box-act'); frames_wait(pg6, 4)
+    after = [wallet(pg6)['circle'], pg6.evaluate(f"{A}.R.debug.circleMesh.visible")]
+    rec('H14', 'circles: the level one is not sold, 200 gems buy and wear the moon circle (decal on), tapping it again takes it off',
+        'Lv.15' in petal[0] and petal[1] and petal[2] and w14['gems'] == 500 and w14['circles'] == ['moon'] and w14['circle'] == 'moon'
+        and deco == [True, 0xc9a8ff] and off_label == '빼기' and after == ['', False] and not errs6,
+        f'petal={petal} gems={w14["gems"]} circles={w14["circles"]} deco={deco} off={off_label!r} after={after}')
     b.close()
 
 print(f'{sum(res)}/{len(res)} passed')

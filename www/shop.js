@@ -48,6 +48,17 @@
       desc: '도감 마지막 다섯 지도까지 다 채운 수집왕의 상이에요. 맑은 하늘색 몸이 시원해요.' },
   ];
 
+  // Summoning circles: a slow-turning pattern on the ground under the player. Looks only, no effect on play.
+  // Colors stay clear of the gameplay signals (red light rim, orange hint rings, gold stars).
+  const CIRCLES = [
+    { id: 'moon', name: '달빛 마법진', color: 0xc9a8ff, gems: 200,
+      desc: '발밑에 보랏빛 마법진이 천천히 돌아요. 그림자가 지나간 자리마다 달빛이 남아요.' },
+    { id: 'stars', name: '별자리 원', color: 0x9fe3ff, gems: 300,
+      desc: '하늘빛 별자리가 발밑을 빙 둘러요. 밤하늘을 데리고 다니는 기분이에요.' },
+    { id: 'petal', name: '꽃잎 원', color: 0xffb3d9, reward: 'level', level: 15,
+      desc: 'Lv.15가 되면 받아요. 분홍 꽃잎이 동그랗게 피어 함께 굴러가요.' },
+  ];
+
   const GEM_PACKS = [
     { product: PREFIX + 'gems.100', gems: 100, price: '₩1,100' },
     { product: PREFIX + 'gems.550', gems: 550, price: '₩4,400' },
@@ -63,7 +74,7 @@
   const allProducts = () => SKINS.filter(s => s.product).map(s => s.product).concat(GEM_PACKS.map(p => p.product));
 
   function emptyWallet() {
-    return { gems: 0, owned: [], equipped: DEFAULT_SKIN, credited: [], pending: 0, dex: [], dexClaimed: [], stats: {}, badges: [],
+    return { gems: 0, owned: [], equipped: DEFAULT_SKIN, circles: [], circle: '', credited: [], pending: 0, dex: [], dexClaimed: [], stats: {}, badges: [],
       tickets: {}, pendingTickets: [], daily: { n: 0, last: '' }, challenge: { date: '', progress: {}, claimed: [], chest: false },
       monthly: { month: '', points: 0, claimed: false }, monthBadges: [] }; // the monthly quest (challenge.js)
   }
@@ -76,6 +87,8 @@
     const strs = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string') : []);
     const owned = strs(w.owned).filter(id => SKINS.some(s => s.id === id && (s.product || s.reward)));
     const equipped = owned.includes(w.equipped) ? w.equipped : DEFAULT_SKIN;
+    const circles = [...new Set(strs(w.circles))].filter(id => CIRCLES.some(c => c.id === id));
+    const circle = circles.includes(w.circle) ? w.circle : ''; // '' = none
     const dex = [...new Set(strs(w.dex))]; // collection book (dex.js): kinds swallowed, rewards taken
     const dexClaimed = [...new Set(strs(w.dexClaimed))].filter(id => dex.includes(id));
     // Lifetime records and claimed badges (badges.js): plain non-negative numbers and badge ids.
@@ -95,7 +108,7 @@
     const mo = w.monthly && typeof w.monthly === 'object' ? w.monthly : {};
     const monthly = { month: typeof mo.month === 'string' ? mo.month : '', points: int(mo.points), claimed: mo.claimed === true };
     const monthBadges = [...new Set(strs(w.monthBadges))].filter(m => /^\d{4}-\d{2}$/.test(m));
-    return { gems: int(w.gems), owned, equipped, credited: strs(w.credited).slice(-CREDIT_LOG), pending: int(w.pending), dex, dexClaimed, stats, badges,
+    return { gems: int(w.gems), owned, equipped, circles, circle, credited: strs(w.credited).slice(-CREDIT_LOG), pending: int(w.pending), dex, dexClaimed, stats, badges,
       tickets, pendingTickets, daily, challenge, monthly, monthBadges };
   }
 
@@ -143,6 +156,19 @@
     return Object.assign({}, w, { equipped: id });
   }
 
+  // Circles: bought with gems or reached by level; wearing one is optional, so equipping the worn one takes it off.
+  function buyCircle(w, id) {
+    const c = CIRCLES.find(k => k.id === id);
+    if (!c || !c.gems || w.circles.includes(id) || w.gems < c.gems) return null;
+    return Object.assign({}, w, { gems: w.gems - c.gems, circles: w.circles.concat(id) });
+  }
+  const dueCircles = (w, level) => CIRCLES.filter(c => c.level && c.level <= level && !w.circles.includes(c.id)).map(c => c.id);
+  const grantCircle = (w, id) => (w.circles.includes(id) || !CIRCLES.some(c => c.id === id) ? w : Object.assign({}, w, { circles: w.circles.concat(id) }));
+  function wearCircle(w, id) {
+    if (!w.circles.includes(id)) return w;
+    return Object.assign({}, w, { circle: w.circle === id ? '' : id });
+  }
+
   function spend(w, n) {
     return n > w.gems ? null : Object.assign({}, w, { gems: w.gems - n });
   }
@@ -187,7 +213,7 @@
     return gained ? Object.assign({}, w, { gems: w.gems + gained * GEMS_PER_STAR }) : w;
   }
 
-  const api = { buySkin,
+  const api = { buySkin, buyCircle, dueCircles, grantCircle, wearCircle, CIRCLES,
     PREFIX, DEFAULT_SKIN, GEMS_PER_STAR, CREDIT_LOG, SKINS, GEM_PACKS, BOOSTS, allProducts,
     emptyWallet, normalize, creditTransaction, applyEntitlements, grantReward, equip, spend,
     startBoosts, finishRun, refundPending, awardStars, grant, DAILY, dailyDue, claimDaily,

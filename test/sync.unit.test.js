@@ -53,3 +53,11 @@ test('friend codes and nicknames are cleaned before they reach the server', () =
   assert.ok(!Y.isFriendCode('A1B2C') && !Y.isFriendCode('Z1B2C3'));
   assert.equal(Y.cleanNickname('  밤의   그림자는 무섭지 않아  '), '밤의 그림자는 무섭지'); // 12 chars, no trailing space
 });
+
+test('summoning circles owned on either phone are kept; the worn one follows the newer save', () => {
+  const d = save({ wallet: wallet({ circles: ['moon'], circle: 'moon' }), updatedAt: 2000, syncedAt: 1 });
+  const a = save({ wallet: wallet({ circles: ['petal'], circle: 'petal' }), updatedAt: 1000 });
+  const m = Y.merge(d, a);
+  assert.deepEqual(m.wallet.circles.slice().sort(), ['moon', 'petal']);
+  assert.equal(m.wallet.circle, 'moon');
+});

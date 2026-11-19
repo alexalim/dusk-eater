@@ -131,3 +131,26 @@ test('a paid skin also sells for gems: owned and paid once, refused when short, 
   assert.equal(S.buySkin(Object.assign(S.emptyWallet(), { gems: 9999 }), 'nope'), null);
   for (const s of S.SKINS.filter(k => k.product)) assert.ok(s.gems >= 300, s.id + ' costs real gems');
 });
+
+test('summoning circles: bought with gems once, the level one is granted not sold, wearing toggles, junk is dropped', () => {
+  const buyable = S.CIRCLES.find(c => c.gems), earned = S.CIRCLES.find(c => c.level);
+  let w = Object.assign(S.emptyWallet(), { gems: buyable.gems });
+  assert.equal(w.circle, '', 'nothing worn at first');
+  assert.equal(S.buyCircle(w, earned.id), null, 'the level circle is not sold');
+  w = S.buyCircle(w, buyable.id);
+  assert.deepEqual([w.gems, w.circles], [0, [buyable.id]]);
+  assert.equal(S.buyCircle(Object.assign({}, w, { gems: 999 }), buyable.id), null, 'already owned');
+  assert.equal(S.wearCircle(w, earned.id).circle, '', 'cannot wear one not owned');
+  w = S.wearCircle(w, buyable.id);
+  assert.equal(w.circle, buyable.id);
+  assert.equal(S.wearCircle(w, buyable.id).circle, '', 'wearing the worn one takes it off');
+  assert.deepEqual(S.dueCircles(w, earned.level - 1), []);
+  assert.deepEqual(S.dueCircles(w, earned.level), [earned.id]);
+  w = S.grantCircle(S.grantCircle(w, earned.id), earned.id);
+  assert.deepEqual(w.circles, [buyable.id, earned.id], 'granted once');
+  const n = S.normalize(Object.assign({}, w, { circles: w.circles.concat('nope', 3), circle: 'nope' }));
+  assert.deepEqual([n.circles, n.circle], [[buyable.id, earned.id], ''], 'unknown ids dropped, a bad worn id falls back to none');
+  const kept = S.applyEntitlements(w, []);
+  assert.deepEqual([kept.circles, kept.circle], [w.circles, w.circle], 'an App Store refresh never touches circles');
+  for (const c of S.CIRCLES) assert.ok(c.desc && c.name && (c.gems || c.level), c.id);
+});

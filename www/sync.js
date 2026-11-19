@@ -27,6 +27,8 @@
       gems: firstLink ? Math.max(dw.gems, aw.gems) : newer.gems,
       owned: union(dw.owned, aw.owned),
       equipped: newer.equipped,
+      circles: union(dw.circles, aw.circles), // summoning circles: bought or earned once per account
+      circle: newer.circle,
       credited: union(aw.credited, dw.credited),
       pending: dw.pending, // boost gems held for a run on this device only
       dex: union(aw.dex, dw.dex), // a dex reward taken on either device stays taken

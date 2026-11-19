@@ -439,7 +439,7 @@
   .item .pr { font-size: 13px; font-weight: 800; color: var(--accent); }
   .item .pr.own { color: var(--muted); }
   .swatch { display: inline-block; width: 60px; height: 60px; }
-  .swatch svg { display: block; width: 100%; height: 100%; }
+  .swatch svg, .swatch img { display: block; width: 100%; height: 100%; }
   #shop-msg { min-height: 1.4em; }
   /* Skin detail: tapping a skin opens this box; buying or equipping happens only from its button. */
   #skin-box { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px;
@@ -715,6 +715,8 @@
   <p class="note hidden" id="shop-demo">체험 모드: 실제 결제는 일어나지 않아요.</p>
   <h3>스킨</h3>
   <div class="grid" id="shop-skins"></div>
+  <h3>소환진</h3>
+  <div class="grid" id="shop-circles"></div>
   <h3>보석</h3>
   <div class="grid" id="shop-gems"></div>
   <p>보석으로 출발 전에 부스터를 살 수 있어요. 별을 새로 딸 때마다 보석 10개를 드려요.</p>
@@ -1034,16 +1036,20 @@
   }
   function updateSpits(dt) {
     for (const s of spits) {
+      const x0 = s.x, y0 = s.y;
       s.x += s.vx * dt; s.y += s.vy * dt;
-      if (s.x < 0 || s.x > WORLD || s.y < 0 || s.y > waterY) { s.until = 0; continue; }
-      const z = zombies.find(o => o.state === 0 && Math.hypot(o.x - s.x, o.y - s.y) < o.r + s.r);
+      // hits are tested along the whole step, not just where it lands: one slow frame moves a spit further than a zombie is wide
+      const near = (o, r) => { const dx = s.x - x0, dy = s.y - y0, t = Math.max(0, Math.min(1, ((o.x - x0) * dx + (o.y - y0) * dy) / (dx * dx + dy * dy || 1)));
+        return Math.hypot(o.x - x0 - dx * t, o.y - y0 - dy * t) < r + s.r; };
+      const z = zombies.find(o => o.state === 0 && near(o, o.r));
       if (z) { // knocked back the way the spit flies (kept on the map) and stunned
         const d = Math.hypot(s.vx, s.vy) || 1;
         z.x = Math.max(10, Math.min(WORLD - 10, z.x + s.vx / d * KNOCK)); z.y = Math.max(10, Math.min(waterY - 10, z.y + s.vy / d * KNOCK));
         z.stunUntil = elapsed + STUN_S; z.dirty = true; s.until = 0; stats.spitHits = (stats.spitHits || 0) + 1;
         Sound.sfx.yuck(); banner(`${face('excited')} 퉤! 좀비가 날아갔어요`, 1.5); continue;
       }
-      const g = guards.find(g => g.state === 0 && !g.boss && Math.hypot(g.x - s.x, g.y - s.y) < g.r + s.r);
+      if (s.x < 0 || s.x > WORLD || s.y < 0 || s.y > waterY) { s.until = 0; continue; }
+      const g = guards.find(g => g.state === 0 && !g.boss && near(g, g.r));
       if (g) { g.darkUntil = elapsed + DOUSE_S; s.until = 0; stats.spitHits = (stats.spitHits || 0) + 1; shadeStale = true; Sound.sfx.shard('cloud'); banner(`${face('happy')} 등불이 꺼졌어요! ${DOUSE_S}초 동안 빛이 없어요`, 1.8); }
     }
     spits = spits.filter(s => elapsed < s.until);
@@ -1917,8 +1923,8 @@
 
   // Level skins, also checked when the shop opens (a cloud merge can raise the level).
   function grantLevelSkins() {
-    const due = Level.dueSkins(Store.wallet, Shop.SKINS);
-    if (due.length) Store.update(due.reduce(Shop.grantReward, Store.wallet));
+    const due = Level.dueSkins(Store.wallet, Shop.SKINS), circles = Shop.dueCircles(Store.wallet, Level.levelOf(Store.wallet.stats.xp).level);
+    if (due.length || circles.length) Store.update(circles.reduce(Shop.grantCircle, due.reduce(Shop.grantReward, Store.wallet)));
   }
 
   // A filled set unlocks its hidden skin. Also run when screens open: a cloud merge can fill a set too.
@@ -2055,13 +2061,14 @@
     // the strongest step of each perk kind is what applies (a +15% start replaces the +10% before it)
     const inEffect = ['startR', 'sun', 'combo', 'shard', 'shardEvery', 'zombie'].map(k => perk.got.filter(p => p[k] !== undefined).pop()).filter(Boolean).sort((a, b) => a.level - b.level);
     const marks = [...new Set(Level.PERKS.map(p => p.level).concat(Level.TITLES.map(([l]) => l).filter(l => l > 1),
-      Shop.SKINS.filter(s => s.level).map(s => s.level), [25, 50, 75, 100]))].sort((a, b) => a - b);
+      Shop.SKINS.filter(s => s.level).map(s => s.level), Shop.CIRCLES.filter(c => c.level).map(c => c.level), [25, 50, 75, 100]))].sort((a, b) => a - b);
     const road = marks.map(lv => {
-      const skin = Shop.SKINS.find(s => s.level === lv), items = [`보석 ${Level.reward(lv)}개`];
+      const skin = Shop.SKINS.find(s => s.level === lv), circle = Shop.CIRCLES.find(c => c.level === lv), items = [`보석 ${Level.reward(lv)}개`];
       Level.PERKS.filter(p => p.level === lv).forEach(p => items.push(p.text));
       const t = Level.TITLES.find(([l]) => l === lv); if (t) items.push(`칭호 '${t[1]}'`);
       if (skin) items.push(skin.name);
-      return `<div class="lvstep${lv > L.level ? ' lock' : ''}"><span class="lvn">Lv.${lv}</span>${skin ? swatch(skin, false) : ''}<ul>${items.map(x => `<li>${x}</li>`).join('')}</ul></div>`;
+      if (circle) items.push(circle.name);
+      return `<div class="lvstep${lv > L.level ? ' lock' : ''}"><span class="lvn">Lv.${lv}</span>${skin ? swatch(skin, false) : circle ? `<span class="swatch">${circleArt(circle)}</span>` : ''}<ul>${items.map(x => `<li>${x}</li>`).join('')}</ul></div>`;
     }).join('');
     $('level-body').innerHTML = `<div class="lvhead">Lv.${L.level} <small>${Level.titleOf(L.level)}${L.max ? ' · 만렙' : ''}</small></div>
       <div class="xpbar" style="border-color:#c9d3f2;background:#dfe6f7"><i style="width:${L.into / L.next * 100}%"></i></div>
@@ -2342,8 +2349,8 @@
     w = Challenge.record(w, dayKey(), { eaten: stats.total, stars: n, runs: 1, buildings: stats.eaten.building || 0, rushEaten: stats.rushEaten || 0,
       size: Math.round(stats.maxR / 4 * 10) / 10, nightEaten: stats.night, boosted: runBoosted ? 1 : 0, bonus: stats.bonus || 0 });
     const missionsDone = Challenge.status(w, dayKey()).filter(m => m.done).length - doneBefore;
-    const lvSkins = Level.dueSkins(w, Shop.SKINS);
-    w = lvSkins.reduce(Shop.grantReward, w);
+    const lvSkins = Level.dueSkins(w, Shop.SKINS), lvCircles = Shop.dueCircles(w, Level.levelOf(w.stats.xp).level);
+    w = lvCircles.reduce(Shop.grantCircle, lvSkins.reduce(Shop.grantReward, w));
     // Event reward: enough stars across the event's levels grants its skin (once).
     const ev = EVENTS.find(e => e.id === listKey);
     const gotReward = ev && !w.owned.includes(ev.reward.skin) && eventStars(ev) >= ev.reward.stars;
@@ -2359,6 +2366,7 @@
       const title = Level.titleOf(lv.to) !== Level.titleOf(lv.from) ? [`칭호 '${Level.titleOf(lv.to)}'`] : [];
       notes.push(`${ico('sparkle')} 레벨 업 Lv.${lv.to}`, `${gemPill(lv.gems)} 레벨 선물`);
       lvSkins.forEach(id => notes.push(`${ico('gift')} ${skinById(id).name}`));
+      lvCircles.forEach(id => notes.push(`${ico('gift')} ${circleById(id).name}`));
       perks.concat(title).forEach(x => notes.push(`${ico('grow')} ${x}`));
     }
     if (gotReward) notes.push(`${ico('gift')} ${Shop.SKINS.find(k => k.id === ev.reward.skin).name}`);
@@ -2427,6 +2435,13 @@
       <path d="M28 41Q32 45.5 36 41Z" fill="#d8436a"/></svg>`;
   }
   const swatch = (s, secret) => `<span class="swatch">${skinArt(s, secret)}</span>`;
+  // Summoning circle picture: the same art the ground decal uses (render3d drawCircle), in the circle's color.
+  const circleArts = {};
+  function circleArt(c) {
+    if (!circleArts[c.id]) { const cv = document.createElement('canvas'); cv.width = cv.height = 128; window.DuskRender.drawCircle(cv.getContext('2d'), 128, c.id, hex(c.color)); circleArts[c.id] = cv.toDataURL(); }
+    return `<img src="${circleArts[c.id]}" alt="">`;
+  }
+  const circleById = id => Shop.CIRCLES.find(c => c.id === id);
   let shopReturn = 'title', busy = false;
 
   function renderGems() {
@@ -2448,7 +2463,14 @@
       return `<button class="item" data-pack="${p.product}"${price ? '' : ' disabled'}>
         <span class="gem" style="font-size:18px">${GEM}${p.gems.toLocaleString()}</span><span class="pr">${price || '준비 중'}</span></button>`;
     }).join('');
+    $('shop-circles').innerHTML = Shop.CIRCLES.map(c => {
+      const own = w.circles.includes(c.id), on = w.circle === c.id;
+      const label = on ? '쓰는 중' : own ? '쓰기' : c.level ? `${ico('sparkle')} Lv.${c.level}` : `<span class="gem">${GEM}${c.gems}</span>`;
+      return `<button class="item${on ? ' on' : ''}" data-circle="${c.id}">
+        <span class="swatch">${circleArt(c)}</span><span class="nm">${c.name}</span><span class="pr${own ? ' own' : ''}">${label}</span></button>`;
+    }).join('');
     $('shop-skins').querySelectorAll('.item').forEach(el => el.addEventListener('pointerup', () => openSkinBox(el.dataset.skin)));
+    $('shop-circles').querySelectorAll('.item').forEach(el => el.addEventListener('pointerup', () => openSkinBox(el.dataset.circle, true)));
     if (skinBoxId) renderSkinBox();
     $('shop-gems').querySelectorAll('.item').forEach(el => el.addEventListener('pointerup', () => buy(el.dataset.pack)));
   }
@@ -2464,8 +2486,22 @@
   }
 
   // Skin detail box: preview, description, and the only place a skin is bought or equipped.
-  let skinBoxId = null;
+  // The same box shows a summoning circle (boxCircle): gems or a level open it, and its button puts it on or takes it off.
+  let skinBoxId = null, boxCircle = false;
+  function renderCircleBox() {
+    const c = circleById(skinBoxId), w = Store.wallet, own = w.circles.includes(c.id), on = w.circle === c.id;
+    $('skin-box-swatch').innerHTML = circleArt(c);
+    $('skin-box-name').textContent = c.name;
+    $('skin-box-desc').textContent = c.desc;
+    const act = $('skin-box-act');
+    act.innerHTML = on ? '빼기' : own ? '쓰기' : c.level ? `${ico('sparkle')} Lv.${c.level}에 받아요 (지금 Lv.${Level.levelOf(w.stats.xp).level})` : '보석으로 살 수 있어요';
+    act.classList.toggle('off', !own);
+    const gb = $('skin-box-gems'), forGems = !own && !!c.gems;
+    gb.classList.toggle('hidden', !forGems);
+    if (forGems) { gb.innerHTML = `<span class="gem">${GEM}${c.gems}</span>개로 사기` + (w.gems >= c.gems ? '' : ` (${(c.gems - w.gems).toLocaleString()}개 부족)`); gb.classList.toggle('off', w.gems < c.gems); }
+  }
   function renderSkinBox() {
+    if (boxCircle) return renderCircleBox();
     const s = skinById(skinBoxId), w = Store.wallet;
     const own = (!s.product && !s.reward) || w.owned.includes(s.id), on = w.equipped === s.id, price = s.product && Store.price(s.product);
     const ev = s.reward && EVENTS.find(e => e.id === s.reward), set = Dex.setFor(s.id), secret = s.hidden && !own;
@@ -2483,11 +2519,18 @@
     gb.classList.toggle('hidden', !forGems);
     if (forGems) { gb.innerHTML = `<span class="gem">${GEM}${s.gems}</span>개로 사기` + (w.gems >= s.gems ? '' : ` (${(s.gems - w.gems).toLocaleString()}개 부족)`); gb.classList.toggle('off', w.gems < s.gems); }
   }
-  function openSkinBox(id) { skinBoxId = id; renderSkinBox(); $('skin-box').classList.remove('hidden'); }
+  function openSkinBox(id, circle) { skinBoxId = id; boxCircle = !!circle; renderSkinBox(); $('skin-box').classList.remove('hidden'); }
   function closeSkinBox() { skinBoxId = null; $('skin-box').classList.add('hidden'); }
   $('skin-box-close').addEventListener('pointerup', closeSkinBox);
   $('skin-box').addEventListener('pointerup', e => { if (e.target.id === 'skin-box') closeSkinBox(); }); // tap outside the box
   $('skin-box-gems').addEventListener('pointerup', () => {
+    if (boxCircle) {
+      const c = circleById(skinBoxId), w = c && !busy && !$('skin-box-gems').classList.contains('off') && Shop.buyCircle(Store.wallet, c.id);
+      if (!w) return;
+      Store.update(Shop.wearCircle(w, c.id)); renderGems(); renderShop();
+      $('shop-msg').textContent = `${GEM}${c.gems}개로 ${withObject(c.name)} 샀어요.`;
+      return closeSkinBox();
+    }
     const s = skinById(skinBoxId);
     if (!s || busy || $('skin-box-gems').classList.contains('off')) return;
     const w = Shop.buySkin(Store.wallet, s.id);
@@ -2497,6 +2540,11 @@
     closeSkinBox();
   });
   $('skin-box-act').addEventListener('pointerup', async () => {
+    if (boxCircle) {
+      if (busy || $('skin-box-act').classList.contains('off')) return;
+      Store.update(Shop.wearCircle(Store.wallet, skinBoxId));
+      return closeSkinBox();
+    }
     const s = skinById(skinBoxId);
     if (!s || busy || $('skin-box-act').classList.contains('off')) return;
     if (s.reward && !Store.wallet.owned.includes(s.id)) return; // earned in its event, not sold
@@ -2544,7 +2592,7 @@
     const j = JSON.stringify(w);
     if (lastWallet !== null && j !== lastWallet && !applying) { lastWallet = j; touched(); } else lastWallet = j;
     renderGems();
-    if (R) R.setSkin(skinById(w.equipped));
+    if (R) { R.setSkin(skinById(w.equipped)); R.setCircle(circleById(w.circle) || null); }
     if (!$('shop').classList.contains('hidden')) renderShop();
     if (!$('dex').classList.contains('hidden')) renderDex();
     if (!$('badges').classList.contains('hidden')) renderBadges();

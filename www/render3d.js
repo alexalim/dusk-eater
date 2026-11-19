@@ -323,6 +323,37 @@
     return g;
   }
 
+  // Summoning circle art (shop.js CIRCLES), drawn in `color` on a clear square `n` wide. The ground decal draws it in
+  // white and tints it with the material; the shop draws a preview with the real color.
+  function drawCircle(g, n, id, color) {
+    const c = n / 2, R = n * 0.46;
+    g.clearRect(0, 0, n, n); g.strokeStyle = g.fillStyle = color; g.lineCap = g.lineJoin = 'round';
+    const ring = (r, w) => { g.lineWidth = w; g.beginPath(); g.arc(c, c, r, 0, Math.PI * 2); g.stroke(); };
+    const at = (a, r) => [c + Math.cos(a) * r, c + Math.sin(a) * r];
+    const star = (x, y, r) => { g.beginPath(); for (let k = 0; k < 8; k++) { const [px, py] = [x + Math.cos(k * Math.PI / 4) * (k % 2 ? r * 0.35 : r), y + Math.sin(k * Math.PI / 4) * (k % 2 ? r * 0.35 : r)]; k ? g.lineTo(px, py) : g.moveTo(px, py); } g.closePath(); g.fill(); };
+    ring(R, n * 0.03);
+    if (id === 'moon') { // double ring with rune ticks between, a six-point star inside
+      ring(R * 0.82, n * 0.018);
+      g.lineWidth = n * 0.016;
+      for (let k = 0; k < 24; k++) { const a = k * Math.PI / 12, [x1, y1] = at(a, R * 0.86), [x2, y2] = at(a, k % 2 ? R * 0.9 : R * 0.95); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
+      g.lineWidth = n * 0.022;
+      for (const off of [0, Math.PI / 3]) { g.beginPath(); for (let k = 0; k < 3; k++) { const [x, y] = at(off - Math.PI / 2 + k * Math.PI * 2 / 3, R * 0.78); k ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); g.stroke(); }
+      ring(R * 0.36, n * 0.018);
+    } else if (id === 'stars') { // eight stars on the ring, joined inside like a constellation
+      const pts = [];
+      for (let k = 0; k < 8; k++) pts.push(at(k * Math.PI / 4 - Math.PI / 2, R * 0.72));
+      g.lineWidth = n * 0.018; g.globalAlpha = 0.75; g.beginPath(); // an eight-point star line, every third point joined
+      for (let k = 0; k <= 8; k++) { const [x, y] = pts[(k * 3) % 8]; k ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke(); g.globalAlpha = 1;
+      pts.forEach(([x, y], k) => star(x, y, n * (k % 2 ? 0.035 : 0.055)));
+      for (let k = 0; k < 16; k++) { const [x, y] = at(k * Math.PI / 8, R); g.beginPath(); g.arc(x, y, n * 0.012, 0, Math.PI * 2); g.fill(); }
+    } else { // petal: eight petals around a small middle
+      g.lineWidth = n * 0.022;
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, [x, y] = at(a, R * 0.58); g.save(); g.translate(x, y); g.rotate(a); g.beginPath(); g.ellipse(0, 0, R * 0.3, R * 0.14, 0, 0, Math.PI * 2); g.stroke(); g.restore(); }
+      ring(R * 0.16, n * 0.022);
+    }
+  }
+
   function create(canvas) {
     const renderer = new T.WebGLRenderer({ canvas, antialias: true });
     renderer.shadowMap.enabled = true;
@@ -476,6 +507,13 @@
     const magnetRing = new T.Mesh(hintGeo, new T.MeshBasicMaterial({ color: 0xff7ad9, transparent: true, opacity: 0.5, depthWrite: false }));
     magnetRing.visible = false; magnetRing.renderOrder = 4;
     scene.add(bubble, magnetRing);
+    // The worn summoning circle (setCircle): a flat decal under the blob that turns slowly. Looks only, casts nothing.
+    const circleCanvas = document.createElement('canvas'); circleCanvas.width = circleCanvas.height = 256;
+    const circleTex = new T.CanvasTexture(circleCanvas);
+    const circleGeo = new T.PlaneGeometry(2, 2); circleGeo.rotateX(-Math.PI / 2);
+    const circleMesh = new T.Mesh(circleGeo, new T.MeshBasicMaterial({ map: circleTex, transparent: true, opacity: 0.95, depthWrite: false, blending: T.AdditiveBlending }));
+    circleMesh.visible = false; circleMesh.renderOrder = 4;
+    scene.add(circleMesh);
 
     const TEX = makeTextures();
     const NIGHT_WINDOWS = col('#ffc46b');
@@ -1080,6 +1118,7 @@
       rimMat.opacity = player.lit ? 0.85 : 0.55;
       litRing.position.copy(blob.position).setY(1.3);
       litRing.scale.setScalar(player.r);
+      if (circleMesh.visible) { circleMesh.position.set(player.x, 1.0, player.y); circleMesh.scale.setScalar(player.r * 2.5); circleMesh.rotation.y = t * 0.4; }
       bubble.visible = !!player.bubble;
       if (player.bubble) { bubble.position.set(player.x, 2, player.y); bubble.scale.set(player.bubble, player.bubble * 0.35, player.bubble); }
       magnetRing.visible = player.magnet >= 0;
@@ -1203,9 +1242,16 @@
       eyeMat.color.setHex(skin.eye);
       pupilMat.color.setHex(skin.pupil !== undefined ? skin.pupil : 0x16122a);
     }
+    // Summoning circle: a CIRCLES entry, or null for none.
+    function setCircle(c) {
+      circleMesh.visible = !!c;
+      if (!c) return;
+      drawCircle(circleCanvas.getContext('2d'), 256, c.id, '#ffffff');
+      circleTex.needsUpdate = true; circleMesh.material.color.setHex(c.color);
+    }
 
-    return { build, resize, draw, setSkin, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera } };
+    return { build, resize, draw, setSkin, setCircle, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh } };
   }
 
-  root.DuskRender = { create, PARTS, GEO: unit }; // PARTS and the unit shapes also feed tools/icons (collection-book pictures)
+  root.DuskRender = { create, drawCircle, PARTS, GEO: unit }; // PARTS and the unit shapes also feed tools/icons (collection-book pictures)
 })(this);

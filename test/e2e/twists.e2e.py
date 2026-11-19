@@ -345,13 +345,27 @@ with sync_playwright() as p:
     pg.evaluate(f'''(() => {{ const s = {A}.s; for (const o of s.objects.filter(o => o.state === 0 && o.type !== 'zombie' && o.r < s.player.r * 0.6).slice(0, 2)) {{ o.state = 1; o.ft = 0.99; }} }})()''')
     frames_wait(pg, 4)
     lamp = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player, g = s.guards.find(g => g.state === 0 && !g.boss && !g.pool); if (!g) return null;
-        p.face = 0; g.x = p.x + p.r + 40; g.y = p.y; g.dir = Math.PI; const inb = {A}.inBeam(p.x + p.r + 10, p.y, null), before = {A}.ammo; {A}.spit(); window.__lg = g; return [inb, before]; }})()''')
+        p.face = 0; g.x = p.x + p.r + 40; g.y = p.y; g.dir = Math.PI; const inb = {A}.inBeam(p.x + p.r + 10, p.y, null), before = {A}.ammo; {A}.spit(); window.__lg = g; return [inb, before, {A}.ammo]; }})()''')
     frames_wait(pg, 12)
     dark = pg.evaluate(f'''(() => {{ const s = {A}.s, g = window.__lg; return [g.darkUntil > s.elapsed, {A}.inBeam(s.player.x + s.player.r + 10, s.player.y, null), {A}.ammo]; }})()''')
     rec('W24', 'spit: no shot without a swallow; 5 swallows load 3 pips; a spit shrinks the body, knocks a zombie back and stuns it, puts a keeper\'s lamp out',
         empty == [0, 0, True] and pips == [3, 3] and hit[2] and hit[3] == 1 and z1 is not None and z1[0] > hit[0] + 60 and z1[1] >= 2
-        and lamp is not None and lamp[0] is True and lamp[1] >= 1 and dark[0] is True and dark[1] is False and dark[2] == lamp[1] - 1,  # the run may have eaten more on its own: one shot spent
+        and lamp is not None and lamp[0] is True and lamp[1] >= 1 and dark[0] is True and dark[1] is False and lamp[2] == lamp[1] - 1,  # counted right at the spit: the run may eat (and reload) on its own while the frames pass
         f'empty={empty} pips={pips} hit={hit} zombie-after={z1} lamp-before={lamp} after={dark}')
+
+    # W27 a fast spit still hits: one step can carry it further than a zombie is wide (a slow frame), so the hit is
+    # tested along the whole step; here the spit is sped up so every frame jumps ~3 zombie widths
+    pg.evaluate(f'{A}.start(0)'); pg.evaluate(f'{A}.skipTo(20)'); frames_wait(pg, 2)
+    pg.evaluate(f'{A}.input.active = false; {A}.input.dx = {A}.input.dy = 0; {A}.input.keys.clear()')
+    pg.evaluate(f'''(() => {{ const s = {A}.s; for (const o of s.objects.filter(o => o.state === 0 && o.type !== 'zombie' && o.r < s.player.r * 0.6).slice(0, 2)) {{ o.state = 1; o.ft = 0.99; }} }})()''')
+    frames_wait(pg, 4)
+    fast = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player, z = s.objects.find(o => o.type === 'zombie' && o.state === 0);
+        p.face = 0; p.vx = p.vy = 0; z.x = p.x + p.r + 60; z.y = p.y; z.dirty = true; window.__fz = z; {A}.spit(); const sp = {A}.spits[0];
+        if (sp) sp.vx = 5000; return [!!sp, Math.round(z.x)]; }})()''')
+    frames_wait(pg, 8)
+    fz = pg.evaluate(f"(() => {{ const s = {A}.s, z = window.__fz; return [z.stunUntil > s.elapsed, Math.round(z.x)]; }})()")
+    rec('W27', 'a spit fast enough to jump past a zombie in one frame still hits it (swept test)',
+        fast[0] and fz[0] is True and fz[1] > fast[1] + 60, f'spit={fast} zombie-after={fz}')
 
     # W25 no stacked props: on the market and park maps, no two stalls / fruit boxes / benches / kiosks (or a person inside one) share a spot,
     # since same-height flat tops on one spot flicker (TestFlight, 전통시장); every object also carries a small height hair (zf)
