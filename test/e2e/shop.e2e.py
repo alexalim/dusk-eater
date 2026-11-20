@@ -183,15 +183,15 @@ with sync_playwright() as p:
     pg6.tap('#skin-box-close'); frames_wait(pg6)
     pg6.tap('.item[data-circle=moon]'); frames_wait(pg6)
     pg6.tap('#skin-box-gems'); frames_wait(pg6, 4)
-    w14 = wallet(pg6)
+    w14 = wallet(pg6); msg14 = pg6.inner_text('#shop-msg') # the gem icon is drawn, not printed as <svg …> text
     deco = pg6.evaluate(f"(() => {{ const m = {A}.R.debug.circleMesh; return [m.visible, m.material.color.getHex()]; }})()")
     pg6.tap('.item[data-circle=moon]'); frames_wait(pg6)
     off_label = pg6.inner_text('#skin-box-act'); pg6.tap('#skin-box-act'); frames_wait(pg6, 4)
     after = [wallet(pg6)['circle'], pg6.evaluate(f"{A}.R.debug.circleMesh.visible")]
-    rec('H14', 'circles: the level one is not sold, 200 gems buy and wear the moon circle (decal on), tapping it again takes it off',
+    rec('H14', 'circles: the level one is not sold, 200 gems buy and wear the moon circle (decal on, a clean message), tapping it again takes it off',
         'Lv.15' in petal[0] and petal[1] and petal[2] and w14['gems'] == 500 and w14['circles'] == ['moon'] and w14['circle'] == 'moon'
-        and deco == [True, 0xc9a8ff] and off_label == '빼기' and after == ['', False] and not errs6,
-        f'petal={petal} gems={w14["gems"]} circles={w14["circles"]} deco={deco} off={off_label!r} after={after}')
+        and deco == [True, 0xc9a8ff] and off_label == '빼기' and after == ['', False] and '샀어요' in msg14 and '<' not in msg14 and not errs6,
+        f'petal={petal} gems={w14["gems"]} circles={w14["circles"]} deco={deco} off={off_label!r} after={after} msg={msg14!r}')
     b.close()
 
 print(f'{sum(res)}/{len(res)} passed')

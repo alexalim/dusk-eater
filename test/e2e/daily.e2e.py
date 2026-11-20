@@ -27,17 +27,17 @@ with sync_playwright() as p:
     boot(pg, '2026-11-06')
     pg.goto(URL); pg.evaluate(f'{A}.ready'); frames_wait(pg, 4)
 
-    # C1 the check-in greets a fresh day; day 1 pays 10 gems and is saved; the same day stays closed
+    # C1 the check-in greets a fresh day; day 1 pays 10 gems and is saved; the same day stays closed, and tapping
+    # the "받았어요" button then closes the window without paying again
     # (checked in-page: Chromium's file:// localStorage can lose a write across a quick reload, so no reload here)
     shown = pg.is_visible('#daily')
     pg.tap('#btn-daily-claim'); frames_wait(pg)
     w1 = wallet(pg); label = pg.inner_text('#btn-daily-claim')
     saved = pg.evaluate("JSON.parse(localStorage.getItem('dusk-wallet')).daily")
     pg.tap('#btn-daily-claim'); frames_wait(pg)
-    twice = wallet(pg)['gems']
-    pg.tap('#btn-daily-back'); frames_wait(pg)
-    rec('C1', 'check-in pops up, pays day 1 once and saves it', shown and w1['gems'] == 10 and w1['daily']['n'] == 1 and '내일' in label
-        and saved == {'n': 1, 'last': '2026-11-06'} and twice == 10, f'shown={shown} gems={w1["gems"]} saved={saved} twice={twice}')
+    twice = wallet(pg)['gems']; closed = not pg.is_visible('#daily') and pg.is_visible('#title')
+    rec('C1', 'check-in pops up, pays day 1 once and saves it; the taken button closes it', shown and w1['gems'] == 10 and w1['daily']['n'] == 1 and '내일' in label
+        and saved == {'n': 1, 'last': '2026-11-06'} and twice == 10 and closed, f'shown={shown} gems={w1["gems"]} saved={saved} twice={twice} closed={closed}')
 
     # C2 a later day (one skipped) gives day 2: a 황혼 연장 ticket; the start sheet offers it for free and it replaces gems
     pg.evaluate(f"window.__DUSK_TEST__.today = '2026-11-08'; {A}.openDaily()"); frames_wait(pg)

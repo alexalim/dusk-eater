@@ -328,6 +328,7 @@
   function drawCircle(g, n, id, color) {
     const c = n / 2, R = n * 0.46;
     g.clearRect(0, 0, n, n); g.strokeStyle = g.fillStyle = color; g.lineCap = g.lineJoin = 'round';
+    g.shadowColor = color; g.shadowBlur = n * 0.04; // every line carries a soft halo of its own color
     const ring = (r, w) => { g.lineWidth = w; g.beginPath(); g.arc(c, c, r, 0, Math.PI * 2); g.stroke(); };
     const at = (a, r) => [c + Math.cos(a) * r, c + Math.sin(a) * r];
     const star = (x, y, r) => { g.beginPath(); for (let k = 0; k < 8; k++) { const [px, py] = [x + Math.cos(k * Math.PI / 4) * (k % 2 ? r * 0.35 : r), y + Math.sin(k * Math.PI / 4) * (k % 2 ? r * 0.35 : r)]; k ? g.lineTo(px, py) : g.moveTo(px, py); } g.closePath(); g.fill(); };
@@ -352,6 +353,20 @@
       for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, [x, y] = at(a, R * 0.58); g.save(); g.translate(x, y); g.rotate(a); g.beginPath(); g.ellipse(0, 0, R * 0.3, R * 0.14, 0, 0, Math.PI * 2); g.stroke(); g.restore(); }
       ring(R * 0.16, n * 0.022);
     }
+    g.shadowBlur = 0;
+  }
+  // The circle's outer band: rune ticks and dots on a thin ring, turned the other way from the circle.
+  function drawRunes(g, n) {
+    const c = n / 2, R = n * 0.47;
+    g.clearRect(0, 0, n, n); g.strokeStyle = g.fillStyle = '#ffffff'; g.lineCap = 'round';
+    g.shadowColor = '#ffffff'; g.shadowBlur = n * 0.03;
+    g.lineWidth = n * 0.01; g.beginPath(); g.arc(c, c, R, 0, Math.PI * 2); g.stroke();
+    for (let k = 0; k < 36; k++) {
+      const a = k * Math.PI / 18, r0 = R * 0.9, r1 = k % 3 ? R * 0.94 : R * 0.86;
+      if (k % 6 === 3) { g.beginPath(); g.arc(c + Math.cos(a) * R * 0.92, c + Math.sin(a) * R * 0.92, n * 0.012, 0, Math.PI * 2); g.fill(); continue; }
+      g.lineWidth = n * 0.008; g.beginPath(); g.moveTo(c + Math.cos(a) * r0, c + Math.sin(a) * r0); g.lineTo(c + Math.cos(a) * r1, c + Math.sin(a) * r1); g.stroke();
+    }
+    g.shadowBlur = 0;
   }
 
   function create(canvas) {
@@ -507,18 +522,37 @@
     const magnetRing = new T.Mesh(hintGeo, new T.MeshBasicMaterial({ color: 0xff7ad9, transparent: true, opacity: 0.5, depthWrite: false }));
     magnetRing.visible = false; magnetRing.renderOrder = 4;
     scene.add(bubble, magnetRing);
-    // The worn summoning circle (setCircle): a flat decal under the blob that turns slowly. Looks only, casts nothing.
-    const circleCanvas = document.createElement('canvas'); circleCanvas.width = circleCanvas.height = 256;
-    const circleTex = new T.CanvasTexture(circleCanvas);
-    const circleGeo = new T.PlaneGeometry(2, 2); circleGeo.rotateX(-Math.PI / 2);
-    const circleMesh = new T.Mesh(circleGeo, new T.MeshBasicMaterial({ map: circleTex, transparent: true, opacity: 0.95, depthWrite: false, blending: T.AdditiveBlending }));
-    circleMesh.visible = false; circleMesh.renderOrder = 4;
-    scene.add(circleMesh);
+    // The worn summoning circle (setCircle): looks only, casts nothing. Three flat layers under the blob — a
+    // violet shadow pool with the pattern pressed into it (normal blending, so it darkens the ground like a cast
+    // shadow, but tinted so it never reads as real shade), the glowing pattern turning one way, a rune band turning
+    // the other — plus motes of its color rising from the rim.
+    const decal = (size, blending, order) => {
+      const cv = document.createElement('canvas'); cv.width = cv.height = size;
+      const tex = new T.CanvasTexture(cv), geo = new T.PlaneGeometry(2, 2); geo.rotateX(-Math.PI / 2);
+      const m = new T.Mesh(geo, new T.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending }));
+      m.renderOrder = order; m.userData.canvas = cv; scene.add(m); return m;
+    };
+    const circleShade = decal(256, T.NormalBlending, 3), circleMesh = decal(256, T.AdditiveBlending, 4), circleRunes = decal(256, T.AdditiveBlending, 4);
+    {
+      const g = circleRunes.userData.canvas.getContext('2d'); drawRunes(g, 256); circleRunes.material.map.needsUpdate = true;
+    }
+    const MOTES = 14, moteGeo = new T.BufferGeometry();
+    moteGeo.setAttribute('position', new T.Float32BufferAttribute(new Float32Array(MOTES * 3), 3));
+    const moteTex = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), grd = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+      grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.35, 'rgba(255,255,255,.6)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = grd; g.fillRect(0, 0, 32, 32); return new T.CanvasTexture(c);
+    })();
+    const circleMotes = new T.Points(moteGeo, new T.PointsMaterial({ map: moteTex, size: 9, transparent: true, depthWrite: false, blending: T.AdditiveBlending }));
+    circleMotes.renderOrder = 8; circleMotes.frustumCulled = false; scene.add(circleMotes);
+    const circleParts = [circleShade, circleMesh, circleRunes, circleMotes];
+    circleParts.forEach(m => { m.visible = false; });
 
     const TEX = makeTextures();
     const NIGHT_WINDOWS = col('#ffc46b');
     const dummy = new T.Object3D();
     const tmpCol = new T.Color(), tmpAxis = new T.Vector3();
+    const tmpDir = new T.Vector3(), tmpRight = new T.Vector3(), tmpUp = new T.Vector3(), tmpFocus = new T.Vector3(); // shadow-camera snapping
     let world = null, group = null, vw = 1, vh = 1;
 
     function disposeGroup() {
@@ -1036,10 +1070,20 @@
         for (const m of world.roofMats) m.emissive.set(0x000000);
         for (const m of world.wallMats) { m.emissiveMap = TEX.plain; m.emissive.copy(m.userData.day); }
         world.lampMat.color.set('#d8d4c8'); world.haloMat.opacity = 0;
-        const ce = Math.cos(sun.elev);
-        sunLight.position.set(focusX - sun.sx * ce * 3000, Math.sin(sun.elev) * 3000, focusY - sun.sy * ce * 3000);
-        sunLight.target.position.set(focusX, 0, focusY);
-        const S = f.view * 1.5 + 60 + (520 - f.view * 1.5 - 60) * e, sc = sunLight.shadow.camera;
+        // Stable shadows (TestFlight: "buildings flicker" on a big, wide view): the shadow box grows in 10% steps
+        // instead of every frame, and its center snaps to whole shadow-map texels across the light's view, so
+        // following the player slides the texel grid by whole cells and shadow edges stop shimmering.
+        const ce = Math.cos(sun.elev), sc = sunLight.shadow.camera;
+        const S = Math.pow(1.1, Math.ceil(Math.log(f.view * 1.5 + 60 + (520 - f.view * 1.5 - 60) * e) / Math.log(1.1)));
+        const texel = 2 * S / sunLight.shadow.mapSize.x;
+        tmpDir.set(sun.sx * ce, -Math.sin(sun.elev), sun.sy * ce).normalize(); // toward the ground, along the light
+        tmpRight.crossVectors(tmpDir, tmpUp.set(0, 1, 0)).normalize(); tmpUp.crossVectors(tmpRight, tmpDir);
+        tmpFocus.set(focusX, 0, focusY);
+        const da = Math.round(tmpFocus.dot(tmpRight) / texel) * texel - tmpFocus.dot(tmpRight);
+        const db = Math.round(tmpFocus.dot(tmpUp) / texel) * texel - tmpFocus.dot(tmpUp);
+        tmpFocus.addScaledVector(tmpRight, da).addScaledVector(tmpUp, db);
+        sunLight.target.position.copy(tmpFocus);
+        sunLight.position.copy(tmpFocus).addScaledVector(tmpDir, -3000);
         sc.left = -S; sc.right = S; sc.top = S; sc.bottom = -S;
         sc.updateProjectionMatrix();
       }
@@ -1121,7 +1165,20 @@
       rimMat.opacity = player.lit ? 0.85 : 0.55;
       litRing.position.copy(blob.position).setY(1.3);
       litRing.scale.setScalar(player.r);
-      if (circleMesh.visible) { circleMesh.position.set(player.x, 1.0, player.y); circleMesh.scale.setScalar(player.r * 2.5); circleMesh.rotation.y = t * 0.4; }
+      if (circleMesh.visible) {
+        const cr = player.r * 2.5, pulse = 0.5 + 0.5 * Math.sin(t * 2.4);
+        circleShade.position.set(player.x, 0.9, player.y); circleShade.scale.setScalar(cr * 1.08); circleShade.rotation.y = t * 0.4;
+        circleMesh.position.set(player.x, 1.0, player.y); circleMesh.scale.setScalar(cr); circleMesh.rotation.y = t * 0.4;
+        circleMesh.material.opacity = 0.5 + pulse * 0.25; // see-through, breathing
+        circleRunes.position.set(player.x, 1.05, player.y); circleRunes.scale.setScalar(cr * 1.14); circleRunes.rotation.y = -t * 0.25;
+        circleRunes.material.opacity = 0.35 + (1 - pulse) * 0.25;
+        const mp = moteGeo.attributes.position;
+        for (let i = 0; i < MOTES; i++) { // each mote rises from the rim, drifting round, and starts over
+          const life = (t * 0.45 + i / MOTES) % 1, a = i * 2.39996 + t * 0.3, rr = cr * (0.75 + 0.2 * Math.sin(i * 7.1));
+          mp.setXYZ(i, player.x + Math.cos(a) * rr, 2 + life * player.r * 1.6, player.y + Math.sin(a) * rr);
+        }
+        mp.needsUpdate = true; circleMotes.material.size = Math.max(6, player.r * 0.5); circleMotes.material.opacity = 0.85;
+      }
       bubble.visible = !!player.bubble;
       if (player.bubble) { bubble.position.set(player.x, 2, player.y); bubble.scale.set(player.bubble, player.bubble * 0.35, player.bubble); }
       magnetRing.visible = player.magnet >= 0;
@@ -1248,10 +1305,20 @@
     }
     // Summoning circle: a CIRCLES entry, or null for none.
     function setCircle(c) {
-      circleMesh.visible = !!c;
+      circleParts.forEach(m => { m.visible = !!c; });
       if (!c) return;
-      drawCircle(circleCanvas.getContext('2d'), 256, c.id, '#ffffff');
-      circleTex.needsUpdate = true; circleMesh.material.color.setHex(c.color);
+      drawCircle(circleMesh.userData.canvas.getContext('2d'), 256, c.id, '#ffffff');
+      circleMesh.material.map.needsUpdate = true;
+      // the shadow: a soft violet-black pool, darkest in the middle, with the pattern pressed in darker still
+      const g = circleShade.userData.canvas.getContext('2d');
+      drawCircle(g, 256, c.id, '#ffffff'); // drawn white; the material tints it violet-black
+      g.globalCompositeOperation = 'destination-over';
+      const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+      grd.addColorStop(0, 'rgba(255,255,255,.75)'); grd.addColorStop(0.75, 'rgba(255,255,255,.5)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = grd; g.fillRect(0, 0, 256, 256); g.globalCompositeOperation = 'source-over';
+      circleShade.material.map.needsUpdate = true;
+      circleShade.material.color.set(0x1a0b3a); circleShade.material.opacity = 0.55;
+      for (const m of [circleMesh, circleRunes, circleMotes]) m.material.color.setHex(c.color);
     }
 
     return { build, resize, draw, setSkin, setCircle, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh } };

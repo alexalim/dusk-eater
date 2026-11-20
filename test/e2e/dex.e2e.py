@@ -71,8 +71,10 @@ with sync_playwright() as p:
     # X5 tapping a silhouette pays nothing and gives a hint instead
     pg.tap('#btn-dex'); frames_wait(pg)
     other = pg.evaluate("document.querySelector('#dex .card.hide').dataset.dex")
-    pg.tap(f'.card[data-dex={other}]'); frames_wait(pg)
-    rec('X5', 'silhouette tap: no gems, a hint about where to look', wallet(pg)['gems'] == g2 and '꿀꺽' in pg.inner_text('#dex-msg'), pg.inner_text('#dex-msg'))
+    # tap and read in one tick: the hint clears itself after 3.2s, and a slow machine can spend longer than that inside pg.tap
+    hint = pg.evaluate(f"(() => {{ document.querySelector('.card[data-dex={other}]').dispatchEvent(new PointerEvent('pointerup')); return document.querySelector('#dex-msg').innerText; }})()")
+    frames_wait(pg)
+    rec('X5', 'silhouette tap: no gems, a hint about where to look', wallet(pg)['gems'] == g2 and '꿀꺽' in hint, hint)
     # X7 swallowing the last missing kind of a set unlocks its hidden skin: toast, set bar, shop card all reveal it
     set1 = pg.evaluate('window.DuskDex.SETS[0]')
     pg.tap('#btn-dex-back'); frames_wait(pg)

@@ -130,6 +130,18 @@
   #burst i.yum, #burst i.heart { width: auto; height: auto; margin: 0; background: none; border-radius: 0; white-space: nowrap; transform: translate(-50%, -50%);
     font: 900 18px var(--display); color: var(--c); -webkit-text-stroke: 1px rgba(60,20,90,.55); text-shadow: 0 2px 0 rgba(0,0,0,.25); }
   #burst i.yum { animation: yum .8s cubic-bezier(.2,.9,.3,1) forwards; }
+  #burst i.yum.big { font-size: 32px; -webkit-text-stroke: 1.5px rgba(60,20,90,.6); animation-duration: 1s; }
+  /* the shockwave of a big swallow: a ring that bursts out from the body */
+  #burst i.wave { width: var(--s); height: var(--s); margin: calc(var(--s) / -2); border-radius: 50%; background: none;
+    border: 5px solid var(--c); box-shadow: 0 0 14px var(--c); animation: wave .45s ease-out forwards; }
+  @keyframes wave { 0% { transform: scale(.25); opacity: .95; } 100% { transform: scale(1.5); opacity: 0; border-width: 1px; } }
+  /* the combo count: big in the upper middle, slammed in at each swallow */
+  #hitcount { position: fixed; left: 50%; top: 27%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; z-index: 4; opacity: 0;
+    font: 900 var(--hs, 40px) / 1 var(--display); color: var(--hc, #fff1a8); -webkit-text-stroke: 2px rgba(60,20,90,.6); text-shadow: 0 4px 0 rgba(0,0,0,.28); }
+  #hitcount small { display: block; font-size: 15px; -webkit-text-stroke: 1px rgba(60,20,90,.5); }
+  #hitcount.go { animation: hitcount 1.1s ease-out forwards; }
+  @keyframes hitcount { 0% { transform: translate(-50%, -50%) scale(1.9); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(.92); opacity: 1; }
+    30% { transform: translate(-50%, -50%) scale(1); } 75% { opacity: 1; } 100% { transform: translate(-50%, -62%) scale(1); opacity: 0; } }
   @keyframes yum { 0% { transform: translate(-50%, -50%) scale(.4) rotate(0); opacity: 0; } 25% { transform: translate(calc(-50% + var(--dx) * .5), calc(-50% + var(--dy) * .55)) scale(1.25) rotate(var(--rot)); opacity: 1; }
     100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(var(--rot)); opacity: 0; } }
   /* a heart from one square and two circles, tilted 45 degrees */
@@ -541,6 +553,7 @@
 <div id="rain" class="hidden"></div>
 <div id="snow" class="hidden"></div>
 <div id="streak" class="hidden"></div>
+<div id="hitcount"></div>
 <div id="no3d" class="overlay hidden">
   <p class="big">이 브라우저에서는 3D 화면을 켤 수 없어요.</p>
   <p>브라우저의 그래픽 가속(WebGL)이 꺼져 있거나 그래픽 드라이버가 막혀 있어요.</p>
@@ -989,7 +1002,7 @@
   }
   // Impact ("타격감"): a flash, a camera shake, a split second of slow motion and a spray of sparks.
   // level 1 a tap (big swallow, golden friend), 2 a hit (star, size tier, rush), 3 a slam (bolt mission, boss).
-  let shake = 0, hitStop = 0, punches = 0;
+  let shake = 0, hitStop = 0, punches = 0, shakeDir = null;
   let lastPuff = 0;
   function spark(color, dx, dy, size, cls) { // one DOM particle from the screen center (where the body is)
     const sp = document.createElement('i');
@@ -1001,14 +1014,22 @@
   // crowd of small things does not become a wall of text; hearts fly out at every fifth combo.
   const YUM = ['#ffd6e7', '#fff1a8', '#e0d0ff', '#c8f3ff'];
   let lastYum = 0, yumN = 0;
-  function yum(word) {
-    if (performance.now() - lastYum < 90) return; lastYum = performance.now(); // real time: slow frames must not swallow the words
+  function yum(word, big) { // big: a large word for a big swallow, never dropped by the throttle
+    if (!big && performance.now() - lastYum < 90) return; lastYum = performance.now(); // real time: slow frames must not swallow the words
     const sp = document.createElement('i'), side = (yumN++ % 2 ? 1 : -1);
-    sp.className = 'yum'; sp.textContent = word;
+    sp.className = big ? 'yum big' : 'yum'; sp.textContent = word;
     sp.style.setProperty('--dx', `${side * (30 + Math.random() * 40)}px`); sp.style.setProperty('--dy', `${-70 - Math.random() * 50}px`);
     sp.style.setProperty('--c', YUM[yumN % YUM.length]); sp.style.setProperty('--rot', `${side * (6 + Math.random() * 10)}deg`);
     sp.addEventListener('animationend', () => sp.remove());
     $('burst').appendChild(sp);
+  }
+  // The combo count slams in at the top: bigger and warmer the longer the chain.
+  function hitCount(n) {
+    const el = $('hitcount');
+    el.style.setProperty('--hs', `${Math.min(64, 34 + n * 2)}px`);
+    el.style.setProperty('--hc', n >= 20 ? '#ffd25c' : n >= 10 ? '#ff9fc4' : '#fff1a8');
+    el.innerHTML = `${n}<small>연속 냠!</small>`;
+    el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
   }
   function hearts() {
     for (let i = 0; i < 7; i++) {
@@ -1054,8 +1075,11 @@
     }
     spits = spits.filter(s => elapsed < s.until);
   }
-  function punch(level, color) {
+  // A hit: shake, a split second of slow motion, a flash and sparks. `dir` (a unit vector on the map) kicks the
+  // camera the way the hit went instead of rattling it; level 2 and up also send out a shockwave ring.
+  function punch(level, color, dir) {
     punches++;
+    if (dir) shakeDir = dir; else if (shake <= 0) shakeDir = null;
     shake = Math.max(shake, [0, 0.35, 0.7, 1.1][level]);
     hitStop = Math.max(hitStop, [0, 0, 0.07, 0.14][level]);
     const f = $('flash'); f.style.setProperty('--flash', color || '#fff6d6'); f.style.setProperty('--peak', String([0, 0.18, 0.4, 0.6][level]));
@@ -1068,6 +1092,11 @@
       sp.style.setProperty('--s', `${6 + Math.random() * 8}px`);
       sp.addEventListener('animationend', () => sp.remove());
       host.appendChild(sp);
+    }
+    if (level >= 2) {
+      const w = document.createElement('i'); w.className = 'wave';
+      w.style.setProperty('--s', `${level >= 3 ? 300 : 190}px`); w.style.setProperty('--c', color || '#fff6d6');
+      w.addEventListener('animationend', () => w.remove()); host.appendChild(w);
     }
     if (level >= 3) Sound.sfx.hit();
   }
@@ -1713,11 +1742,11 @@
       if (o.state !== 1) continue;
       o.ft += dt / SWALLOW_S;
       if (o.ft < 1) { inFlight = true; continue; }
-      o.state = 2; player.bulge = 1; gulped = true;
+      o.state = 2; gulped = true;
       lastEat = elapsed; starving = false; starveT = 0; hungerTick = 0; // fed again
       if (TYPES[o.type] && TYPES[o.type].bad) { // a zombie: chills you — slow for a few seconds, no growth, no points, combo gone
         const chill = Math.max(0.5, TYPES[o.type].slow - runPerk.zombie); // level perk: a shorter chill
-        slowUntil = elapsed + chill; combo = 0; stats.yuck = (stats.yuck || 0) + 1;
+        slowUntil = elapsed + chill; combo = 0; stats.yuck = (stats.yuck || 0) + 1; player.bulge = 1;
         Sound.sfx.yuck(); punch(1, '#9bd38a'); banner(`${face('surprised')} 으엑! 좀비는 먹는 게 아니에요… ${chill}초 느려져요`, 2, 'bad');
         stats.eaten[o.type] = (stats.eaten[o.type] || 0) + 1; stats.total++;
         if (!Store.wallet.dex.includes(o.type)) discoverDex(o.type);
@@ -1727,15 +1756,20 @@
       combo = elapsed < comboUntil ? combo + 1 : 1; comboUntil = elapsed + C.COMBO.window + runPerk.combo; stats.maxCombo = Math.max(stats.maxCombo || 0, combo);
       const mult = C.comboMult(combo);
       if (combo >= 3) Sound.sfx.combo(combo);
+      if (combo >= 3) hitCount(combo);
       if (combo >= 5 && combo % 5 === 0) { streak(combo); hearts(); }
       const v = o.worth || o.r; // a courtyard wall is swallowed at its size but grows and scores little (worth)
       Sound.sfx.gulp(Math.min(1, o.r / player.r), combo);
-      yum(v > player.r * 0.45 ? '꿀꺽!' : combo >= 3 ? '냠냠냠!' : combo === 2 ? '냠냠!' : '냠');
-      if (v > player.r * 0.45 && !o.boss) punch(1);
+      // Hit feel scales with the bite: a big one stops time a moment, rings out a shockwave and kicks the view the
+      // way it came from; a huge one (most of your size) is the full knockout. The body bulges in step.
+      const big = v > player.r * 0.45, huge = v > player.r * 0.7;
+      yum(huge ? '꿀꺼억!' : big ? '꿀꺽!' : combo >= 3 ? '냠냠냠!' : combo === 2 ? '냠냠!' : '냠', big);
+      player.bulge = huge ? 1.8 : big ? 1.4 : 1;
+      if (big && !o.boss) { const dx = player.x - o.fx, dy = player.y - o.fy, d = Math.hypot(dx, dy) || 1; punch(huge ? 3 : 2, null, [dx / d, dy / d]); }
       player.r = C.grow(player.r, v);
       const gold = o.goldUntil > elapsed;
       score += Math.round(Math.round(v * v / 2) * (gold ? 5 : 1) * (rush ? 2 : 1) * mult);
-      if (gold) { stats.golds = (stats.golds || 0) + 1; Sound.sfx.coin(); banner(`${ico('sparkle')} 황금 친구! 점수 5배`, 1.5); punch(1, '#ffd25c'); }
+      if (gold) { stats.golds = (stats.golds || 0) + 1; Sound.sfx.coin(); banner(`${ico('sparkle')} 황금 친구! 점수 5배`, 1.5); punch(2, '#ffd25c'); }
       if (rush) stats.rushEaten = (stats.rushEaten || 0) + 1;
       if (bonus && !bonus.done && o.type === bonus.type && ++bonus.got >= bonus.n) {
         bonus.done = 'win'; stats.bonus = 1; score += 300;
@@ -1809,7 +1843,9 @@
     const golden = stage.twist === 'golden' ? objects.filter(o => o.state === 0 && o.goldUntil > elapsed) : [];
     if (stage.twist === 'golden') for (const o of objects) o.glow = o.state === 0 && o.goldUntil > elapsed; // painted gold by the renderer
     const jolt = shake * cam.view * 0.035; shake = Math.max(0, shake - 1 / 20); // about a third of a second
-    R.draw({ t, phase, sun, player, view: cam.view, camX: cam.x + (Math.random() - 0.5) * jolt, camY: cam.y + (Math.random() - 0.5) * jolt, swallowPos, hints, fp: state === 'title' ? 0 : view.t,
+    // a directed hit kicks the view along its line and springs back; anything else rattles it
+    const jx = shakeDir ? shakeDir[0] * jolt * 0.8 : (Math.random() - 0.5) * jolt, jy = shakeDir ? shakeDir[1] * jolt * 0.8 : (Math.random() - 0.5) * jolt;
+    R.draw({ t, phase, sun, player, view: cam.view, camX: cam.x + jx, camY: cam.y + jy, swallowPos, hints, fp: state === 'title' ? 0 : view.t,
       clouds, golden, eclipse, shards: shards.filter(h => h.state === 0).map(h => ({ kind: h.kind, x: h.x, y: h.y, blink: h.until - elapsed < 3 })),
       spits: spits.map(s => ({ x: s.x, y: s.y, r: s.r })), dark: guards.filter(g => g.darkUntil > elapsed) });
     $('vignette').classList.toggle('hidden', !phase.night && !eclipse && !(mapEvent && mapEvent.kind === 'blackout'));
@@ -1832,7 +1868,8 @@
       const t = o.ft / ARRIVE, pull = t * t * t, ease = t * t * (3 - 2 * t);
       const dx = o.fx - mx, dy = o.fy - my, curl = Math.sin(t * Math.PI) * 0.6;
       const k = 1 - pull, c = Math.cos(curl), sn = Math.sin(curl);
-      return { x: mx + (dx * c - dy * sn) * k, y: my + (dx * sn + dy * c) * k, s: 1 + (fit - 1) * ease, lift: player.r * MOUTH_H * pull };
+      const grab = o.ft < 0.12 ? 1 + 0.22 * Math.sin(o.ft / 0.12 * Math.PI) : 1; // it jolts bigger the moment it is grabbed, then gets pulled in
+      return { x: mx + (dx * c - dy * sn) * k, y: my + (dx * sn + dy * c) * k, s: (1 + (fit - 1) * ease) * grab, lift: player.r * MOUTH_H * pull };
     }
     const u = (o.ft - ARRIVE) / (1 - ARRIVE); // 0 at the lips .. 1 deep inside
     return { x: mx - cx * player.r * 0.6 * u, y: my - cy * player.r * 0.6 * u, s: fit * (1 - u * u), lift: player.r * MOUTH_H };
@@ -2012,7 +2049,7 @@
       const label = r.gems ? `보석 ${r.gems}` : rewardText(r); // the icon above already shows the gem
       return `<div class="day${cls}"><b>${k + 1}일</b>${rewardIco(r)}<span>${label}</span></div>`;
     }).join('');
-    $('btn-daily-claim').classList.toggle('off', !due && !dailyThenMap);
+    // once taken the button stays live and closes the window (TestFlight: tapping "받았어요" did nothing)
     $('btn-daily-claim').textContent = due ? `${at + 1}일째 선물 받기` : dailyThenMap ? '첫 판 하러 가기' : '오늘은 받았어요. 내일 또 만나요!';
   }
   function openDaily() { $('daily-msg').textContent = ''; renderDaily(); show('daily'); }
@@ -2537,7 +2574,7 @@
       const c = circleById(skinBoxId), w = c && !busy && !$('skin-box-gems').classList.contains('off') && Shop.buyCircle(Store.wallet, c.id);
       if (!w) return;
       Store.update(Shop.wearCircle(w, c.id)); renderGems(); renderShop();
-      $('shop-msg').textContent = `${GEM}${c.gems}개로 ${withObject(c.name)} 샀어요.`;
+      $('shop-msg').innerHTML = `<span class="gem">${GEM}${c.gems}</span>개로 ${withObject(c.name)} 샀어요.`;
       return closeSkinBox();
     }
     const s = skinById(skinBoxId);
@@ -2545,7 +2582,7 @@
     const w = Shop.buySkin(Store.wallet, s.id);
     if (!w) return;
     Store.update(Shop.equip(w, s.id)); renderGems(); renderShop();
-    $('shop-msg').textContent = `${GEM}${s.gems}개로 ${withObject(s.name)} 샀어요.`;
+    $('shop-msg').innerHTML = `<span class="gem">${GEM}${s.gems}</span>개로 ${withObject(s.name)} 샀어요.`;
     closeSkinBox();
   });
   $('skin-box-act').addEventListener('pointerup', async () => {
@@ -2734,12 +2771,13 @@
   $('btn-info').addEventListener('pointerup', () => show('info'));
   $('btn-missions').addEventListener('pointerup', whenReady(() => { renderMissions(); show('missions'); }));
   $('btn-missions-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
-  $('btn-daily-back').addEventListener('pointerup', () => {
+  function closeDaily() {
     if (dailyThenMap) { dailyThenMap = false; state = 'menu'; openSelectAt(0); return; }
     state = 'title'; show('title');
-  });
+  }
+  $('btn-daily-back').addEventListener('pointerup', closeDaily);
   $('btn-daily-claim').addEventListener('pointerup', () => {
-    if (!Shop.dailyDue(Store.wallet, dayKey())) { if (dailyThenMap) { dailyThenMap = false; state = 'menu'; openSelectAt(0); } return; }
+    if (!Shop.dailyDue(Store.wallet, dayKey())) { closeDaily(); return; }
     const r = Shop.DAILY[Store.wallet.daily.n % Shop.DAILY.length];
     Store.update(Shop.claimDaily(Store.wallet, dayKey())); Sound.sfx.coin();
     $('daily-msg').innerHTML = `${rewardText(r)} 받았어요!`;
