@@ -18,7 +18,7 @@
   // What a map can actually put in the world (index.html buildWorld spawns from these same fields).
   function spawnable(t) {
     const out = ['building', 'guard'];
-    for (const list of [t.small, t.waterSmall, t.parkItems]) for (const [type] of list || []) out.push(type);
+    for (const list of [t.small, t.waterSmall, t.parkItems, t.giants]) for (const [type] of list || []) out.push(type);
     if (t.carsPerRoad > 0) out.push(t.vehicle || 'car');
     for (const id of t.extras || []) out.push(id); // placed by hand rather than scattered (hanok courtyard walls)
     return out;

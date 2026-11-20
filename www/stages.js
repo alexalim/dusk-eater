@@ -14,6 +14,7 @@
       parkChance: 0.18, splitChance: 0.45, height: [25, 140],
       small: [['person', 320], ['cat', 60], ['trash', 90], ['bench', 50], ['tree', 70]],
       parkItems: [['tree', 9], ['bench', 3], ['kiosk', 0.5, 'center']], carsPerRoad: 6,
+      giants: [['bigtree', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       waterFrom: null, cranes: 0, lighthouse: null,
       // [type, count at level 1, count at level 150]; kept well under what spawns
       eat: [['person', 12, 80], ['cat', 4, 14], ['tree', 4, 30], ['car', 2, 8]],
@@ -30,6 +31,7 @@
       small: [['worker', 200], ['container', 150], ['crate', 120], ['gull', 60]],
       waterSmall: [['boat', 18], ['buoy', 40]],
       parkItems: [['container', 5]], carsPerRoad: 3,
+      giants: [['bigbox', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       waterFrom: 0.72, cranes: 7,
       eat: [['worker', 10, 60], ['crate', 4, 30], ['container', 3, 26], ['gull', 3, 20]],
     },
@@ -43,6 +45,7 @@
       parkChance: 0.05, splitChance: 0.6, height: [120, 320],
       small: [['officer', 260], ['vending', 50], ['trash', 60], ['bench', 20]],
       parkItems: [['tree', 6], ['bench', 4]], carsPerRoad: 9, vehicle: 'taxi',
+      giants: [['bigtree', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       waterFrom: null, cranes: 0,
       eat: [['officer', 12, 70], ['vending', 3, 20], ['taxi', 2, 16]],
     },
@@ -57,7 +60,8 @@
       parkChance: 0.3, splitChance: 0.7, height: [30, 80],
       small: [['visitor', 300], ['balloon', 70], ['candy', 60], ['trash', 40]],
       parkItems: [['carousel', 0.6, 'center'], ['balloon', 4], ['tree', 7], ['bench', 2]], carsPerRoad: 0,
-      towers: { n: 10, w: 18, h: [140, 200], color: '#ff7aa8' },
+      giants: [['wheel', 1], ['coaster', 1], ['swing', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
+      towers: { n: 10, w: 18, h: [140, 200], color: '#ff7aa8', ride: 'drop' }, // drop towers
       waterFrom: null, cranes: 0,
       eat: [['visitor', 10, 70], ['balloon', 4, 26], ['candy', 1, 6]],
     },
@@ -72,6 +76,7 @@
       parkChance: 0.22, splitChance: 0.4, height: [22, 70],
       small: [['skier', 160], ['snowman', 50], ['sled', 60], ['pine', 55]],
       parkItems: [['pine', 8], ['snowman', 2], ['sled', 2]], carsPerRoad: 2,
+      giants: [['bigpine', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       sunMax: 35 * Math.PI / 180,
       waterFrom: null, cranes: 0,
       eat: [['skier', 8, 50], ['snowman', 3, 18], ['pine', 3, 25], ['sled', 3, 22]],
@@ -87,6 +92,7 @@
       parkChance: 0.6, splitChance: 0.3, height: [30, 70], plainWalls: true,
       small: [['chicken', 120], ['sheep', 70], ['cow', 40], ['haystack', 70]],
       parkItems: [['haystack', 3], ['tree', 4], ['sheep', 4], ['cow', 2], ['chicken', 6]], carsPerRoad: 1, vehicle: 'tractor',
+      giants: [['bighay', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       towers: { n: 8, w: 22, h: [90, 140], color: '#c9c2b8' },
       waterFrom: null, cranes: 0,
       eat: [['chicken', 8, 45], ['sheep', 4, 25], ['cow', 2, 14]],
@@ -101,6 +107,7 @@
       parkChance: 0.35, splitChance: 0.5, height: [90, 200],
       small: [['person', 220], ['parasol', 40], ['planter', 70], ['trash', 30]],
       parkItems: [['fountain', 0.6, 'center'], ['parasol', 3], ['planter', 4], ['tree', 4], ['bench', 2]], carsPerRoad: 4,
+      giants: [['bigparasol', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       waterFrom: null, cranes: 0,
       eat: [['person', 12, 70], ['planter', 3, 24], ['parasol', 2, 14]],
     },
@@ -120,6 +127,7 @@
       streetTree: 'persimmon', streetAt: 2, streetEvery: 50, streetFill: 0.45, squareTrees: 'persimmon', // persimmon trees line the lanes and ring the square
       small: [['hanbok', 200], ['jangdok', 120], ['persimmon', 50]],
       parkItems: [['pagoda', 0.5], ['jangdok', 6], ['persimmon', 6]], carsPerRoad: 1,
+      giants: [['bigpersimmon', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       waterFrom: null, cranes: 0,
       eat: [['hanbok', 10, 60], ['jangdok', 6, 40], ['persimmon', 2, 14]],
     },
@@ -133,6 +141,7 @@
       parkChance: 0.35, splitChance: 0.3, height: [45, 110],
       small: [['student', 260], ['bicycle', 70], ['bench', 40], ['trash', 30]],
       parkItems: [['statue', 0.5, 'center'], ['tree', 5], ['bench', 3], ['student', 4]], carsPerRoad: 2,
+      giants: [['bigtree', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       waterFrom: null, cranes: 0,
       eat: [['student', 12, 70], ['bicycle', 3, 22], ['bench', 2, 14]],
     },
@@ -146,6 +155,7 @@
       parkChance: 0.08, splitChance: 0.95, height: [20, 45],
       small: [['grandma', 200], ['fruit', 140], ['stall', 80]],
       parkItems: [['stall', 7], ['fruit', 6]], carsPerRoad: 5, vehicle: 'scooter',
+      giants: [['bigstall', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       waterFrom: null, cranes: 0,
       eat: [['grandma', 10, 60], ['fruit', 6, 40], ['stall', 2, 16]],
     },
@@ -159,6 +169,7 @@
       parkChance: 0.04, splitChance: 0.55, height: [100, 220],
       small: [['commuter', 420], ['umbrella', 70], ['vending', 30]],
       parkItems: [['commuter', 8], ['tree', 6]], carsPerRoad: 8,
+      giants: [['bigtree', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       waterFrom: null, cranes: 0,
       eat: [['commuter', 14, 80], ['umbrella', 3, 24], ['car', 2, 8]],
     },
@@ -172,6 +183,7 @@
       parkChance: 0.3, splitChance: 0.05, height: [40, 70],
       small: [['fan', 320], ['ball', 80], ['trash', 40]],
       parkItems: [['fan', 6], ['ball', 3], ['tree', 5], ['parasol', 3]], carsPerRoad: 3, vehicle: 'foodtruck',
+      giants: [['bigparasol', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       waterFrom: null, cranes: 0,
       eat: [['fan', 14, 80], ['ball', 4, 26], ['trash', 2, 14]],
     },
@@ -185,6 +197,7 @@
       parkChance: 0.3, splitChance: 0.5, height: [30, 120],
       small: [['worker', 160], ['cone', 120], ['beam', 60], ['pipe', 60]],
       parkItems: [['beam', 3], ['pipe', 3], ['cone', 5], ['container', 4]], carsPerRoad: 2, vehicle: 'excavator',
+      giants: [['bigbox', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       towers: { n: 7, w: 14, h: [180, 240], color: '#f2c14e' },
       waterFrom: null, cranes: 0,
       eat: [['worker', 10, 60], ['cone', 6, 40], ['beam', 2, 16]],
@@ -200,9 +213,10 @@
       water: ['#5ec4d6', '#6fd0df', '#5a8fb8'], waterNight: '#1b2c4c',
       roofs: ['#f4f1ea', '#e8f1f5', '#ffd25c', '#7fd1e8'],
       parkChance: 0.35, splitChance: 0.5, height: [40, 110],
-      small: [['sunbather', 220], ['parasol', 150], ['sandcastle', 50], ['towel', 60]],
-      waterSmall: [['surfer', 20], ['tube', 40]],
+      small: [['sunbather', 220], ['parasol', 150], ['sandcastle', 50], ['towel', 60], ['shell', 40], ['crab', 30]],
+      waterSmall: [['surfer', 20], ['tube', 40], ['fish', 50], ['jelly', 25], ['octopus', 10], ['dolphin', 6], ['shark', 4]],
       parkItems: [['parasol', 9], ['towel', 3], ['sandcastle', 1]], carsPerRoad: 1,
+      giants: [['bigparasol', 1], ['bigpalm', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       sunMax: 78 * Math.PI / 180,
       waterFrom: 0.66, cranes: 0,
       eat: [['sunbather', 10, 60], ['parasol', 3, 26], ['sandcastle', 2, 14]],
@@ -219,6 +233,7 @@
       parkChance: 0.35, splitChance: 0.6, height: [26, 70],
       small: [['traveler', 160], ['pot', 120], ['camel', 50], ['palm', 110]],
       parkItems: [['tent', 0.6, 'center'], ['palm', 9], ['tent', 1], ['camel', 1]], carsPerRoad: 1,
+      giants: [['bigtent', 1], ['bigpalm', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       sunMax: 80 * Math.PI / 180,
       waterFrom: null, cranes: 0,
       eat: [['traveler', 8, 50], ['pot', 5, 36], ['camel', 2, 12]],
@@ -235,6 +250,7 @@
       parkChance: 0.25, splitChance: 0.45, height: [25, 90],
       small: [['caroler', 180], ['gift', 120], ['snowman', 40], ['reindeer', 40]],
       parkItems: [['xtree', 0.7, 'center'], ['gift', 6], ['pine', 4]], carsPerRoad: 2, vehicle: 'sleigh',
+      giants: [['biggift', 1]], giantChance: 0.22, // a built lot now and then holds one big thing of the place instead
       sunMax: 30 * Math.PI / 180,
       waterFrom: null, cranes: 0,
       eat: [['gift', 6, 40], ['caroler', 6, 40], ['reindeer', 2, 14], ['snowman', 3, 16]],
@@ -370,6 +386,11 @@
     foodtruck: ['푸드트럭', '대'], trash: ['쓰레기통', '개'], cone: ['꼬깔콘', '개'], beam: ['철골', '개'], sunbather: ['피서객', '명'],
     sandcastle: ['모래성', '개'], traveler: ['여행자', '명'], pot: ['항아리', '개'], camel: ['낙타', '마리'],
     gift: ['선물 상자', '개'], caroler: ['캐럴 합창단', '명'], reindeer: ['순록', '마리'],
+    shell: ['조개', '개'], crab: ['꽃게', '마리'], fish: ['물고기', '마리'], jelly: ['해파리', '마리'], octopus: ['문어', '마리'],
+    dolphin: ['돌고래', '마리'], shark: ['상어', '마리'],
+    bigtree: ['동네 큰 나무', '그루'], bigbox: ['컨테이너 탑', '개'], bigpine: ['거대 전나무', '그루'], bighay: ['큰 건초더미', '개'],
+    bigparasol: ['대형 파라솔', '개'], bigpersimmon: ['큰 감나무', '그루'], bigstall: ['대형 천막 노점', '개'], bigpalm: ['대형 야자수', '그루'],
+    bigtent: ['대형 텐트', '개'], biggift: ['거대 선물 상자', '개'], wheel: ['관람차', '대'], coaster: ['롤러코스터', '대'], swing: ['회전그네', '대'],
     guard: ['경비원', '명'], boss: ['보스', '명'], // a level's boss goal carries its own `name` (BOSSES)
   };
 

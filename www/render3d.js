@@ -61,9 +61,15 @@
   // shapes the game's shade rule models (index.html SHADE, core propShadow). type -> part indices.
   const CASTERS = { tree: [1, 2], persimmon: [1], ginkgo: [1, 2, 3, 4], pine: [1, 2], xtree: [1, 2, 3], palm: [1, 2],
     parasol: [1], tent: [0], haystack: [0, 1], stall: [0, 1], container: [0, 1] };
+  // Big things of each place (index.html giants): the same shapes scaled up, so they shade the same way, plus the rides,
+  // whose only shade is a solid part (a station box, a canopy): rims, tracks and chains are open, so they cast nothing.
+  Object.assign(CASTERS, { bigtree: CASTERS.tree, bigpine: CASTERS.pine, bighay: CASTERS.haystack, bigparasol: CASTERS.parasol,
+    bigpersimmon: CASTERS.persimmon, bigstall: CASTERS.stall, bigpalm: CASTERS.palm, bigtent: CASTERS.tent, bigbox: CASTERS.container,
+    biggift: [0, 1, 2], wheel: [0], coaster: [0], swing: [0] });
   // A person: body in the instance color, head, hair or hat, plus any extra parts.
   const human = (hat = HAIR, extra = []) => [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN),
     P('sphere', [0.58, 0.32, 0.58], 2.7, hat)].concat(extra);
+  const COASTER_Y = a => 0.7 + 1.6 * ((1 + Math.cos(a)) / 2) ** 2; // track height round the loop: one big hill at the +x end
   const PARTS = {
     person:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.58, 0.32, 0.58], 2.7, HAIR)],
     worker:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.62, 0.36, 0.62], 2.72, '#f2c14e')],
@@ -195,7 +201,57 @@
     tractor:   [P('box', [1.4, 0.8, 1.0], 0.7, 'inst'), P('box', [0.7, 0.7, 0.8], 1.45, '#9fc3e6', [-0.3, 0]), P('box', [0.8, 0.9, 1.25], 0.45, '#26262e', [-0.45, 0]),
                 P('box', [0.5, 0.5, 1.15], 0.25, '#26262e', [0.55, 0]), P('box', [0.06, 0.16, 0.6], 0.8, '#fff3c4', [0.72, 0], true)],
     haystack:  [P('cyl', [1.0, 1.1, 1.0], 0.55, 'inst'), P('cone', [1.02, 0.4, 1.02], 1.3, '#d9b55a')],
+    // beach sea life (forward is +x)
+    shell:     [P('blob', [1.0, 0.35, 0.9], 0.3, 'inst'), P('box', [0.1, 0.12, 1.4], 0.6, '#fff3e2', [0.15, 0]), P('box', [0.1, 0.12, 1.3], 0.58, '#fff3e2', [-0.25, 0]),
+                P('sphere', [0.175, 0.15, 0.175], 0.4, '#ffffff', [-0.75, 0])],
+    crab:      [P('sphere', [0.9, 0.4, 0.7], 0.55, 'inst'), P('sphere', [0.38, 0.28, 0.32], 0.55, 'inst', [0.85, 0.55]), P('sphere', [0.38, 0.28, 0.32], 0.55, 'inst', [0.85, -0.55]),
+                P('box', [0.12, 0.1, 2.4], 0.3, 'inst', [0.2, 0]), P('box', [0.12, 0.1, 2.4], 0.3, 'inst', [-0.2, 0]), P('box', [0.12, 0.1, 2.2], 0.3, 'inst', [-0.55, 0]),
+                P('cyl', [0.06, 0.35, 0.06], 1.0, '#3a2020', [0.55, 0.25]), P('cyl', [0.06, 0.35, 0.06], 1.0, '#3a2020', [0.55, -0.25]),
+                P('sphere', [0.15, 0.15, 0.15], 1.2, '#ffffff', [0.55, 0.25]), P('sphere', [0.15, 0.15, 0.15], 1.2, '#ffffff', [0.55, -0.25])],
+    fish:      [P('sphere', [1, 0.5, 0.4], 0.6, 'inst'), P('box', [0.5, 0.8, 0.12], 0.6, 'inst', [-1.1, 0]), P('box', [0.5, 0.3, 0.1], 1.1, 'inst', [-0.1, 0]),
+                P('sphere', [0.16, 0.16, 0.16], 0.75, '#ffffff', [0.6, 0.3]), P('sphere', [0.16, 0.16, 0.16], 0.75, '#ffffff', [0.6, -0.3]),
+                P('sphere', [0.08, 0.08, 0.08], 0.78, '#222222', [0.68, 0.36]), P('sphere', [0.08, 0.08, 0.08], 0.78, '#222222', [0.68, -0.36])],
+    jelly:     [P('sphere', [0.9, 0.6, 0.9], 1.3, 'inst')].concat([0, 1, 2, 3, 4, 5].map(i =>
+                P('cyl', [0.07, 1.0, 0.07], 0.55, '#ffd6f0', [Math.cos(i * Math.PI / 3) * 0.5, Math.sin(i * Math.PI / 3) * 0.5]))),
+    octopus:   [P('sphere', [0.8, 0.9, 0.8], 1.35, 'inst')].concat([0, 1, 2, 3, 4, 5, 6, 7].flatMap(i => {
+                  const a = (i + 0.5) * Math.PI / 4;
+                  return [P('sphere', [0.275, 0.2, 0.275], 0.3, 'inst', [Math.cos(a) * 0.8, Math.sin(a) * 0.8]), P('sphere', [0.19, 0.15, 0.19], 0.2, 'inst', [Math.cos(a) * 1.25, Math.sin(a) * 1.25])];
+                }), [P('sphere', [0.21, 0.21, 0.21], 1.5, '#ffffff', [0.72, 0.3]), P('sphere', [0.21, 0.21, 0.21], 1.5, '#ffffff', [0.72, -0.3]),
+                P('sphere', [0.1, 0.1, 0.1], 1.52, '#222222', [0.85, 0.32]), P('sphere', [0.1, 0.1, 0.1], 1.52, '#222222', [0.85, -0.32])]),
+    dolphin:   [P('sphere', [1.2, 0.375, 0.4], 0.6, 'inst'), P('sphere', [1, 0.25, 0.3], 0.45, '#e8f1f5'), P('sphere', [0.3, 0.15, 0.15], 0.55, 'inst', [1.25, 0]),
+                P('box', [0.45, 0.5, 0.1], 1.05, 'inst', [-0.1, 0]), P('box', [0.3, 0.1, 0.9], 0.6, 'inst', [-1.25, 0]),
+                P('sphere', [0.07, 0.07, 0.07], 0.75, '#222222', [0.85, 0.32]), P('sphere', [0.07, 0.07, 0.07], 0.75, '#222222', [0.85, -0.32])],
+    shark:     [P('sphere', [1.3, 0.425, 0.45], 0.6, 'inst'), P('sphere', [1.1, 0.275, 0.35], 0.45, '#f4f6fa'), P('cone', [0.35, 0.8, 0.1], 1.3, 'inst', [-0.1, 0]),
+                P('box', [0.25, 1.0, 0.12], 0.8, 'inst', [-1.35, 0]), P('box', [0.5, 0.08, 0.4], 0.45, '#5a2a2a', [1.0, 0]), P('box', [0.5, 0.05, 0.42], 0.5, '#ffffff', [1.0, 0]),
+                P('sphere', [0.07, 0.07, 0.07], 0.8, '#222222', [0.85, 0.36]), P('sphere', [0.07, 0.07, 0.07], 0.8, '#222222', [0.85, -0.36])],
+    // the big things of each place: the small kind's parts, drawn at the big kind's size
+    biggift:   [P('box', [1.4, 1.2, 1.4], 0.6, 'inst'), P('box', [1.46, 1.26, 0.26], 0.6, '#ffd25c'), P('box', [0.26, 1.26, 1.46], 0.6, '#ffd25c'),
+                P('sphere', [0.6, 0.4, 0.6], 1.4, '#ffd25c', [0.2, 0]), P('sphere', [0.6, 0.4, 0.6], 1.4, '#ffd25c', [-0.2, 0])],
+    // amusement rides. A ferris wheel: the boarding hut shades; the legs, rim and cabins are open, so they cast nothing.
+    wheel:     [P('box', [1.4, 0.5, 0.8], 0.25, 'inst'), P('box', [0.12, 1.9, 0.12], 1.45, '#f4f1ea', [0, 0.38]), P('box', [0.12, 1.9, 0.12], 1.45, '#f4f1ea', [0, -0.38]),
+                P('sphere', [0.18, 0.18, 0.45], 2.2, '#ffd25c')].concat(Array.from({ length: 24 }, (_, i) => {
+                  const a = i * Math.PI / 12; return P('box', [0.3, 0.3, 0.12], 2.2 + Math.sin(a) * 1.25, '#f4f1ea', [Math.cos(a) * 1.25, 0]);
+                }), Array.from({ length: 8 }, (_, i) => {
+                  const a = i * Math.PI / 4; return P('box', [0.34, 0.3, 0.34], 2.0 + Math.sin(a) * 1.25, ['#ff7aa8', '#7fd1e8', '#ffd25c', '#b5e48c'][i % 4], [Math.cos(a) * 1.25, 0]);
+                })),
+    // a roller coaster: a station hut that shades, then a loop of track on posts with one big hill and a train on top
+    coaster:   [P('box', [1.0, 0.6, 0.8], 0.3, 'inst')].concat(Array.from({ length: 40 }, (_, i) => {
+                  const a = i * Math.PI / 20; return P('box', [0.36, 0.1, 0.36], COASTER_Y(a), '#ff5d73', [Math.cos(a) * 1.9, Math.sin(a) * 1.2]);
+                }), Array.from({ length: 10 }, (_, i) => {
+                  const a = i * Math.PI / 5, h = COASTER_Y(a); return P('cyl', [0.05, h / 2, 0.05], h / 2, '#f4f1ea', [Math.cos(a) * 1.9, Math.sin(a) * 1.2]);
+                }), [10, 11, 12].map((i, k) => {
+                  const a = i * Math.PI / 20; return P('box', [0.34, 0.22, 0.28], COASTER_Y(a) + 0.15, ['#ffd25c', '#7fd1e8', '#b5e48c'][k], [Math.cos(a) * 1.9, Math.sin(a) * 1.2]);
+                })),
+    // a swing ride: a striped canopy that shades, on a pole, with seats hanging out past its edge
+    swing:     [P('cone', [1.4, 0.6, 1.4], 2.3, 'inst'), P('cyl', [0.15, 2.0, 0.15], 1.0, '#f4f1ea'), P('sphere', [0.4, 0.4, 0.4], 2.7, '#ffd25c')].concat(
+                Array.from({ length: 8 }, (_, i) => {
+                  const a = i * Math.PI / 4; return P('cyl', [0.03, 0.8, 0.03], 1.55, '#dddddd', [Math.cos(a) * 1.55, Math.sin(a) * 1.55]);
+                }), Array.from({ length: 8 }, (_, i) => {
+                  const a = i * Math.PI / 4; return P('box', [0.28, 0.12, 0.28], 1.1, ['#7fd1e8', '#ffd25c', '#b5e48c', '#c9a0ff'][i % 4], [Math.cos(a) * 1.55, Math.sin(a) * 1.55]);
+                })),
   };
+  Object.assign(PARTS, { bigtree: PARTS.tree, bigpine: PARTS.pine, bighay: PARTS.haystack, bigparasol: PARTS.parasol, bigpersimmon: PARTS.persimmon,
+    bigstall: PARTS.stall, bigpalm: PARTS.palm, bigtent: PARTS.tent, bigbox: PARTS.container });
   // Every other chunky box part (a car body, a kiosk, a crate) gets rounded edges. Thin trims, rails and lamps stay boxes, and so
   // do the kinds that cast gameplay shade (CASTERS), whose parts the shade rule models.
   for (const [type, parts] of Object.entries(PARTS)) {
@@ -683,7 +739,7 @@
       // Walls get a lighter, self-lit tone so a camera-facing wall never reads as a ground shadow.
       // Windows come from a texture; at night the emissive map swaps to lit windows (no shader change).
       const mats = {};
-      w.wallMats = [];
+      w.wallMats = []; w.rideCars = [];
       const propMat = lambert('#a19d94');
       // The theme's look: which wall texture, and what color the walls take (default: the roof color lightened).
       const look = w.stage.look || {};
@@ -718,6 +774,14 @@
           boom.scale.set(6 / 18, 6 / b.h, 90 / 18);
           boom.position.set(0, 0.5 - 3 / b.h, 0.5 + 45 / 18);
           mesh.add(boom);
+        } else if (b.ride === 'drop') { // a drop tower (park): a ring of seats that rises and drops along the box, and a lit crown
+          // The box is the shade, as for every tower; the ring and crown are wider than it but cast nothing, like a crane's boom.
+          const ring = new T.Mesh(unit.cyl, lambert('#ffd25c', { emissive: col('#ffd25c').multiplyScalar(0.3) }));
+          ring.scale.set(17 / b.w, 7 / b.h, 17 / b.d);
+          const crown = new T.Mesh(unit.cone, lambert('#ff7aa8'));
+          crown.scale.set(14 / b.w, 16 / b.h, 14 / b.d); crown.position.y = 0.5 + 8 / b.h;
+          mesh.add(ring, crown);
+          w.rideCars.push({ ring, b, phase: (hash % 17) / 17 });
         } else { // one or two rooftop units; they cast no shadow, so the rule stays buildings-only
           // A flat top gets a raised rim and a round water tank too, so it reads as a roof, not the top of a block
           // (tester, build 53: everything looks like blocks). The wall box itself is the shade rule and stays as it is.
@@ -1004,6 +1068,10 @@
     function draw(f) {
       if (!world) return;
       const { phase, sun, player, t } = f;
+      for (const c of world.rideCars) { // drop towers: the seats climb slowly, hang at the top, drop fast, rest at the bottom
+        const u = (t * 0.1 + c.phase) % 1, up = u < 0.6 ? u / 0.6 : u < 0.72 ? 1 : u < 0.8 ? 1 - ((u - 0.72) / 0.08) ** 2 : 0;
+        c.ring.position.y = -0.5 + (8 + (c.b.h - 26) * up) / c.b.h;
+      }
 
       // Camera: orthographic, tilted 55°, `view` world units across the shorter screen side.
       // In first person the light/shadow box centers ahead of the player instead of under the camera.

@@ -882,6 +882,29 @@
     cow:       { r: 10, color: '#f4f1ea' },
     tractor:   { r: 14, color: '#3f9b4f' },
     haystack:  { r: 9,  color: '#e8c66a' },
+    // beach sea life
+    shell:     { r: 3,  color: '#ffb3a7', colors: ['#ffb3a7', '#fff3e2', '#f9d27a'] },
+    crab:      { r: 4,  color: '#e5533d' },
+    fish:      { r: 4,  color: '#ffa13d', colors: ['#ffa13d', '#5bc0eb', '#ffd25c', '#ff7aa8'] },
+    jelly:     { r: 5,  color: '#f3b6ff', colors: ['#f3b6ff', '#b6e3ff'] },
+    octopus:   { r: 9,  color: '#e0607e' },
+    dolphin:   { r: 14, color: '#7fa7c9' },
+    shark:     { r: 18, color: '#7d8a99' },
+    // The big things of each place (stages giants): a built lot now and then holds one of these instead of buildings.
+    // They shade like their small kinds (SHADE scales with r), get a still ring and loom like buildings do.
+    bigtree:   { r: 34, color: '#3f9b4f', giant: true },
+    bigbox:    { r: 26, color: '#d9534f', giant: true },
+    bigpine:   { r: 34, color: '#2f6b4a', giant: true },
+    bighay:    { r: 28, color: '#e8c66a', giant: true },
+    bigparasol: { r: 32, color: '#ff5d73', colors: ['#ff5d73', '#5bc0eb', '#ffd25c', '#9bc53d'], giant: true },
+    bigpersimmon: { r: 32, color: '#3f7d3f', giant: true },
+    bigstall:  { r: 30, color: '#e05a4f', colors: ['#e05a4f', '#3f8fd6', '#f2c14e'], giant: true },
+    bigpalm:   { r: 34, color: '#3f8f4f', giant: true },
+    bigtent:   { r: 34, color: '#f4f1ea', colors: ['#f4f1ea', '#e05a4f'], giant: true },
+    biggift:   { r: 26, color: '#d62c3a', colors: ['#d62c3a', '#2f9e5a', '#3a6fd6'], giant: true },
+    wheel:     { r: 34, color: '#ff7aa8', giant: true },
+    coaster:   { r: 36, color: '#7fd1e8', giant: true },
+    swing:     { r: 30, color: '#ff9ec4', giant: true },
   };
   // Props that throw shade, with the shape of that shade (core propShadow), matched to the parts render3d draws into
   // the shadow map (CASTERS there). Trees, parasols, tents, haystacks, stalls and containers shade like buildings do.
@@ -897,7 +920,13 @@
     haystack:  { discs: [[0, 1.0], [1.1, 1.02], [1.5, 0.05]] },
     stall:     { box: [1.45, 1.8, 1.3] },
     container: { box: [1.24, 2.64, 1.24] },
+    biggift:   { box: [1.26, 1.46, 1.46] },
+    wheel:     { box: [0.5, 1.4, 0.8] },   // the boarding hut; the wheel above is open and casts nothing
+    coaster:   { box: [0.6, 1.0, 0.8] },   // the station; the track is open
+    swing:     { discs: [[2.0, 1.4], [2.6, 0.05]] }, // the canopy
   };
+  Object.assign(SHADE, { bigtree: SHADE.tree, bigpine: SHADE.pine, bighay: SHADE.haystack, bigparasol: SHADE.parasol, bigpersimmon: SHADE.persimmon,
+    bigstall: SHADE.stall, bigpalm: SHADE.palm, bigtent: SHADE.tent, bigbox: SHADE.container });
   const CAR_COLORS = ['#e2574c', '#f2c14e', '#4fb0c6', '#f4f1ea', '#7b68ee'];
   const CONTAINER_COLORS = ['#4f86c6', '#d9534f', '#5cb85c', '#f0ad4e', '#8e6fc1'];
 
@@ -1111,7 +1140,7 @@
   // a tester "bigger than the buildings" found nothing to eat on an open map before night. 1.3 leaves a gap above
   // EAT_RATIO (a building that merely fits still needs real shade). Walls keep their own rule above.
   const LOOM = 1.3;
-  const looms = b => b.type === 'building' && !b.wall && player.r >= b.r * LOOM;
+  const looms = b => (b.type === 'building' && !b.wall || TYPES[b.type] && TYPES[b.type].giant) && player.r >= b.r * LOOM; // the big things of a place too
   // Hunger (core HUNGER): time of the last swallow, the current state for the HUD, and how long the body has sat at its smallest
   let lastEat = 0, hunger = null, hungerTick = 0, starving = false, starveT = 0, endedBy = null;
   let combo = 0, comboUntil = 0, slowUntil = 0; // swallow chain (core COMBO) and the zombie slowdown
@@ -1191,7 +1220,7 @@
   // flat tops at the same height and flicker (TestFlight: "items overlap and blink", 전통시장 stalls and fruit boxes).
   // People may still stand under a tree crown or a parasol: that shade is the game. Hard limits, never a lost item:
   // a spot that stays crowded through most of the tries falls back to the old free placement.
-  const CANOPY = new Set(['tree', 'pine', 'persimmon', 'ginkgo', 'palm', 'xtree', 'parasol', 'tent']);
+  const CANOPY = new Set(['tree', 'pine', 'persimmon', 'ginkgo', 'palm', 'xtree', 'parasol', 'tent', 'bigtree', 'bigpine', 'bigpersimmon', 'bigpalm', 'bigparasol', 'bigtent', 'swing']);
   function crowded(type, x, y) {
     const r = TYPES[type].r, person = PEOPLE.has(type);
     for (const o of objects) {
@@ -1217,6 +1246,7 @@
         const extra = {};
         if (type === 'container') { extra.color = CONTAINER_COLORS[(rnd() * CONTAINER_COLORS.length) | 0]; extra.rot = rnd() < 0.5 ? 0 : Math.PI / 2; }
         if (type === 'boat') extra.rot = rnd() * Math.PI;
+        if (type === 'fish' || type === 'dolphin' || type === 'shark' || type === 'crab') extra.rot = rnd() * Math.PI * 2; // they face every way
         addObj(type, x, y, extra);
         placed++;
       }
@@ -1273,6 +1303,13 @@
           continue;
         }
         if (rnd() < stage.parkChance) { parks.push([x0, y0, inner]); continue; }
+        // A place is more than rows of buildings (tester): now and then a built lot holds one big thing of the place
+        // (a giant parasol, a ferris wheel) on open ground instead; it is a lot like a park, so the theme's props gather round.
+        if (stage.giants && rnd() < stage.giantChance) {
+          const all = stage.giants.reduce((n, g) => n + g[1], 0); let k = rnd() * all, pick = stage.giants[0][0];
+          for (const [type, wgt] of stage.giants) if ((k -= wgt) < 0) { pick = type; break; }
+          parks.push([x0, y0, inner]); addObj(pick, x0 + inner / 2, y0 + inner / 2, { rot: (rnd() * 4 | 0) * Math.PI / 2 }); continue;
+        }
         if (stage.compound) { compound(x0, y0, inner, R); blocks.push([x0, y0, inner]); continue; }
         blocks.push([x0, y0, inner]);
         const split = rnd() < stage.splitChance;
@@ -1312,7 +1349,7 @@
       const x = R(40, WORLD - 40 - T_.w), y = R(40, waterY - 80 - T_.w);
       if (insideAnyBuilding(x + T_.w / 2, y + T_.w / 2, T_.w)) continue;
       const b = { x, y, w: T_.w, d: T_.w, h: R(T_.h[0], T_.h[1]), roof: T_.color, plain: true,
-                  state: 0, ft: 0, type: 'building' };
+                  state: 0, ft: 0, type: 'building', ride: T_.ride }; // ride: drawn as that ride around the box (render3d)
       b.r = T_.w * 0.6;
       buildings.push(b); i++;
     }
@@ -1828,7 +1865,7 @@
       if (o.state !== 0 || o.r >= player.r * C.EAT_RATIO) continue;
       if (Math.hypot(o.x - player.x, o.y - player.y) > 260 + player.r) continue;
       if (TYPES[o.type].bad) { hints.push({ x: o.x, y: o.y, r: o.r + 3, bad: true }); continue; } // violet ring under every zombie, shade or sun: the tell
-      if (isShaded(o, o) || o.goldUntil > elapsed) hints.push({ x: o.x, y: o.y, r: o.r + 2 });
+      if (looms(o) || isShaded(o, o) || o.goldUntil > elapsed) hints.push({ x: o.x, y: o.y, r: o.r + 2, steady: !!TYPES[o.type].giant }); // a big thing's ring is still, like a building's
     }
     for (const g of guards) {
       if (g.state === 0 && g.r < player.r * C.EAT_RATIO && isShaded(g, g)) hints.push({ x: g.x, y: g.y, r: g.r + 3 });

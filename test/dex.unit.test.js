@@ -98,3 +98,24 @@ test('bundled fonts: every @font-face file exists and the OFL license ships with
   for (const u of urls) assert.ok(fs.statSync(path.join(www, u)).size > 50000, u);
   assert.match(fs.readFileSync(path.join(www, 'fonts/LICENSE.txt'), 'utf8'), /SIL Open Font License/);
 });
+
+test('every kind a map places is complete: size, parts, name, book picture; and shade shapes pair with shadow-map parts', () => {
+  const www = path.join(__dirname, '../www');
+  const html = fs.readFileSync(path.join(www, 'index.html'), 'utf8'), r3d = fs.readFileSync(path.join(www, 'render3d.js'), 'utf8');
+  const types = new Set([...html.matchAll(/^\s+(\w+):\s*\{ r: \d+,/gm)].map(m => m[1]));
+  const keysOf = (src, start) => { // keys of an object literal plus its later Object.assign(<name>, {...}) aliases
+    const lit = src.slice(src.indexOf(start)), body = lit.slice(0, lit.indexOf('};'));
+    const alias = (src.match(new RegExp(`Object\\.assign\\(${start.match(/(\w+) =/)[1]}, \\{([^}]*)\\}`)) || [, ''])[1];
+    // one key per line (PARTS, SHADE) or several on a line (CASTERS); a shade's own `discs:`/`box:` fields are not keys
+    return new Set([...body.matchAll(/(?:^ {4}|\{ |, )(\w+):/gm), ...alias.matchAll(/(\w+):/g)].map(m => m[1]).filter(k => k !== 'discs' && k !== 'box'));
+  };
+  const parts = keysOf(r3d, 'const PARTS = {');
+  for (const e of D.ENTRIES) {
+    if (e.id === 'building' || e.id === 'guard') continue;
+    assert.ok(types.has(e.id), `TYPES ${e.id}`);
+    assert.ok(parts.has(e.id), `PARTS ${e.id}`);
+    assert.ok(e.name, `name ${e.id}`); // stages NAMES or dex EXTRA_NAMES
+    assert.ok(fs.existsSync(path.join(www, e.img)), `picture ${e.id}`);
+  }
+  assert.deepEqual([...keysOf(html, 'const SHADE = {')].sort(), [...keysOf(r3d, 'const CASTERS = {')].sort());
+});
