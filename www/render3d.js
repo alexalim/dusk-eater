@@ -562,10 +562,13 @@
         group.add(quay);
       }
 
-      const alley = !!stage.alley, snowy = !!(stage.look && stage.look.snow); // earthen lanes: no lane paint, no crosswalks, low stone edges
+      // earthen lanes: no lane paint, no crosswalks, low stone edges. `street` gives a map its own path surface
+      // (TestFlight: the later maps all looked like the same gray grid) and drops the city paint with it.
+      const street = stage.street || null, alley = !!stage.alley || !!street, snowy = !!(stage.look && stage.look.snow);
       // Day colors of the street (the frame loop restores them after night): a cool mid gray so paint and curbs pop.
       // on a snow map the streets are packed snow, not bare asphalt (TestFlight: "too little snow")
-      w.roadDay = alley ? '#cdb892' : snowy ? '#d9e0e9' : '#9a96a4'; w.curbDay = alley ? '#b8aa90' : snowy ? '#f6f8fb' : '#e6e0d4';
+      w.roadDay = street ? street.road : alley ? '#cdb892' : snowy ? '#d9e0e9' : '#9a96a4';
+      w.curbDay = street ? street.curb : alley ? '#b8aa90' : snowy ? '#f6f8fb' : '#e6e0d4';
       w.roadMat = lambert(w.roadDay);
       for (let k = 0; k <= WORLD / CELL; k++) {
         const v = new T.Mesh(unit.box, w.roadMat);

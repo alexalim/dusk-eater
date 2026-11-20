@@ -49,6 +49,7 @@
     park: {
       look: { wall: 'pastel', roof: 'gable', rise: 0.4 }, // building walls and roofs (render3d.js)
       theme: 'park',
+      street: { road: '#eab3a4', curb: '#fff3e2' }, // pink brick promenades (render3d.js)
       name: '놀이공원',
       desc: '매점과 놀이기구가 그늘을 만들어요. 풍선이랑 솜사탕이 가득한 광장이 목표예요.',
       ground: ['#f3dcb0', '#f4e6c8', '#efab78'], groundNight: '#2c2648',
@@ -78,6 +79,7 @@
     farm: {
       look: { wall: 'planks', roof: 'gable', rise: 0.45 }, // building walls and roofs (render3d.js)
       theme: 'farm',
+      street: { road: '#b78a5a', curb: '#93c06c' }, // dirt tracks with grass verges (render3d.js)
       name: '시골 농장',
       desc: '넓은 밭에 그늘은 헛간, 사일로, 건초더미랑 나무 밑뿐이에요. 그늘이 귀하니 길을 잘 골라요.',
       ground: ['#cfe3a0', '#dbe8b0', '#e7b878'], groundNight: '#24304a',
@@ -191,6 +193,7 @@
       look: { wall: 'pastel', roof: 'gable', rise: 0.3 }, // building walls and roofs (render3d.js)
       theme: 'beach',
       streetTree: 'palm',
+      street: { road: '#c99d6c', curb: '#f4e6c6' }, // wooden boardwalks over the sand (render3d.js)
       name: '해변 리조트',
       desc: '한여름 해가 높아서 그늘이 아주 짧아요. 파라솔 그늘을 콩콩 건너가요.',
       ground: ['#f2dfb0', '#f6e8c4', '#efb98a'], groundNight: '#2a2a48',
@@ -208,6 +211,7 @@
       look: { wall: 'adobe', roof: 'flat' }, // building walls and roofs (render3d.js)
       theme: 'desert',
       streetTree: 'palm', // trees along the curbs of built lots (index.html buildWorld)
+      street: { road: '#d6ab72', curb: '#c49a64' }, // packed-sand tracks (render3d.js)
       name: '사막 오아시스',
       desc: '해가 머리 위에 있어서 그늘이 거의 없어요. 흙집과 야자수 그늘이 소중해요.',
       ground: ['#ecd3a0', '#f2ddb2', '#eaa874'], groundNight: '#2c2742',

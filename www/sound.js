@@ -142,13 +142,15 @@
     lose() { [67, 64, 60].forEach((n, i) => tone(note(n), note(n), 0.4, { type: 'triangle', vol: 0.25, at: i * 0.16 })); },
   };
 
-  // Background music: a small synth band in A minor (Am - F - C - G), scheduled a little ahead of time.
-  //   pad: three detuned saws per chord note through a slowly breathing low-pass
-  //   arp: a 16th-note pluck with a dotted-8th echo     bass: filtered saw on 8ths
-  //   lead: a soft pentatonic line                       drums: synthesized kick and hi-hat
-  // mode 'title' keeps it to pad + arp; 'play' brings in bass and drums; 'night' opens the filter and adds sparkle.
+  // Background music: a small neo-pop band, scheduled a little ahead of time (TestFlight: the old 16th-note
+  // square arp "just ticks the beat").
+  //   pad: seventh chords on detuned saws through a low-pass that ducks on every beat (the sidechain pump)
+  //   keys: soft electric-piano chord stabs on a 3+3+2 (tresillo) rhythm, with a dotted-8th echo
+  //   bass: a round sub on the same tresillo   lead: a soft pentatonic line   drums: deep kick, clap on 2 and 4, shaker
+  // mode 'title' keeps it to pad + keys; 'play' brings in bass and drums; 'night' opens the filter and adds sparkle.
   // Every region has its own tune: key, tempo, four-chord progression, lead timbre, and a melody grown from
-  // a seed over the key's pentatonic scale (so it stays the same each visit). Chords are triads on scale steps.
+  // a seed over the key's pentatonic scale (so it stays the same each visit). `tropical` swaps the keys and
+  // lead for marimba and steel pan over a four-on-the-floor kick (the beach).
   const DEG = { I: [0, 4, 7], ii: [2, 5, 9], iii: [4, 7, 11], IV: [5, 9, 12], V: [7, 11, 14], vi: [9, 12, 16],
     i: [0, 3, 7], iv: [5, 8, 12], v: [7, 10, 14], III: [3, 7, 10], VI: [8, 12, 15], VII: [10, 14, 17] };
   const TUNES = {
@@ -164,7 +166,7 @@
     harbor: { key: 52, bpm: 90, prog: ['i', 'VII', 'VI', 'VII'], lead: 'triangle', seed: 10, minor: true },
     construction: { key: 54, bpm: 108, prog: ['i', 'iv', 'VII', 'i'], lead: 'square', seed: 11, minor: true },
     park: { key: 55, bpm: 116, prog: ['I', 'vi', 'IV', 'V'], lead: 'square', seed: 12 },
-    beach: { key: 57, bpm: 98, prog: ['I', 'IV', 'ii', 'V'], lead: 'triangle', seed: 13 },
+    beach: { key: 57, bpm: 104, prog: ['IV', 'V', 'iii', 'vi'], lead: 'pan', seed: 13, tropical: true },
     desert: { key: 62, bpm: 86, prog: ['i', 'VI', 'VII', 'i'], lead: 'sine', seed: 14, minor: true },
     farm: { key: 65, bpm: 100, prog: ['I', 'IV', 'I', 'V'], lead: 'triangle', seed: 15 },
     xmas: { key: 60, bpm: 104, prog: ['I', 'IV', 'V', 'I'], lead: 'sine', seed: 16, bells: true },
@@ -183,7 +185,8 @@
   function setTune(name) {
     tune = TUNES[name] || TUNES.town;
     BPM = tune.bpm; S16 = 60 / BPM / 4;
-    CHORDS = tune.prog.map(d => DEG[d].map(o => tune.key + o));
+    // seventh chords: a major seventh on major triads (a flat one on V), a minor seventh on minor ones
+    CHORDS = tune.prog.map(d => { const c = DEG[d]; return [...c, c[0] + (c[1] - c[0] === 4 && d !== 'V' ? 11 : 10)].map(o => tune.key + o); });
     ROOTS = tune.prog.map(d => tune.key - 12 + DEG[d][0] - (tune.key >= 60 ? 12 : 0));
     LEAD = melody(tune);
     if (fx) fx.echo.delayTime.value = S16 * 3;
@@ -196,11 +199,12 @@
     const delay = ctx.createDelay(1), fb = ctx.createGain(), wet = ctx.createGain(), tone = ctx.createBiquadFilter();
     delay.delayTime.value = S16 * 3; fb.gain.value = 0.35; wet.gain.value = 0.4; tone.type = 'lowpass'; tone.frequency.value = 2400;
     delay.connect(tone).connect(fb).connect(delay); tone.connect(wet).connect(musicBus);
-    const padLp = ctx.createBiquadFilter(); padLp.type = 'lowpass'; padLp.frequency.value = 900; padLp.Q.value = 2; padLp.connect(musicBus);
+    const padLp = ctx.createBiquadFilter(), pump = ctx.createGain(); padLp.type = 'lowpass'; padLp.frequency.value = 900; padLp.Q.value = 2;
+    padLp.connect(pump).connect(musicBus);
     const len = ctx.sampleRate * 0.2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     noise = buf;
-    fx = { echo: delay, padLp };
+    fx = { echo: delay, padLp, pump };
     return fx;
   }
 
@@ -266,42 +270,71 @@
     const end = t + dur + 0.05;
     o.start(t); o2.start(t); lfo.start(t); br.start(t); o.stop(end); o2.stop(end); lfo.stop(end); br.stop(end);
   }
-  function kick(at) {
+  function kick(at, vol = 0.75) { // deep and round: a lower start and a longer body than a click
     const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain();
-    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
-    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
-    o.connect(g).connect(musicBus); o.start(t); o.stop(t + 0.32);
+    o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.16);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    o.connect(g).connect(musicBus); o.start(t); o.stop(t + 0.42);
   }
-  function hat(at, vol) {
-    const t = ctx.currentTime + at, src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
-    src.buffer = noise; f.type = 'highpass'; f.frequency.value = 7000;
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-    src.connect(f).connect(g).connect(musicBus); src.start(t); src.stop(t + 0.06);
+  function noiseHit(at, { f, q = 1, type = 'bandpass', vol, attack = 0.002, dur }) {
+    const t = ctx.currentTime + at, src = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = noise; fl.type = type; fl.frequency.value = f; fl.Q.value = q;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(fl).connect(g).connect(musicBus); src.start(t); src.stop(t + dur + 0.02);
   }
+  // clap: three quick bursts and a short tail; shaker: a soft swish (a slow attack, so it never clicks)
+  function clap(at) { [0, 0.012, 0.024].forEach(d => noiseHit(at + d, { f: 1300, q: 0.9, vol: 0.22, dur: d ? 0.03 : 0.17 })); }
+  function shaker(at, vol) { noiseHit(at, { f: 6500, type: 'highpass', vol, attack: 0.02, dur: 0.09 }); }
+  // keys: an electric-piano tone (a sine with a quieter octave, a bell-ish attack that falls away)
+  function epiano(freq, at, vol, dur = 0.9) {
+    voice(freq, at, dur, { type: 'sine', vol, attack: 0.006, release: dur, to: [musicBus, fx.echo] });
+    voice(freq * 2, at, dur, { type: 'sine', vol: vol * 0.25, attack: 0.004, release: dur * 0.3, to: [musicBus] });
+  }
+  // marimba: a short wooden knock (a sine and its quick-dying 4th partial); steel pan: a sine with a slightly
+  // sharp octave and a twelfth, a fast attack and a ringing tail
+  function marimba(freq, at, vol) {
+    voice(freq, at, 0.4, { type: 'sine', vol, attack: 0.003, release: 0.4, to: [musicBus, fx.echo] });
+    voice(freq * 4, at, 0.06, { type: 'sine', vol: vol * 0.35, attack: 0.002, release: 0.06 });
+  }
+  function pan(freq, at, vol) {
+    voice(freq, at, 0.8, { type: 'sine', vol, attack: 0.004, release: 0.8, to: [musicBus, fx.echo] });
+    voice(freq * 2.01, at, 0.5, { type: 'sine', vol: vol * 0.5, attack: 0.004, release: 0.5 });
+    voice(freq * 3, at, 0.25, { type: 'sine', vol: vol * 0.15, attack: 0.004, release: 0.25 });
+  }
+  const TRESILLO = [0, 3, 6, 8, 11, 14], KEYS = { play: [0, 3, 6, 10], title: [0, 6] };
 
   function schedule() {
-    const { echo, padLp } = buildFx();
+    const { echo, padLp, pump } = buildFx();
     while (nextT < ctx.currentTime + 0.3) {
       const at = Math.max(0, nextT - ctx.currentTime), play = mode !== 'title', night = mode === 'night', boss = mode === 'boss';
       if (tune.korean) { scheduleKorean(at, play, night, boss); nextT += rushOn ? S16 / 1.2 : S16; step++; continue; }
       const bar = (step >> 4) % 4, s = step % 16, chord = CHORDS[bar];
+      const t0 = ctx.currentTime + at, trop = !!tune.tropical;
       if (s === 0) { // pad: the whole bar, filter breathing with the bar
-        padLp.frequency.setTargetAtTime(night ? 2600 : play ? 1400 : 900, ctx.currentTime + at, 0.8);
-        for (const n of chord) voice(note(n), at, 16 * S16, { vol: 0.05, detune: [-9, 0, 9], attack: 0.35, release: 16 * S16 + 0.3, to: [padLp] });
+        padLp.frequency.setTargetAtTime(night ? 2600 : play ? 1400 : 900, t0, 0.8);
+        for (const n of chord) voice(note(n), at, 16 * S16, { vol: 0.04, detune: [-9, 0, 9], attack: 0.35, release: 16 * S16 + 0.3, to: [padLp] });
       }
-      const arp = chord[[0, 1, 2, 1][s % 4]] + 12 + (s >= 8 && night ? 12 : 0); // arp: up an octave, higher at night
-      voice(note(arp), at, S16, { type: 'square', vol: 0.05, release: 0.18, cutoff: night ? 2600 : 1500, to: [musicBus, echo] });
+      if (s % 4 === 0) { // the pump: the pad ducks on each beat and swells back before the next
+        pump.gain.cancelScheduledValues(t0); pump.gain.setValueAtTime(play ? 0.3 : 0.7, t0); pump.gain.linearRampToValueAtTime(1, t0 + 3.2 * S16);
+      }
+      // keys: chord stabs (upper three notes, an octave up) on the tresillo; marimba plucks on the beach
+      if (trop) { if (s % 4 === 2 || s === 7 || s === 15) marimba(note(chord[[1, 2, 3, 2][(s >> 2) % 4]] + 12), at, play ? 0.09 : 0.06); }
+      else if (KEYS[play ? 'play' : 'title'].includes(s)) for (const n of chord.slice(1)) epiano(note(n + 12), at, play ? 0.035 : 0.03);
       if (play) {
-        if (s % 2 === 0) voice(note(ROOTS[bar] + (s % 8 === 6 ? 12 : 0)), at, 2 * S16, { vol: 0.16, detune: [0, 6], release: 0.22, cutoff: 380 });
-        if (s % 4 === 0 || (boss && s % 4 === 2)) kick(at); // the boss doubles the kick
-        if (s % 4 === 2 || ((night || boss) && s % 2 === 1)) hat(at, s % 4 === 2 ? 0.12 : 0.05);
+        if (TRESILLO.includes(s)) voice(note(ROOTS[bar] + (s === 14 ? 12 : 0)), at, 3 * S16, { type: 'triangle', vol: 0.2, detune: [0, 5], attack: 0.01, release: (s === 6 || s === 14 ? 2 : 3) * S16, cutoff: 420 });
+        if (trop || boss ? s % 4 === 0 : s === 0 || s === 8 || s === 10) kick(at); // four on the floor on the beach and for the boss
+        if (s === 4 || s === 12) clap(at);
+        if (s % 4 === 2 || ((trop || night || boss) && s % 2 === 1)) shaker(at, s % 4 === 2 ? 0.07 : 0.035);
         const m = LEAD[(step >> 1) % LEAD.length];
-        if (s % 2 === 0 && m) voice(note(m), at, 2 * S16, { type: tune.lead, vol: tune.lead === 'square' ? 0.06 : 0.12, attack: 0.02, release: 0.5, to: [musicBus, echo] });
+        if (s % 2 === 0 && m) {
+          if (tune.lead === 'pan') pan(note(m), at, 0.09);
+          else voice(note(m), at, 2 * S16, { type: tune.lead === 'square' ? 'sawtooth' : tune.lead, vol: tune.lead === 'square' ? 0.07 : 0.11, attack: 0.03, release: 0.5, cutoff: tune.lead === 'square' ? 1400 : 0, to: [musicBus, echo] });
+        }
         if (tune.bells && s % 8 === 4) voice(note(chord[1] + 24), at, S16, { type: 'sine', vol: 0.06, release: 0.9, to: [musicBus, echo] });
       }
       if (night && s % 4 === 3) voice(note(chord[2] + 24), at, S16, { type: 'sine', vol: 0.05, release: 0.4, to: [musicBus, echo] });
       nextT += rushOn ? S16 / 1.2 : S16; step++; // the last-stretch rush plays 20% faster
-      if (rushOn && s % 2 === 1) hat(at, 0.06);
+      if (rushOn && s % 2 === 1) shaker(at, 0.05);
     }
   }
   // 본조 아리랑 (a traditional folk song) over 세마치 장단: a bar is 9 pulses, three beats of three. A note is
