@@ -69,6 +69,8 @@
   // A person: body in the instance color, head, hair or hat, plus any extra parts.
   const human = (hat = HAIR, extra = []) => [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN),
     P('sphere', [0.58, 0.32, 0.58], 2.7, hat)].concat(extra);
+  // A part that circles (spin): round a vertical wheel's hub at height c, or (flat) round the pole; w = turns in radians/s.
+  const spin = (p, sp) => Object.assign(p, { spin: sp });
   const COASTER_Y = a => 0.7 + 1.6 * ((1 + Math.cos(a)) / 2) ** 2; // track height round the loop: one big hill at the +x end
   const PARTS = {
     person:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.58, 0.32, 0.58], 2.7, HAIR)],
@@ -230,9 +232,9 @@
     // amusement rides. A ferris wheel: the boarding hut shades; the legs, rim and cabins are open, so they cast nothing.
     wheel:     [P('box', [1.4, 0.5, 0.8], 0.25, 'inst'), P('box', [0.12, 1.9, 0.12], 1.45, '#f4f1ea', [0, 0.38]), P('box', [0.12, 1.9, 0.12], 1.45, '#f4f1ea', [0, -0.38]),
                 P('sphere', [0.18, 0.18, 0.45], 2.2, '#ffd25c')].concat(Array.from({ length: 24 }, (_, i) => {
-                  const a = i * Math.PI / 12; return P('box', [0.3, 0.3, 0.12], 2.2 + Math.sin(a) * 1.25, '#f4f1ea', [Math.cos(a) * 1.25, 0]);
+                  const a = i * Math.PI / 12; return spin(P('box', [0.3, 0.3, 0.12], 2.2 + Math.sin(a) * 1.25, '#f4f1ea', [Math.cos(a) * 1.25, 0]), { a, R: 1.25, c: 2.2, w: 0.25 });
                 }), Array.from({ length: 8 }, (_, i) => {
-                  const a = i * Math.PI / 4; return P('box', [0.34, 0.3, 0.34], 2.0 + Math.sin(a) * 1.25, ['#ff7aa8', '#7fd1e8', '#ffd25c', '#b5e48c'][i % 4], [Math.cos(a) * 1.25, 0]);
+                  const a = i * Math.PI / 4; return spin(P('box', [0.34, 0.3, 0.34], 2.0 + Math.sin(a) * 1.25, ['#ff7aa8', '#7fd1e8', '#ffd25c', '#b5e48c'][i % 4], [Math.cos(a) * 1.25, 0]), { a, R: 1.25, c: 2.0, w: 0.25 });
                 })),
     // a roller coaster: a station hut that shades, then a loop of track on posts with one big hill and a train on top
     coaster:   [P('box', [1.0, 0.6, 0.8], 0.3, 'inst')].concat(Array.from({ length: 40 }, (_, i) => {
@@ -245,9 +247,9 @@
     // a swing ride: a striped canopy that shades, on a pole, with seats hanging out past its edge
     swing:     [P('cone', [1.4, 0.6, 1.4], 2.3, 'inst'), P('cyl', [0.15, 2.0, 0.15], 1.0, '#f4f1ea'), P('sphere', [0.4, 0.4, 0.4], 2.7, '#ffd25c')].concat(
                 Array.from({ length: 8 }, (_, i) => {
-                  const a = i * Math.PI / 4; return P('cyl', [0.03, 0.8, 0.03], 1.55, '#dddddd', [Math.cos(a) * 1.55, Math.sin(a) * 1.55]);
+                  const a = i * Math.PI / 4; return spin(P('cyl', [0.03, 0.8, 0.03], 1.55, '#dddddd', [Math.cos(a) * 1.55, Math.sin(a) * 1.55]), { a, R: 1.55, w: 1.1, flat: true });
                 }), Array.from({ length: 8 }, (_, i) => {
-                  const a = i * Math.PI / 4; return P('box', [0.28, 0.12, 0.28], 1.1, ['#7fd1e8', '#ffd25c', '#b5e48c', '#c9a0ff'][i % 4], [Math.cos(a) * 1.55, Math.sin(a) * 1.55]);
+                  const a = i * Math.PI / 4; return spin(P('box', [0.28, 0.12, 0.28], 1.1, ['#7fd1e8', '#ffd25c', '#b5e48c', '#c9a0ff'][i % 4], [Math.cos(a) * 1.55, Math.sin(a) * 1.55]), { a, R: 1.55, w: 1.1, flat: true });
                 })),
   };
   Object.assign(PARTS, { bigtree: PARTS.tree, bigpine: PARTS.pine, bighay: PARTS.haystack, bigparasol: PARTS.parasol, bigpersimmon: PARTS.persimmon,
@@ -1179,17 +1181,23 @@
             im.setColorAt(i, tmpCol.set(o.glow ? (part.color === 'inst' ? '#ffd23f' : '#ffe27a') : (part.color === 'inst' ? o.color : '#ffffff')));
             recolor = true;
           }
-          if ((o.state === 0 && !o.dirty && !o.glow && !o.glowShown) || (o.state === 2 && hidden[i])) continue;
+          if ((o.state === 0 && !o.dirty && !o.glow && !o.glowShown && !part.spin) || (o.state === 2 && hidden[i])) continue; // ride parts turn every frame
           if (o.state === 2) hidden[i] = 1;
           let x = o.x, y = o.y, s = 1, lift = 0;
           if (o.state === 1) { const p = f.swallowPos(o); x = p.x; y = p.y; s = p.s; lift = p.lift; }
           if (o.state === 2) s = 0;
           if (o.glow) { s *= 1.2; lift += o.r * (0.6 + Math.sin(t * 6 + o.x) * 0.4); }
           if (o.state === 0 && o.r <= 12 && (o.vx || o.vy)) lift += Math.abs(Math.sin(t * 11 + o.x * 0.1)) * o.r * 0.16; // small walkers hop along
+          if (o.type === 'dolphin' && o.state === 0) lift += Math.max(0, Math.sin(t * 1.3 + o.x * 0.05)) ** 4 * o.r * 1.2; // a leap now and then
           const r = o.r * s;
-          dummy.position.set(x, part.y * r + lift + (o.zf || 0), y); // zf: per-object height hair against z-fighting
+          let py = part.y, po = part.o;
+          if (part.spin && o.state === 0) {
+            const sp = part.spin, a = sp.a + t * sp.w;
+            if (sp.flat) po = [Math.cos(a) * sp.R, Math.sin(a) * sp.R]; else { po = [Math.cos(a) * sp.R, 0]; py = sp.c + Math.sin(a) * sp.R; }
+          }
+          dummy.position.set(x, py * r + lift + (o.zf || 0), y); // zf: per-object height hair against z-fighting
           dummy.rotation.set(0, -o.rot, 0);
-          if (part.o) { dummy.translateX(part.o[0] * r); dummy.translateZ(part.o[1] * r); }
+          if (po) { dummy.translateX(po[0] * r); dummy.translateZ(po[1] * r); }
           dummy.scale.set(part.s[0] * r || 1e-6, part.s[1] * r || 1e-6, part.s[2] * r || 1e-6);
           dummy.updateMatrix();
           im.setMatrixAt(i, dummy.matrix);
