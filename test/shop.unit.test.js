@@ -154,3 +154,13 @@ test('summoning circles: bought with gems once, the level one is granted not sol
   assert.deepEqual([kept.circles, kept.circle], [w.circles, w.circle], 'an App Store refresh never touches circles');
   for (const c of S.CIRCLES) assert.ok(c.desc && c.name && (c.gems || c.level), c.id);
 });
+
+test('the car skin sells for gems only and stays owned when App Store entitlements are rebuilt', () => {
+  const car = S.SKINS.find(s => s.id === 'car');
+  assert.ok(car && !car.product && car.gems && car.car);
+  assert.equal(S.buySkin(Object.assign(S.emptyWallet(), { gems: car.gems - 1 }), 'car'), null);
+  let w = S.buySkin(Object.assign(S.emptyWallet(), { gems: car.gems }), 'car');
+  assert.equal(w.gems, 0); assert.ok(w.owned.includes('car'));
+  w = S.applyEntitlements(S.equip(w, 'car'), []);
+  assert.ok(w.owned.includes('car')); assert.equal(w.equipped, 'car');
+});

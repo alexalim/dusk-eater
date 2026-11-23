@@ -2618,7 +2618,7 @@
     act.innerHTML = on ? '장착 중' : own ? '장착하기' : ev ? `${mapIco(ev.theme)} 이벤트 별 ${ev.reward.stars}개를 모으면 받아요`
       : set ? `${ico('book')} ${set.name} ${Dex.setFound(w, set)}/${set.entries.length}`
       : s.level ? `${ico('sparkle')} Lv.${s.level}에 받아요 (지금 Lv.${Level.levelOf(w.stats.xp).level})`
-      : price ? `${price} 구매하기` : '준비 중';
+      : price ? `${price} 구매하기` : s.reward === 'gems' ? '보석으로 사요' : '준비 중';
     act.classList.toggle('off', on || (!own && !price));
     // a paid skin's second way in: gems (shop.js buySkin); greyed while the purse is short
     const gb = $('skin-box-gems'), forGems = !own && !!s.gems;

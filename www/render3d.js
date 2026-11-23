@@ -454,6 +454,75 @@
     sunLight.shadow.camera.far = 7000;
     scene.add(sunLight, sunLight.target);
 
+    // Felt (tester, build 67: "every piece with depth, like wool felt and yarn"): a fibre pattern laid on in world space
+    // from three sides (so a bench and a tower show the same fibre size), and a soft brighter fuzz where a surface turns
+    // away from the camera. Colour only: shapes, and with them every shadow and the shade rule, stay as they are. The
+    // gameplay signals (red lit rim, orange rings, gold, shards, beams) keep their flat materials.
+    const feltTex = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 256;
+      const g = c.getContext('2d'); g.fillStyle = '#808080'; g.fillRect(0, 0, 256, 256);
+      let seed = 7; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      g.lineCap = 'round';
+      for (let i = 0; i < 3600; i++) { // short curly fibres, light and dark, drawn wrapped so the tile repeats seamlessly
+        const x = rand() * 256, y = rand() * 256, a = rand() * Math.PI * 2, len = 4 + rand() * 10, bend = (rand() - 0.5) * 8;
+        g.strokeStyle = rand() < 0.5 ? `rgba(255,255,255,${0.15 + rand() * 0.2})` : `rgba(0,0,0,${0.12 + rand() * 0.2})`;
+        g.lineWidth = 0.8 + rand() * 1.4;
+        for (const ox of [-256, 0, 256]) for (const oy of [-256, 0, 256]) {
+          g.beginPath(); g.moveTo(x + ox, y + oy);
+          g.quadraticCurveTo(x + ox + Math.cos(a) * len / 2 - Math.sin(a) * bend, y + oy + Math.sin(a) * len / 2 + Math.cos(a) * bend, x + ox + Math.cos(a) * len, y + oy + Math.sin(a) * len);
+          g.stroke();
+        }
+      }
+      const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 4;
+      return t;
+    })();
+    // Knitting (the reference's beanies and bobbed hair): rows of V stitches, each a pair of slanted loops lit in the
+    // middle and dark where they tuck under, on a dark gap. Laid on roofs and on rounded yarn-ball shapes (tree crowns).
+    const knitTex = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 256;
+      const g = c.getContext('2d'); g.fillStyle = '#3a3a3a'; g.fillRect(0, 0, 256, 256);
+      const N = 8, cw = 256 / N;
+      for (let row = 0; row < N; row++) for (let col = 0; col < N; col++) for (const side of [-1, 1]) {
+        const cx = col * cw + cw / 2 + side * cw * 0.2, cy = row * cw + cw / 2;
+        g.save(); g.translate(cx, cy); g.rotate(side * 0.5);
+        const grd = g.createRadialGradient(0, -cw * 0.08, 0, 0, 0, cw * 0.42);
+        grd.addColorStop(0, '#f2f2f2'); grd.addColorStop(0.6, '#bdbdbd'); grd.addColorStop(1, '#5a5a5a');
+        g.fillStyle = grd; g.beginPath(); g.ellipse(0, 0, cw * 0.22, cw * 0.46, 0, 0, Math.PI * 2); g.fill();
+        g.restore();
+      }
+      const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 4;
+      return t;
+    })();
+    const FELT_TILE = 14, KNIT_TILE = 30; // world units per fibre tile, per eight stitches
+    function felt(mat, knit) {
+      if (mat.userData.felt) return mat;
+      mat.userData.felt = true;
+      const TILE = knit ? KNIT_TILE : FELT_TILE, lo = knit ? 0.5 : 0.4, amp = knit ? 0.85 : 1.2;
+      mat.customProgramCacheKey = () => knit ? 'knit' : 'felt';
+      mat.onBeforeCompile = sh => {
+        sh.uniforms.feltMap = { value: knit ? knitTex : feltTex };
+        sh.vertexShader = sh.vertexShader
+          .replace('#include <common>', '#include <common>\nvarying vec3 vFeltP;\nvarying vec3 vFeltN;\nvarying vec3 vFeltVN;')
+          .replace('#include <project_vertex>', `#include <project_vertex>
+            vec4 feltW = vec4(transformed, 1.0); vec3 feltN = normal;
+            #ifdef USE_INSTANCING
+              feltW = instanceMatrix * feltW; feltN = mat3(instanceMatrix) * feltN;
+            #endif
+            vFeltP = (modelMatrix * feltW).xyz; vFeltN = normalize(mat3(modelMatrix) * feltN); vFeltVN = normalize(normalMatrix * feltN);`);
+        sh.fragmentShader = sh.fragmentShader
+          .replace('#include <common>', '#include <common>\nuniform sampler2D feltMap;\nvarying vec3 vFeltP;\nvarying vec3 vFeltN;\nvarying vec3 vFeltVN;')
+          .replace('#include <color_fragment>', `#include <color_fragment>
+            vec3 feltB = abs(vFeltN); feltB /= (feltB.x + feltB.y + feltB.z + 1e-4);
+            vec3 feltQ = vFeltP / ${TILE.toFixed(1)};
+            float feltF = texture2D(feltMap, feltQ.zy).r * feltB.x + texture2D(feltMap, feltQ.xz).r * feltB.y + texture2D(feltMap, feltQ.xy).r * feltB.z;
+            diffuseColor.rgb *= ${lo.toFixed(2)} + feltF * ${amp.toFixed(2)}; // felt about ±20%: never enough to make sunlit ground read as shade`)
+          .replace('#include <output_fragment>', `float feltFz = pow(1.0 - abs(dot(normalize(vFeltVN), vec3(0.0, 0.0, 1.0))), 2.0);
+            outgoingLight += diffuseColor.rgb * feltFz * 0.35;
+            #include <output_fragment>`);
+      };
+      return mat;
+    }
+
     // Player: a soft dome standing on its wobbling ground shadow, with eyes and a mouth that opens to eat.
     // The footprint stays the r-disc the game collides with; the dome only adds height.
     const BLOB_N = 40;
@@ -485,9 +554,9 @@
     }
     bodyGeo.computeBoundingSphere();
     bodyGeo.setAttribute('color', new T.Float32BufferAttribute(bodyCols, 3));
-    const bodyMat = new T.MeshBasicMaterial({ color: bodyColor, vertexColors: true });
+    const bodyMat = felt(new T.MeshBasicMaterial({ color: bodyColor, vertexColors: true }));
     const body = new T.Mesh(bodyGeo, bodyMat);
-    const armMat = new T.MeshBasicMaterial({ color: 0xf1e8ff }); // the shared sphere has no vertex colors
+    const armMat = felt(new T.MeshBasicMaterial({ color: 0xf1e8ff })); // the shared sphere has no vertex colors
     const arms = [0, 1].map(() => new T.Mesh(unit.sphere, armMat));
     // Mouth: a small dark void (deep violet rim, near-black throat) — it eats darkness, so the mouth is a hole, not a red lip.
     const mouth = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x2a0b55 }));
@@ -519,12 +588,30 @@
     const cheeks = [0, 1].map(() => new T.Mesh(unit.sphere, cheekMat));
     scene.add(body, aura, mouth, throat, ...arms, ...cheeks);
     // A point on the body's surface: horizontal angle a, elevation el (radians), pushed out by `out`·r.
+    let bodyLift = 0; // share of r the body sits up (the car skin's seat)
     const onBody = (player, a, el, out, v) => {
       const r = player.r, c = Math.cos(el);
-      return v.set(player.x + Math.cos(a) * c * r * (1 + out), r * BODY_Y + Math.sin(el) * r * BODY_SY * (1 + out),
+      return v.set(player.x + Math.cos(a) * c * r * (1 + out), r * (BODY_Y + bodyLift) + Math.sin(el) * r * BODY_SY * (1 + out),
         player.y + Math.sin(a) * c * r * (1 + out));
     };
     scene.add(blob, litRing);
+    // Car skin (shop `car`): the bean sits on a little felt car that drives where it goes, wheels turning with the speed.
+    // Looks only: the body's footprint (r) and every rule stay the same. Unlit like the body, so day and night match.
+    const carMat = felt(new T.MeshBasicMaterial({ color: 0x8fd3e8 })), tyreMat = felt(new T.MeshBasicMaterial({ color: 0x2a2d3a }));
+    const trimMat = new T.MeshBasicMaterial({ color: 0xf4f1ea }), lampMat = new T.MeshBasicMaterial({ color: 0xfff3b0 });
+    const car = new T.Group(), wheels = [];
+    const carPart = (geo, mat, sx, sy, sz, x, y, z) => { const m = new T.Mesh(unit[geo], mat); m.scale.set(sx, sy, sz); m.position.set(x, y, z); car.add(m); return m; };
+    carPart('rbox', carMat, 2.6, 0.42, 1.7, 0, 0.36, 0);                                   // the chassis, forward is +x
+    carPart('rbox', trimMat, 0.16, 0.18, 1.5, 1.3, 0.24, 0); carPart('rbox', trimMat, 0.16, 0.18, 1.5, -1.3, 0.24, 0); // bumpers
+    for (const z of [0.5, -0.5]) carPart('sphere', lampMat, 0.1, 0.1, 0.1, 1.3, 0.42, z);  // headlights
+    for (const [x, z] of [[0.85, 0.86], [0.85, -0.86], [-0.85, 0.86], [-0.85, -0.86]]) {
+      const hub = new T.Group(); hub.position.set(x, 0.3, z); hub.rotation.x = Math.PI / 2; car.add(hub); // axle across the car
+      const spin = new T.Group(); hub.add(spin); wheels.push(spin);
+      const tyre = new T.Mesh(unit.cyl, tyreMat); tyre.scale.set(0.3, 0.2, 0.3); spin.add(tyre);
+      const cap = new T.Mesh(unit.box, trimMat); cap.scale.set(0.34, 0.22, 0.07); spin.add(cap); // a bar on the hubcap shows it turning
+    }
+    car.visible = false; scene.add(car);
+    let carOn = false, carHead = 0, wheelTurn = 0, carT = 0;
 
     // Twists: cloud shade drifting on the ground and gold rings under golden friends, instanced; counts set per frame.
     const MAX_CLOUDS = 12, MAX_GOLD = 6;
@@ -623,7 +710,7 @@
       scene.remove(group);
     }
 
-    function lambert(color, extra) { return new T.MeshLambertMaterial(Object.assign({ color: col(color) }, extra)); }
+    function lambert(color, extra, knit) { return felt(new T.MeshLambertMaterial(Object.assign({ color: col(color) }, extra)), knit); }
 
     function build(w) {
       disposeGroup();
@@ -643,7 +730,7 @@
       w.waterMat = null;
       if (waterY < WORLD) {
         const wg = new T.PlaneGeometry(WORLD, WORLD - waterY, 1, 1); wg.rotateX(-Math.PI / 2); wg.userData.own = true;
-        w.waterMat = new T.MeshPhongMaterial({ color: col(stage.water[0]), shininess: 60, specular: 0x334455 });
+        w.waterMat = felt(new T.MeshPhongMaterial({ color: col(stage.water[0]), shininess: 60, specular: 0x334455 }));
         const water = new T.Mesh(wg, w.waterMat);
         water.position.set(WORLD / 2, -1.5, waterY + (WORLD - waterY) / 2);
         water.receiveShadow = true;
@@ -762,7 +849,7 @@
           const wall = b.crane ? lambert(wallCol, { emissive: glow }) : lambert(wallCol, { map, emissive: glow, emissiveMap: TEX.plain });
           wall.userData.day = glow; wall.userData.night = litAtNight(kind) ? TEX.lit : TEX.dark;
           if (!b.crane) w.wallMats.push(wall);
-          const roof = lambert(b.roof, b.crane ? {} : { map: TEX.roof });
+          const roof = lambert(b.roof, b.crane ? {} : { map: TEX.roof }, !b.crane); // knitted roofs
           // Cranes use the shared six-face box (+x -x +y -y +z -z); other buildings their own two-group box.
           mats[key] = { roof, faces: b.crane ? [wall, wall, roof, wall, wall, wall] : [wall, roof] };
         }
@@ -824,7 +911,7 @@
       w.roofIM = null;
       if (ROOFS[look.roof]) {
         const list = w.buildings.filter(b => !b.crane && !b.wall);
-        const roofMat = lambert('#ffffff', { map: look.snow ? TEX.snowroof : look.roof === 'flat' ? TEX.roof : look.roof === 'gable' ? TEX.shingles : TEX.tiles });
+        const roofMat = lambert('#ffffff', { map: look.snow ? TEX.snowroof : look.roof === 'flat' ? TEX.roof : look.roof === 'gable' ? TEX.shingles : TEX.tiles }, true);
         const capMat = lambert('#e6e4e0'); // pale ridge cap, hip lines and eave edges of a hanok roof; the second geometry group
         const im = new T.InstancedMesh(ROOFS[look.roof], look.roof === 'hanok' ? [roofMat, capMat] : roofMat, list.length);
         im.receiveShadow = true; im.frustumCulled = false;
@@ -847,7 +934,7 @@
       for (const [type, list] of Object.entries(byType)) {
         for (const part of PARTS[type]) {
           const c = part.color === 'inst' ? '#ffffff' : part.color;
-          const mat = part.tex ? new T.MeshBasicMaterial({ map: signTex(part.tex) }) : part.glow ? new T.MeshBasicMaterial({ color: col(c) }) : lambert(c);
+          const mat = part.tex ? new T.MeshBasicMaterial({ map: signTex(part.tex) }) : part.glow ? new T.MeshBasicMaterial({ color: col(c) }) : lambert(c, undefined, part.geo === 'blob'); // round crowns are yarn balls
           const im = new T.InstancedMesh(low[part.geo], mat, list.length);
           im.receiveShadow = true;
           if (CASTERS[type] && CASTERS[type].includes(PARTS[type].indexOf(part))) im.castShadow = true; // shades the ground, as the rule says
@@ -1263,7 +1350,16 @@
       // reach in while something is being sucked in, and the body bulges once when it goes down.
       const gulp = player.gulp || 0, bulge = player.bulge || 0, L = player.look === undefined ? player.face : player.look;
       const breathe = 1 + Math.sin(t * (player.fast ? 9 : 3)) * 0.025, R = player.r; // quick, excited breath while fast
-      body.position.set(player.x, R * BODY_Y, player.y);
+      bodyLift = carOn ? 0.32 : 0;
+      car.visible = carOn && k < 0.6;
+      if (car.visible) {
+        const sp = Math.hypot(player.vx || 0, player.vy || 0), dt = Math.max(0, Math.min(0.1, t - carT));
+        if (sp > 2) carHead = Math.atan2(player.vy, player.vx);
+        wheelTurn -= sp * dt / (0.3 * R); wheels.forEach(w => { w.rotation.y = wheelTurn; });
+        car.position.set(player.x, 0, player.y); car.scale.setScalar(R); car.rotation.set(0, -carHead, 0);
+      }
+      carT = t;
+      body.position.set(player.x, R * (BODY_Y + bodyLift), player.y);
       body.scale.set(R * (1 + bulge * 0.12), R * BODY_SY * breathe * (1 - bulge * 0.06), R * (1 + bulge * 0.12));
       if (player.slow) { const w = Math.sin(t * 14); body.scale.x *= 1 + w * 0.08; body.scale.z *= 1 - w * 0.08; body.scale.y *= 1 + Math.sin(t * 14 + 1) * 0.06; } // poisoned: a wobbling jelly
       body.rotation.set(0, -L, Math.sin(t * 1.7) * 0.035); // a slow idle sway, like humming to itself
@@ -1373,6 +1469,7 @@
     // `debug` is read by the QA scripts (pixel checks, memory counters); the game never uses it.
     // Cosmetic skin: body, unlit rim (also the growth glow) and eye colors. The lit warning stays red regardless.
     function setSkin(skin) {
+      carOn = !!skin.car;
       bodyColor.setHex(skin.body);
       glowColor.setHex(skin.rim);
       rimColor = skin.rim;

@@ -21,6 +21,10 @@
       desc: '밤하늘처럼 짙은 몸에 하늘빛 테두리가 은은해요. 별빛 같은 노란 눈이 반짝여요.' },
     { id: 'gold', name: '황금 그림자', body: 0x221a0c, rim: 0xffe08a, eye: 0xffffff, product: PREFIX + 'skin.gold', gems: 500, price: '₩2,200',
       desc: '반짝반짝 황금빛 테두리를 두른 특별한 아이예요. 어디에 있어도 눈에 쏙 들어와요.' },
+    // Gems only (no App Store product): `reward: 'gems'` keeps it through entitlement rebuilds like the earned skins.
+    // `car`: the renderer seats the body on a little car (render3d setSkin).
+    { id: 'car', name: '붕붕 그림자', body: 0xffe3ee, rim: 0x7fc8ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, car: true,
+      desc: '작은 자동차에 쏙 올라탄 친구예요. 달리면 바퀴가 데굴데굴 굴러가요.' },
     // Earned, not bought: `reward` names the event whose stars unlock it.
     { id: 'santa', name: '산타 그림자', body: 0x3a0d14, rim: 0x7fe08a, eye: 0xffffff, reward: 'xmas',
       desc: '크리스마스 이벤트 선물이에요. 빨간 몸에 초록 테두리로 겨울 기분을 내요.' },
