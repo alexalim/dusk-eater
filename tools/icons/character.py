@@ -73,8 +73,9 @@ print('wrote', ', '.join(OUT))
 # PNGs for the iOS asset catalog, rendered by Chromium so they match what the title screen shows.
 from playwright.sync_api import sync_playwright
 ASSETS = ROOT / 'ios/App/App/Assets.xcassets'
-JOBS = [(ROOT / 'design/app-icon.svg', 1024, [ASSETS / 'AppIcon.appiconset/AppIcon-512@2x.png']),
-        (ROOT / 'design/splash.svg', 2732, [ASSETS / f'Splash.imageset/splash-2732x2732{s}.png' for s in ('', '-1', '-2')])]
+# The app icon and splash now come from the painted character art in design/art (app-icon.png, ghost-hold.png on a
+# violet glow), so this script no longer renders them; it only keeps the vector drawings up to date.
+JOBS = []
 with sync_playwright() as p:
     b = p.chromium.launch()
     for src, size, outs in JOBS:

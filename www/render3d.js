@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
   const T = root.THREE;
-  const TILT = 62 * Math.PI / 180; // steeper than before: more top-down, a little less wall
+  const TILT = 50 * Math.PI / 180; // tilted further (redesign guide): walls, awnings and faces show, not just rooftops
 
   const col = c => new T.Color(c);
   // A unit box with rounded edges (tester: "everything looks like blocks"): a rounded square extruded with a bevel, centred
@@ -441,7 +441,8 @@
     scene.fog = new T.Fog(0xbcd9f0, FAR_FOG, FAR_FOG * 2);
     const SKY = { day: col('#bcd9f0'), dusk: col('#f0a46e'), night: col('#1b1830') };
     const skyCol = new T.Color();
-    const hemi = new T.HemisphereLight(0xffffff, 0x8a7f70, 0.55);
+    const SHADE_SKY = 0xb7a6f2; // lavender sky fill: what the shade is lit by
+    const hemi = new T.HemisphereLight(SHADE_SKY, 0x6f6494, 0.55);
     scene.add(hemi);
     const sunLight = new T.DirectionalLight(0xfff4dd, 0.9);
     sunLight.castShadow = true;
@@ -497,9 +498,12 @@
     // mode: undefined (felt), true (knit), 'body' (the player: fibres fixed to the body, so they stay fine at every size,
     // and pitched darker because a near-white body clips any brightening), 'fuzz' (the player's fuzz shell: only fibre
     // tips show, thicker toward the outline, so the silhouette goes soft like needle-felted wool).
+    // 'clay' (redesign guide: fibre noise on roads and walls read as low-res concrete): matte and smooth, no fibres; walls
+    // darken toward their base like soft ambient occlusion, so blocks sit on the ground like toys on a diorama.
     function felt(mat, mode) {
       if (mat.userData.felt) return mat;
       mat.userData.felt = true;
+      if (mode === 'clay') return clay(mat);
       const knit = mode === true, own = mode === 'body' || mode === 'fuzz';
       const TILE = knit ? KNIT_TILE : own ? 1.1 : FELT_TILE, lo = knit ? 0.5 : own ? 0.42 : 0.4, amp = knit ? 0.85 : own ? 1.0 : 1.2;
       mat.customProgramCacheKey = () => knit ? 'knit' : own ? mode : 'felt';
@@ -523,6 +527,29 @@
           .replace('#include <output_fragment>', `float feltFz = pow(1.0 - abs(dot(normalize(vFeltVN), vec3(0.0, 0.0, 1.0))), 2.0);
             outgoingLight += diffuseColor.rgb * feltFz * ${mode === 'body' ? '0.12' : '0.35'};
             ${mode === 'fuzz' ? 'diffuseColor.a *= smoothstep(0.48, 0.58, feltF) * (0.5 + feltFz * 0.5);' : ''}
+            #include <output_fragment>`);
+      };
+      return mat;
+    }
+
+    function clay(mat) {
+      mat.customProgramCacheKey = () => 'clay';
+      mat.onBeforeCompile = sh => {
+        sh.vertexShader = sh.vertexShader
+          .replace('#include <common>', '#include <common>\nvarying vec3 vClayP;\nvarying vec3 vClayN;\nvarying vec3 vClayVN;')
+          .replace('#include <project_vertex>', `#include <project_vertex>
+            vec4 clayW = vec4(transformed, 1.0); vec3 clayN = normal;
+            #ifdef USE_INSTANCING
+              clayW = instanceMatrix * clayW; clayN = mat3(instanceMatrix) * clayN;
+            #endif
+            vClayP = (modelMatrix * clayW).xyz; vClayN = normalize(mat3(modelMatrix) * clayN); vClayVN = normalize(normalMatrix * clayN);`);
+        sh.fragmentShader = sh.fragmentShader
+          .replace('#include <common>', '#include <common>\nvarying vec3 vClayP;\nvarying vec3 vClayN;\nvarying vec3 vClayVN;')
+          .replace('#include <color_fragment>', `#include <color_fragment>
+            float claySide = 1.0 - abs(normalize(vClayN).y); // walls only: the ground and roofs keep their exact color
+            diffuseColor.rgb *= mix(1.0, 0.78 + 0.22 * smoothstep(0.0, 22.0, vClayP.y), claySide);`)
+          .replace('#include <output_fragment>', `float clayFz = pow(1.0 - abs(dot(normalize(vClayVN), vec3(0.0, 0.0, 1.0))), 3.0);
+            outgoingLight += diffuseColor.rgb * clayFz * 0.12; // a soft lighter edge, like a rounded corner catching light
             #include <output_fragment>`);
       };
       return mat;
@@ -552,7 +579,8 @@
     const bodyGeo = new T.SphereGeometry(1, 32, 20);
     const bodyCols = [], under = col(0xc9b2f2), top = col(0xffffff), bp = bodyGeo.attributes.position;
     for (let i = 0; i < bp.count; i++) {
-      const y = bp.getY(i), spread = 1 + Math.max(0, -y) * 0.14 - Math.max(0, y) * 0.04;
+      const y = bp.getY(i), hem = Math.max(0, Math.min(1, (-y - 0.3) / 0.3)); // the hem ripples in soft scallops (painted art)
+      const spread = (1 + Math.max(0, -y) * 0.14 - Math.max(0, y) * 0.04) * (1 + hem * 0.07 * Math.cos(6 * Math.atan2(bp.getZ(i), bp.getX(i))));
       bp.setXYZ(i, bp.getX(i) * spread, y, bp.getZ(i) * spread);
       const c = under.clone().lerp(top, Math.pow((y + 1) / 2, 0.6));
       bodyCols.push(c.r, c.g, c.b);
@@ -571,10 +599,11 @@
     const throat = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x06030f }));
     const eyeMat = new T.MeshBasicMaterial({ color: 0x1b1240 });
     const pupilMat = new T.MeshBasicMaterial({ color: 0xffffff });
+    const planeGeo0 = new T.PlaneGeometry(1, 1), sparkMat0 = new T.MeshBasicMaterial({ color: 0xfff1b8, transparent: true, depthWrite: false }); // map set below
     // Eyes: big round glossy eyes set close together, a big glint up top and a small one below — a wide-eyed,
     // hungry look. Kept round (not tall ovals) and the mouth stays a dark void, so it never reads as Kirby.
     const eyes = [0, 1].map(() => {
-      const e = new T.Mesh(unit.sphere, eyeMat), p = new T.Mesh(unit.sphere, pupilMat), p2 = new T.Mesh(unit.sphere, pupilMat);
+      const e = new T.Mesh(unit.sphere, eyeMat), p = new T.Mesh(planeGeo0, sparkMat0), p2 = new T.Mesh(unit.sphere, pupilMat); p2.visible = false; // a sparkle star in each eye
       scene.add(e, p, p2);
       return { e, p, p2 };
     });
@@ -592,9 +621,32 @@
     const auraMat = new T.MeshBasicMaterial({ map: swirl, color: 0xb78cff, transparent: true, opacity: 0, depthWrite: false });
     const aura = new T.Mesh(bodyGeo, auraMat);
     aura.renderOrder = 7;
-    const cheekMat = new T.MeshBasicMaterial({ color: 0xb78cff, transparent: true, opacity: 0.22, depthWrite: false }); // a faint violet glow, not pink blush
+    const cheekMat = new T.MeshBasicMaterial({ color: 0xff9fb0, transparent: true, opacity: 0.5, depthWrite: false }); // pink blush, as in the painted art
     const cheeks = [0, 1].map(() => new T.Mesh(unit.sphere, cheekMat));
-    scene.add(body, fuzz, aura, mouth, throat, ...arms, ...cheeks);
+    // The painted character (design/art): a curl of a tuft on top, a gold crescent on the brow, sparkle-star eyes, a star
+    // glowing in the belly and a thin gold swirl around it. Looks only: the footprint and every rule stay the r-disc.
+    const flat = (draw, n = 128) => { const c = document.createElement('canvas'); c.width = c.height = n; draw(c.getContext('2d'), n); return new T.CanvasTexture(c); };
+    const starPath = (g, cx, cy, R, r, k) => { g.beginPath(); for (let i = 0; i < k * 2; i++) { const a = -Math.PI / 2 + i * Math.PI / k, q = i % 2 ? r : R; g.lineTo(cx + Math.cos(a) * q, cy + Math.sin(a) * q); } g.closePath(); };
+    const planeGeo = new T.PlaneGeometry(1, 1);
+    const tuft = new T.Group(); // body-local units: +x is the face, y up; it leans back and curls over to one side
+    for (const [x, y, z, r] of [[-0.05, 0.74, 0, 0.42], [-0.18, 0.98, 0.04, 0.31], [-0.27, 1.18, 0.1, 0.23], [-0.24, 1.35, 0.17, 0.165], [-0.1, 1.44, 0.22, 0.115], [0.05, 1.43, 0.25, 0.08]]) {
+      const m = new T.Mesh(unit.sphere, armMat); m.position.set(x, y, z); m.scale.setScalar(r); tuft.add(m); // armMat: the shared sphere has no vertex colors
+    }
+    const moon = new T.Mesh(planeGeo, new T.MeshBasicMaterial({ transparent: true, depthWrite: false, map: flat((g, n) => {
+      g.fillStyle = '#f6c443'; g.beginPath(); g.arc(n / 2, n / 2, n * 0.42, 0, Math.PI * 2); g.fill();
+      g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(n * 0.66, n * 0.4, n * 0.36, 0, Math.PI * 2); g.fill();
+    }) }));
+    const sparkleTex = flat((g, n) => { g.fillStyle = '#fff'; starPath(g, n / 2, n / 2, n * 0.48, n * 0.12, 4); g.fill(); });
+    const sparkMat = sparkMat0; sparkMat.map = sparkleTex;
+    const glowTex = flat((g, n) => { const grd = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); grd.addColorStop(0, 'rgba(255,214,110,.7)'); grd.addColorStop(0.4, 'rgba(255,190,90,.3)'); grd.addColorStop(1, 'rgba(255,170,70,0)'); g.fillStyle = grd; g.fillRect(0, 0, n, n); });
+    const bellyGlow = new T.Mesh(planeGeo, new T.MeshBasicMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: T.AdditiveBlending }));
+    const bellyStar = new T.Mesh(planeGeo, new T.MeshBasicMaterial({ transparent: true, depthWrite: false, map: flat((g, n) => {
+      g.shadowColor = '#ffd25c'; g.shadowBlur = n * 0.08; g.fillStyle = '#fff3b0'; starPath(g, n / 2, n * 0.53, n * 0.4, n * 0.2, 5); g.fill();
+      g.shadowBlur = 0; g.fillStyle = '#ffffff'; starPath(g, n / 2, n * 0.53, n * 0.2, n * 0.1, 5); g.fill();
+    }) }));
+    const swirlRing = new T.Mesh(new T.TorusGeometry(1, 0.012, 6, 72), new T.MeshBasicMaterial({ color: 0xffd36b, transparent: true, opacity: 0.6, depthWrite: false }));
+    scene.add(body, fuzz, aura, mouth, throat, ...arms, ...cheeks, tuft, moon, bellyGlow, bellyStar, swirlRing);
+    const lookV = new T.Vector3(), outward = (m, player) => m.lookAt(lookV.set(m.position.x * 2 - player.x, m.position.y * 2 - player.r * (BODY_Y + bodyLift), m.position.z * 2 - player.y));
     // A point on the body's surface: horizontal angle a, elevation el (radians), pushed out by `out`·r.
     let bodyLift = 0; // share of r the body sits up (the car skin's seat)
     const onBody = (player, a, el, out, v) => {
@@ -718,7 +770,8 @@
       scene.remove(group);
     }
 
-    function lambert(color, extra, knit) { return felt(new T.MeshLambertMaterial(Object.assign({ color: col(color) }, extra)), knit); }
+    // Hard things (ground, roads, buildings, roofs) are matte clay; soft things (props, people, animals, guards) stay felt.
+    function lambert(color, extra, mode = 'clay') { return felt(new T.MeshLambertMaterial(Object.assign({ color: col(color) }, extra)), mode); }
 
     function build(w) {
       disposeGroup();
@@ -738,7 +791,7 @@
       w.waterMat = null;
       if (waterY < WORLD) {
         const wg = new T.PlaneGeometry(WORLD, WORLD - waterY, 1, 1); wg.rotateX(-Math.PI / 2); wg.userData.own = true;
-        w.waterMat = felt(new T.MeshPhongMaterial({ color: col(stage.water[0]), shininess: 60, specular: 0x334455 }));
+        w.waterMat = felt(new T.MeshPhongMaterial({ color: col(stage.water[0]), shininess: 60, specular: 0x334455 }), 'clay');
         const water = new T.Mesh(wg, w.waterMat);
         water.position.set(WORLD / 2, -1.5, waterY + (WORLD - waterY) / 2);
         water.receiveShadow = true;
@@ -857,7 +910,7 @@
           const wall = b.crane ? lambert(wallCol, { emissive: glow }) : lambert(wallCol, { map, emissive: glow, emissiveMap: TEX.plain });
           wall.userData.day = glow; wall.userData.night = litAtNight(kind) ? TEX.lit : TEX.dark;
           if (!b.crane) w.wallMats.push(wall);
-          // felt, not knit: knit stitches over the roof's own lines made a fine checker that crawled as the camera moved
+          // clay, never knit: knit stitches over the roof's own lines made a fine checker that crawled as the camera moved
           // (tester, build 69: "every map's roofs flicker")
           const roof = lambert(b.roof, b.crane ? {} : { map: TEX.roof });
           // Cranes use the shared six-face box (+x -x +y -y +z -z); other buildings their own two-group box.
@@ -921,7 +974,7 @@
       w.roofIM = null;
       if (ROOFS[look.roof]) {
         const list = w.buildings.filter(b => !b.crane && !b.wall);
-        const roofMat = lambert('#ffffff', { map: look.snow ? TEX.snowroof : look.roof === 'flat' ? TEX.roof : look.roof === 'gable' ? TEX.shingles : TEX.tiles }); // felt only, as above
+        const roofMat = lambert('#ffffff', { map: look.snow ? TEX.snowroof : look.roof === 'flat' ? TEX.roof : look.roof === 'gable' ? TEX.shingles : TEX.tiles }); // clay, as above
         const capMat = lambert('#e6e4e0'); // pale ridge cap, hip lines and eave edges of a hanok roof; the second geometry group
         const im = new T.InstancedMesh(ROOFS[look.roof], look.roof === 'hanok' ? [roofMat, capMat] : roofMat, list.length);
         im.receiveShadow = true; im.frustumCulled = false;
@@ -944,7 +997,7 @@
       for (const [type, list] of Object.entries(byType)) {
         for (const part of PARTS[type]) {
           const c = part.color === 'inst' ? '#ffffff' : part.color;
-          const mat = part.tex ? new T.MeshBasicMaterial({ map: signTex(part.tex) }) : part.glow ? new T.MeshBasicMaterial({ color: col(c) }) : lambert(c, undefined, part.geo === 'blob'); // round crowns are yarn balls
+          const mat = part.tex ? new T.MeshBasicMaterial({ map: signTex(part.tex) }) : part.glow ? new T.MeshBasicMaterial({ color: col(c) }) : lambert(c, undefined, part.geo === 'blob' || undefined); // round crowns are yarn balls, the rest felt
           const im = new T.InstancedMesh(low[part.geo], mat, list.length);
           im.receiveShadow = true;
           if (CASTERS[type] && CASTERS[type].includes(PARTS[type].indexOf(part))) im.castShadow = true; // shades the ground, as the rule says
@@ -963,7 +1016,7 @@
     function bossMesh(kind, color) {
       const g = new T.Group();
       const M = (geo, c, sc, pos, glow, rot) => {
-        const m = new T.Mesh(unit[geo], glow ? new T.MeshBasicMaterial({ color: c }) : lambert(c));
+        const m = new T.Mesh(unit[geo], glow ? new T.MeshBasicMaterial({ color: c }) : lambert(c, undefined, undefined));
         m.scale.set(sc[0], sc[1], sc[2]); m.position.set(pos[0], pos[1], pos[2]); if (rot) m.rotation.set(rot[0], rot[1], rot[2]);
         m.receiveShadow = !glow; g.add(m); return m;
       };
@@ -1067,7 +1120,7 @@
     }
 
       // Guards: few, so plain meshes. A boss is the map's own figure (bossMesh), built at guard size and scaled up to its radius.
-      const guardMat = lambert('#2f3e66'), skinMat = lambert('#f6d2b0'), lampMat = new T.MeshBasicMaterial({ color: 0xffd23f });
+      const guardMat = lambert('#2f3e66', undefined, undefined), skinMat = lambert('#f6d2b0', undefined, undefined), lampMat = new T.MeshBasicMaterial({ color: 0xffd23f });
       for (const g of w.guards) {
         g.k = g.boss ? g.r / 9 : 1;
         let gg;
@@ -1227,10 +1280,12 @@
         // Sunlit ground lands at exactly its palette color (hemi + sun·sin(elev) = 1) instead of
         // washing out at noon or going dull at dawn; shade gets the hemisphere term only (~36%).
         // The cap keeps sun-facing walls from blowing out when the sun is very low.
+        // Shade is dusk-violet, not gray (redesign guide): the sky fill is lavender, and the sun makes up the rest so
+        // sunlit ground still lands near its palette color. The shade stays as dark as before, so its edge reads the same.
         const HEMI = 0.36;
-        sunLight.intensity = Math.min(1.8, (1 - HEMI) / Math.sin(sun.elev));
+        sunLight.intensity = Math.min(1.8, (1 - HEMI * 0.82) / Math.sin(sun.elev));
         sunLight.color.set(0xfff4dd).lerp(col('#ff9a5a'), lowSun); // deeper orange toward dusk
-        hemi.color.set(0xffffff); hemi.groundColor.set(0x8a7f70); hemi.intensity = HEMI;
+        hemi.color.set(SHADE_SKY); hemi.groundColor.set(0x6f6494); hemi.intensity = HEMI;
         world.roadMat.color.set(world.roadDay);
         world.paintMat.color.set('#faf6ee'); world.curbMat.color.set(world.curbDay);
         if (world.lawnMat) world.lawnMat.color.set(world.stage.lawn);
@@ -1383,7 +1438,18 @@
       swirl.offset.set(t * 0.05, 0); swirl.rotation = t * 0.4;
       armMat.color.copy(bodyMat.color).multiplyScalar(0.94);
       // First person looks over the top of the head; the eyes high on its front would peek over it.
-      eyes.forEach(o => { o.e.visible = o.p.visible = o.p2.visible = k < 0.6; });
+      eyes.forEach(o => { o.e.visible = o.p.visible = k < 0.6; });
+      tuft.visible = moon.visible = k < 0.6;
+      tuft.position.copy(body.position); tuft.scale.copy(body.scale); tuft.rotation.copy(body.rotation);
+      // gold crescent high on the brow, off to one side; belly star low in front, glowing brighter as it grows
+      onBody(player, L + 0.62, 0.8, 0.01, moon.position); outward(moon, player); moon.scale.setScalar(R * 0.3);
+      onBody(player, L, 0.02, 0.03, bellyStar.position); outward(bellyStar, player);
+      const starBeat = 1 + Math.sin(t * 2.4) * 0.06;
+      bellyStar.scale.setScalar(R * 0.5 * starBeat);
+      bellyGlow.position.copy(bellyStar.position); bellyGlow.quaternion.copy(bellyStar.quaternion); bellyGlow.scale.setScalar(R * (0.8 + grown * 0.4) * starBeat);
+      bellyGlow.material.opacity = 0.35 + grown * 0.3; bellyStar.renderOrder = 9; bellyGlow.renderOrder = 8;
+      swirlRing.position.set(player.x, R * (BODY_Y + bodyLift - 0.08), player.y);
+      swirlRing.rotation.set(Math.PI / 2 - 0.32, Math.sin(t * 0.7) * 0.15, t * 0.6); swirlRing.scale.setScalar(R * 1.22);
       arms.forEach((m, k) => {
         onBody(player, L + (k ? 1 : -1) * (1.05 - gulp * 0.45), -0.28, 0.06, m.position);
         m.scale.set(R * 0.3, R * 0.24, R * 0.3);
@@ -1406,13 +1472,11 @@
         onBody(player, a, EYE_EL, 0.0, e.position);
         e.rotation.set(0, -L, 0);
         e.scale.set(R * 0.09, R * (0.19 + wide * 0.04) * Math.max(0.15, shut), R * (0.14 + wide * 0.03));
-        onBody(player, a + (k ? 1 : -1) * 0.03, EYE_EL + 0.05, 0.08, p.position);
-        p.scale.setScalar(R * (0.08 + wide * 0.015) * shut);
-        onBody(player, a - (k ? 1 : -1) * 0.03, EYE_EL - 0.1, 0.06, p2.position);
-        p2.scale.setScalar(R * 0.04 * shut);
+        onBody(player, a + (k ? 1 : -1) * 0.02, EYE_EL + 0.02, 0.17, p.position); // just in front of the eye's bulge outward(p, player);
+        p.scale.setScalar(R * (0.22 + wide * 0.03) * Math.max(0.001, shut)); p.renderOrder = 9;
       });
-      // Cheeks: a faint violet glow at rest that warms to a pink blush, bigger, while a combo is going.
-      cheekMat.color.set(0xb78cff).lerp(tmpCol.set(0xff9fc4), cheer); cheekMat.opacity = 0.22 + cheer * 0.45;
+      // Cheeks: a pink blush that deepens and grows while a combo is going.
+      cheekMat.color.set(0xff9fb0).lerp(tmpCol.set(0xff7f9e), cheer); cheekMat.opacity = 0.5 + cheer * 0.3;
       cheeks.forEach((m, i) => {
         onBody(player, L + (i ? 1 : -1) * 0.62, 0.42, 0.0, m.position);
         m.rotation.set(0, -L, 0);
@@ -1485,7 +1549,7 @@
       glowColor.setHex(skin.rim);
       rimColor = skin.rim;
       eyeMat.color.setHex(skin.eye);
-      pupilMat.color.setHex(skin.pupil !== undefined ? skin.pupil : 0x16122a);
+      pupilMat.color.setHex(skin.pupil !== undefined ? skin.pupil : 0x16122a); // the eye sparkle stays warm gold-white on every skin, like the painted art
     }
     // Summoning circle: a CIRCLES entry, or null for none.
     function setCircle(c) {

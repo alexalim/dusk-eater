@@ -187,7 +187,7 @@
   /* Tall content scrolls instead of squeezing blocks into each other; Korean wraps between words. */
   .overlay > * { flex-shrink: 0; }
   .overlay p { word-break: keep-all; }
-  .overlay .logo { width: 132px; height: 132px; animation: float 3.2s ease-in-out infinite; } /* the logo has its own halo; no extra glow behind it */
+  .overlay .logo { width: 168px; height: 168px; object-fit: contain; animation: float 3.2s ease-in-out infinite; } /* the logo has its own halo; no extra glow behind it */
   @keyframes float { 50% { transform: translateY(-7px) rotate(-2deg); } }
   .overlay h1 { margin: 0; font-size: 38px; letter-spacing: 1px; color: var(--accent); }
   .overlay h2 { margin: 0; font-size: 26px; color: var(--accent); }
@@ -416,7 +416,7 @@
   .ico { display: inline-block; width: 1.15em; height: 1.15em; vertical-align: -0.2em; object-fit: contain; }
   .ico.map { border-radius: 26%; }
   /* Expression faces (img/ui/face-*.svg): big on the end and pause screens, small beside the tutorial and warning. */
-  .face-big { width: 92px; height: 92px; } /* shaded like the 3D body; no glow behind it */
+  .face-big { width: 92px; height: 92px; object-fit: contain; } /* shaded like the 3D body; no glow behind it */
   .ico.face { width: 1.5em; height: 1.5em; vertical-align: middle; margin: -0.3em 0; }
   #tutorial .face { float: left; width: 40px; height: 40px; margin: 0 8px 0 0; }
   .ico.dex { width: 1.8em; height: 1.8em; vertical-align: middle; margin: -0.3em 0; }
@@ -583,7 +583,7 @@
 <div id="title" class="overlay">
   <div class="corner"><span class="left"><span class="chip round" id="btn-info" aria-label="정보">i</span><span class="chip lv" id="title-level"></span></span><span class="chip" id="btn-account">계정 · 친구</span></div>
   <div class="strip"><span class="chip gem gem-count"></span><span class="chip" id="title-streak"></span><span class="chip" id="title-region"></span></div><!-- status row: gems, check-ins, where you are -->
-  <img class="logo" src="logo.svg" alt="">
+  <img class="logo" src="img/art/ghost-eat.webp" alt="">
   <h1>Dusk Eater</h1>
   <p class="tagline">어둠을 냠냠 먹고 쑥쑥 자라는 아이예요.<br>그늘에 숨어 꿀꺽, 해가 지면 온 동네가 내 거예요!</p>
   <div class="btn hero" id="btn-title">시작</div>
@@ -2482,7 +2482,8 @@
     $('end-gems').classList.toggle('hidden', !notes.length);
 
     const title = !cleared ? '아쉬워요, 다시 도전!' : n === 3 ? `완벽한 밤이었어요! ${ico('sparkle')}` : '밤이 끝났어요';
-    const face = `img/ui/face-${['sleepy', 'determined', 'happy', 'excited'][n]}.svg`; // the character reacts to the stars
+    // the character reacts to the stars: drawn faces for a miss or one star, the painted art (design/art) for two and three
+    const face = ['img/ui/face-sleepy.svg', 'img/ui/face-determined.svg', 'img/art/ghost-hold.webp', 'img/art/ghost-cheer.webp'][n];
     $('end-title').innerHTML = title; $('end-face').src = face;
     $('end-stars').innerHTML = starText(n);
     $('result').textContent = `${stats.total}개 삼킴 · ${score.toLocaleString()}점`;
