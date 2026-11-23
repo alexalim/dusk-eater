@@ -477,7 +477,7 @@
       return t;
     })();
     // Knitting (the reference's beanies and bobbed hair): rows of V stitches, each a pair of slanted loops lit in the
-    // middle and dark where they tuck under, on a dark gap. Laid on roofs and on rounded yarn-ball shapes (tree crowns).
+    // middle and dark where they tuck under, on a dark gap. Laid on rounded yarn-ball shapes (tree crowns), not on roofs.
     const knitTex = (() => {
       const c = document.createElement('canvas'); c.width = c.height = 256;
       const g = c.getContext('2d'); g.fillStyle = '#3a3a3a'; g.fillRect(0, 0, 256, 256);
@@ -849,7 +849,9 @@
           const wall = b.crane ? lambert(wallCol, { emissive: glow }) : lambert(wallCol, { map, emissive: glow, emissiveMap: TEX.plain });
           wall.userData.day = glow; wall.userData.night = litAtNight(kind) ? TEX.lit : TEX.dark;
           if (!b.crane) w.wallMats.push(wall);
-          const roof = lambert(b.roof, b.crane ? {} : { map: TEX.roof }, !b.crane); // knitted roofs
+          // felt, not knit: knit stitches over the roof's own lines made a fine checker that crawled as the camera moved
+          // (tester, build 69: "every map's roofs flicker")
+          const roof = lambert(b.roof, b.crane ? {} : { map: TEX.roof });
           // Cranes use the shared six-face box (+x -x +y -y +z -z); other buildings their own two-group box.
           mats[key] = { roof, faces: b.crane ? [wall, wall, roof, wall, wall, wall] : [wall, roof] };
         }
@@ -911,7 +913,7 @@
       w.roofIM = null;
       if (ROOFS[look.roof]) {
         const list = w.buildings.filter(b => !b.crane && !b.wall);
-        const roofMat = lambert('#ffffff', { map: look.snow ? TEX.snowroof : look.roof === 'flat' ? TEX.roof : look.roof === 'gable' ? TEX.shingles : TEX.tiles }, true);
+        const roofMat = lambert('#ffffff', { map: look.snow ? TEX.snowroof : look.roof === 'flat' ? TEX.roof : look.roof === 'gable' ? TEX.shingles : TEX.tiles }); // felt only, as above
         const capMat = lambert('#e6e4e0'); // pale ridge cap, hip lines and eave edges of a hanok roof; the second geometry group
         const im = new T.InstancedMesh(ROOFS[look.roof], look.roof === 'hanok' ? [roofMat, capMat] : roofMat, list.length);
         im.receiveShadow = true; im.frustumCulled = false;
