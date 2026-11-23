@@ -44,9 +44,11 @@ with sync_playwright() as p:
     hidden = [pg.inner_text(f'.item[data-skin={k}] .nm') for k in ('dawn', 'forest', 'sky')]
     lvl = [pg.inner_text(f'.item[data-skin={k}] .pr').strip() for k in ('candy', 'aurora', 'galaxy')]
     mint_pr = pg.inner_text('.item[data-skin=mint] .pr'); car_pr = pg.inner_text('.item[data-skin=car] .pr')
-    rec('H1', 'shop lists 16 skins (santa locked to its event, 7 level skins with their level, 3 hidden as ???, paid ones priced in won and gems, the car for gems only) + 3 gem packs, demo notice shown', pg.is_visible('#shop') and pg.is_visible('#shop-demo')
+    car_art = pg.inner_html('.item[data-skin=car] .swatch'); plain_art = pg.inner_html('.item[data-skin=mint] .swatch')
+    rec('H1', 'shop lists 16 skins (santa locked to its event, 7 level skins with their level, 3 hidden as ???, paid ones priced in won and gems, the car for gems only, pictured in its car) + 3 gem packs, demo notice shown', pg.is_visible('#shop') and pg.is_visible('#shop-demo')
         and len(skins) == 16 and '이벤트' in santa and hidden == ['???'] * 3 and lvl == ['Lv.5', 'Lv.10', 'Lv.20'] and len(packs) == 3 and all('₩' in x for x in prices)
-        and '₩' in mint_pr and '300' in mint_pr and '600' in car_pr and '₩' not in car_pr, str(prices) + f' mint={mint_pr!r} car={car_pr!r}')
+        and '₩' in mint_pr and '300' in mint_pr and '600' in car_pr and '₩' not in car_pr
+        and '#8fd3e8' in car_art and '#8fd3e8' not in plain_art, str(prices) + f' mint={mint_pr!r} car={car_pr!r}')
 
     # H2 buying a gem pack credits gems and saves them
     packs[0].tap(); frames_wait(pg, 5)
