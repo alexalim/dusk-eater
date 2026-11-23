@@ -22,6 +22,7 @@
     rbox: roundedBox(4, 3),
     box: new T.BoxGeometry(1, 1, 1),
     cyl: new T.CylinderGeometry(1, 1, 1, 14),
+    disc: new T.CylinderGeometry(1, 1, 1, 30), // big flat ground decals (ponds, plazas): round at any size
     sphere: new T.SphereGeometry(1, 14, 10),
     blob: new T.SphereGeometry(1, 10, 8),
     cone: new T.ConeGeometry(1, 1, 12),
@@ -59,7 +60,7 @@
   const HAIR = '#4a3426', SKIN = '#f6d2b0';
   // Prop parts drawn into the shadow map: the crown, canopy or body only (no trunks, poles, fruit or ornaments), the same
   // shapes the game's shade rule models (index.html SHADE, core propShadow). type -> part indices.
-  const CASTERS = { tree: [1, 2], persimmon: [1], ginkgo: [1, 2, 3, 4], pine: [1, 2], xtree: [1, 2, 3], palm: [1, 2],
+  const CASTERS = { tree: [1, 2], persimmon: [1], ginkgo: [1, 2, 3, 4], pine: [1, 2], xtree: [1, 2, 3], palm: [1, 2, 3, 4, 5, 6],
     parasol: [1], tent: [0], haystack: [0, 1], stall: [0, 1], container: [0, 1] };
   // Big things of each place (index.html giants): the same shapes scaled up, so they shade the same way, plus the rides,
   // whose only shade is a solid part (a station box, a canopy): rims, tracks and chains are open, so they cast nothing.
@@ -71,6 +72,9 @@
     P('sphere', [0.58, 0.32, 0.58], 2.7, hat)].concat(extra);
   // A part that circles (spin): round a vertical wheel's hub at height c, or (flat) round the pole; w = turns in radians/s.
   const spin = (p, sp) => Object.assign(p, { spin: sp });
+  // A part turned in place (rot): yaw round the pole, then pitch, so a frond points outward and droops.
+  const tilt = (p, yaw, pitch) => Object.assign(p, { rot: [yaw, pitch] });
+  const frond = a => tilt(P('sphere', [0.5, 0.06, 0.2], 2.56, 'inst', [Math.cos(a) * 0.44, Math.sin(a) * 0.44]), -a, -0.42);
   const COASTER_Y = a => 0.7 + 1.6 * ((1 + Math.cos(a)) / 2) ** 2; // track height round the loop: one big hill at the +x end
   const PARTS = {
     person:    [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.58, 0.32, 0.58], 2.7, HAIR)],
@@ -92,7 +96,11 @@
     buoy:      [P('cyl', [0.9, 1.0, 0.9], 0.5, 'inst'), P('cone', [0.55, 1.2, 0.55], 1.6, '#ffffff')],
     bench:     [P('box', [2.2, 0.25, 0.8], 0.6, 'inst'), P('box', [2.2, 0.6, 0.15], 1.0, 'inst', [0, -0.35])],
     container: [P('box', [2.6, 1.2, 1.2], 0.6, 'inst'), P('box', [2.64, 0.08, 1.24], 1.2, '#e8e4dc')],
-    tree:      [P('cyl', [0.25, 1.4, 0.25], 0.7, '#7a5233'), P('blob', [1.0, 0.85, 1.0], 1.8, 'inst'), P('blob', [0.68, 0.6, 0.68], 2.5, '#5fb86a')],
+    // a lumpy crown (redesign guide): three smaller balls poke out of the big one. They cast nothing (CASTERS), so the
+    // drawn shade stays the two balls the rule models.
+    tree:      [P('cyl', [0.25, 1.4, 0.25], 0.7, '#7a5233'), P('blob', [1.0, 0.85, 1.0], 1.8, 'inst'), P('blob', [0.68, 0.6, 0.68], 2.5, '#5fb86a'),
+                P('blob', [0.5, 0.46, 0.5], 2.05, 'inst', [0.62, 0.3]), P('blob', [0.46, 0.42, 0.46], 2.0, '#74c97c', [-0.56, -0.42]),
+                P('blob', [0.42, 0.4, 0.42], 2.2, 'inst', [-0.18, 0.66])],
     car:       [P('box', [1.6, 0.32, 1.16], 0.18, '#26262e'), P('box', [2.0, 0.5, 1.1], 0.5, 'inst'), P('box', [1.1, 0.42, 0.96], 0.96, '#9fc3e6', [-0.1, 0]),
                 P('box', [0.95, 0.08, 0.9], 1.2, 'inst', [-0.1, 0]), P('box', [0.06, 0.16, 0.8], 0.55, '#fff3c4', [1.0, 0], true)],
     boat:      [P('box', [2.0, 0.5, 0.9], 0.25, 'inst'), P('box', [0.7, 0.6, 0.6], 0.8, '#3d5a80'), P('cyl', [0.06, 1.8, 0.06], 1.3, '#dddddd', [0.5, 0])],
@@ -177,7 +185,8 @@
     camel:     [P('blob', [0.85, 0.36, 0.38], 1.3, 'inst'), P('sphere', [0.45, 0.4, 0.45], 1.75, 'inst', [-0.2, 0]),
                 P('cyl', [0.12, 0.8, 0.12], 1.8, 'inst', [0.85, 0]), P('blob', [0.28, 0.16, 0.18], 2.2, 'inst', [1.0, 0]),
                 P('cyl', [0.11, 1.0, 0.11], 0.5, 'inst', [0.5, 0.2]), P('cyl', [0.11, 1.0, 0.11], 0.5, 'inst', [0.5, -0.2]), P('cyl', [0.11, 1.0, 0.11], 0.5, 'inst', [-0.5, 0.2]), P('cyl', [0.11, 1.0, 0.11], 0.5, 'inst', [-0.5, -0.2])],
-    palm:      [P('cyl', [0.2, 2.6, 0.2], 1.3, '#8a6a46'), P('box', [1.6, 0.08, 0.4], 2.6, 'inst'), P('box', [0.4, 0.08, 1.6], 2.6, 'inst'),
+    // six drooping fronds round the crown (redesign guide: a palm, not a plus sign), and the coconuts under them
+    palm:      [P('cyl', [0.2, 2.6, 0.2], 1.3, '#8a6a46'), ...[0, 1, 2, 3, 4, 5].map(k => frond(k * Math.PI / 3 + 0.3)),
                 P('sphere', [0.3, 0.3, 0.3], 2.5, '#6b4a2a')],
     tent:      [P('cone', [1.1, 1.3, 1.1], 0.65, 'inst'), P('box', [0.5, 0.6, 0.06], 0.3, '#3a2a20', [0, 0.9])],
     // Christmas event
@@ -632,6 +641,41 @@
     for (const [x, y, z, r] of [[-0.05, 0.74, 0, 0.42], [-0.18, 0.98, 0.04, 0.31], [-0.27, 1.18, 0.1, 0.23], [-0.24, 1.35, 0.17, 0.165], [-0.1, 1.44, 0.22, 0.115], [0.05, 1.43, 0.25, 0.08]]) {
       const m = new T.Mesh(unit.sphere, armMat); m.position.set(x, y, z); m.scale.setScalar(r); tuft.add(m); // armMat: the shared sphere has no vertex colors
     }
+    // Skin accessories (shop `wear`): one small thing on the head, so a skin is more than a color. Body-local units like
+    // the tuft; the side pieces sit on the brow the crescent leaves free, a hat or beret takes the tuft's place. Looks only.
+    const wearMat = felt(new T.MeshBasicMaterial({ color: 0xffffff }), 'body'), wearMat2 = felt(new T.MeshBasicMaterial({ color: 0xffffff }), 'body'); // the piece, its accent
+    const pinMat = new T.MeshBasicMaterial({ transparent: true, depthWrite: false, map: flat((g, n) => { g.fillStyle = '#fff'; starPath(g, n / 2, n / 2, n * 0.48, n * 0.22, 5); g.fill(); }) });
+    const rimGeo = new T.TorusGeometry(1, 0.1, 6, 24), trimGeo = new T.TorusGeometry(1, 0.17, 8, 20);
+    const wear = new T.Group(), WEAR = {}, facing = new T.Matrix4(), CENTRE = new T.Vector3();
+    let wearBare = false; // a hat or beret is on: no tuft
+    const faceOut = o => o.quaternion.setFromRotationMatrix(facing.lookAt(o.position, CENTRE, o.up)); // +z along the body's normal, +y up the slope
+    const wearKind = (name, x = 0, y = 0, z = 0) => { const g = new T.Group(); g.position.set(x, y, z); g.visible = false; wear.add(g); return WEAR[name] = g; };
+    const wearPart = (g, geo, mat, s, p = [0, 0, 0], r = [0, 0, 0]) => { const m = new T.Mesh(unit[geo] || geo, mat); m.scale.set(...s); m.position.set(...p); m.rotation.set(...r); g.add(m); return m; };
+    const BROW = [0.395, 0.84, -0.368]; // on the unit body: 0.75 rad round from the face, 1.0 rad up
+    {
+      const bow = wearKind('bow', ...BROW.map(v => v * 1.06)); faceOut(bow); bow.rotateZ(0.3); // two wings meeting at a knot
+      wearPart(bow, 'cone', wearMat, [0.17, 0.27, 0.06], [-0.15, 0, 0], [0, 0, -Math.PI / 2]); wearPart(bow, 'cone', wearMat, [0.17, 0.27, 0.06], [0.15, 0, 0], [0, 0, Math.PI / 2]);
+      wearPart(bow, 'sphere', wearMat2, [0.085, 0.085, 0.07]);
+      const pin = wearKind('pin', ...BROW.map(v => v * 1.03)); faceOut(pin); pin.rotateZ(0.2); // a flat star hairpin, like the crescent
+      wearPart(pin, planeGeo, pinMat, [0.58, 0.58, 1]);
+      const flower = wearKind('flower', ...BROW.map(v => v * 1.05)); faceOut(flower); // five petals round a centre
+      for (let i = 0; i < 5; i++) wearPart(flower, 'sphere', wearMat, [0.11, 0.11, 0.05], [Math.cos(i * Math.PI * 0.4) * 0.15, Math.sin(i * Math.PI * 0.4) * 0.15, 0]);
+      wearPart(flower, 'sphere', wearMat2, [0.08, 0.08, 0.06], [0, 0, 0.03]);
+      const glasses = wearKind('glasses'); // a ring round each eye (the eyes sit 0.7 rad up, 0.27 rad to each side) and a bridge
+      for (const z of [0.222, -0.222]) faceOut(wearPart(glasses, rimGeo, wearMat, [0.185, 0.24, 0.185], [0.803, 0.702, z]));
+      wearPart(glasses, 'cyl', wearMat, [0.018, 0.09, 0.018], [0.805, 0.704, 0], [Math.PI / 2, 0, 0]);
+      const hat = wearKind('hat', -0.04, 0.84, -0.02); hat.rotation.set(-0.12, 0, 0.16); // a pointed hat leaning back: trim, cone, pompom
+      wearPart(hat, trimGeo, wearMat2, [0.5, 0.5, 0.5], [0, 0.02, 0], [Math.PI / 2, 0, 0]);
+      wearPart(hat, 'cone', wearMat, [0.46, 0.85, 0.46], [0, 0.47, 0]); wearPart(hat, 'sphere', wearMat2, [0.13, 0.13, 0.13], [0, 0.92, 0]);
+      const beret = wearKind('beret', 0, 0.93, -0.1); beret.rotation.set(-0.3, 0, 0.1); // a soft disc tipped to one side, with its stalk
+      wearPart(beret, 'sphere', wearMat, [0.58, 0.17, 0.58], [0, 0.05, 0]); wearPart(beret, 'sphere', wearMat, [0.045, 0.07, 0.045], [0, 0.24, 0]);
+      const crown = wearKind('crown', -0.05, 0.93, 0); crown.rotation.set(0, 0, 0.1); // a band round the tuft's foot, five points with a gem each
+      wearPart(crown, 'cyl', wearMat, [0.42, 0.14, 0.42], [0, 0.05, 0]);
+      for (let i = 0; i < 5; i++) {
+        const cx = Math.cos(i * Math.PI * 0.4) * 0.34, cz = Math.sin(i * Math.PI * 0.4) * 0.34;
+        wearPart(crown, 'cone', wearMat, [0.12, 0.28, 0.12], [cx, 0.25, cz]); wearPart(crown, 'sphere', wearMat2, [0.06, 0.06, 0.06], [cx, 0.4, cz]);
+      }
+    }
     const moon = new T.Mesh(planeGeo, new T.MeshBasicMaterial({ transparent: true, depthWrite: false, map: flat((g, n) => {
       g.fillStyle = '#f6c443'; g.beginPath(); g.arc(n / 2, n / 2, n * 0.42, 0, Math.PI * 2); g.fill();
       g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(n * 0.66, n * 0.4, n * 0.36, 0, Math.PI * 2); g.fill();
@@ -645,7 +689,7 @@
       g.shadowBlur = 0; g.fillStyle = '#ffffff'; starPath(g, n / 2, n * 0.53, n * 0.2, n * 0.1, 5); g.fill();
     }) }));
     const swirlRing = new T.Mesh(new T.TorusGeometry(1, 0.012, 6, 72), new T.MeshBasicMaterial({ color: 0xffd36b, transparent: true, opacity: 0.6, depthWrite: false }));
-    scene.add(body, fuzz, aura, mouth, throat, ...arms, ...cheeks, tuft, moon, bellyGlow, bellyStar, swirlRing);
+    scene.add(body, fuzz, aura, mouth, throat, ...arms, ...cheeks, tuft, wear, moon, bellyGlow, bellyStar, swirlRing);
     const lookV = new T.Vector3(), outward = (m, player) => m.lookAt(lookV.set(m.position.x * 2 - player.x, m.position.y * 2 - player.r * (BODY_Y + bodyLift), m.position.z * 2 - player.y));
     // A point on the body's surface: horizontal angle a, elevation el (radians), pushed out by `out`·r.
     let bodyLift = 0; // share of r the body sits up (the car skin's seat)
@@ -796,7 +840,7 @@
         water.position.set(WORLD / 2, -1.5, waterY + (WORLD - waterY) / 2);
         water.receiveShadow = true;
         group.add(water);
-        const quay = new T.Mesh(unit.box, lambert('#7d7a76'));
+        const quay = new T.Mesh(unit.box, lambert(stage.theme === 'beach' ? '#ecd9aa' : '#7d7a76')); // sand runs into the sea on the beach
         quay.scale.set(WORLD, 4, 8); quay.position.set(WORLD / 2, -0.5, waterY - 3);
         quay.receiveShadow = true;
         group.add(quay);
@@ -839,7 +883,7 @@
           for (let i = -2; i <= 2 && !alley; i++) {
             const off = ROAD / 2 + 7;
             if (r <= land) { stripes.push([c - off, r + i * 8, 10, 4.5]); stripes.push([c + off, r + i * 8, 10, 4.5]); }
-            if (c <= land) { stripes.push([c + i * 8, r - off, 4.5, 10]); stripes.push([c + i * 8, r + off, 4.5, 10]); }
+            if (c <= land && r < waterY - 6) { stripes.push([c + i * 8, r - off, 4.5, 10]); stripes.push([c + i * 8, r + off, 4.5, 10]); } // only where a cross street exists: never out on the water
           }
           if (r <= land && c <= land && (k + m) % 2 === 0) lamps.push([c + ROAD / 2 + 4, r + ROAD / 2 + 4]);
         }
@@ -871,6 +915,80 @@
         slabs(w.lots.filter(([, y0, inner]) => y0 + inner <= land).map(([x0, y0, inner]) => [x0 + inner / 2, y0 + inner / 2, inner - 12, inner - 12]),
           w.lawnMat, 0.35, 0.5);
       }
+      // Natural ground for the open-air maps (redesign guide: a place, not a gray grid): flat decals on the open lots
+      // and along the shore. Like the lawns they lie above the ground, are not part of it and cast nothing, so the
+      // shade rule and the QA pixel check still see buildings only. Each keeps a day and a night color (frame loop).
+      w.terrain = [];
+      const decal = (day, night) => { const mat = lambert(day); w.terrain.push({ mat, day, night }); return mat; };
+      const discs = (list, mat, y, h, geo = unit.disc) => {
+        const im = new T.InstancedMesh(geo, mat, list.length);
+        list.forEach(([x, z, rx, rz], i) => {
+          dummy.position.set(x, y, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(rx, h, rz); dummy.updateMatrix();
+          im.setMatrixAt(i, dummy.matrix);
+        });
+        im.receiveShadow = true; group.add(im);
+      };
+      const open = w.lots.filter(([, y0, inner]) => y0 + inner <= land), theme = stage.theme;
+      const pick = ([x0, y0]) => Math.abs(Math.round(x0 * 7 + y0 * 13)); // a steady number per lot, as for buildings
+      const corner = (lot, n, far) => { // a spot in one quarter of the lot (far: the opposite quarter), clear of the centrepiece
+        const [x0, y0, inner] = lot, fx = (n % 4 < 2) !== !!far ? 0.28 : 0.72, fy = (n % 3 === 0) !== !!far ? 0.28 : 0.72;
+        return [x0 + inner * fx, y0 + inner * fy];
+      };
+      if (theme === 'farm') { // ploughed fields: soil with rows of greens or wheat; every third lot stays pasture
+        const soil = [], greens = [], wheat = [];
+        for (const lot of open) {
+          const [x0, y0, inner] = lot, n = pick(lot);
+          if (n % 3 === 0) continue;
+          soil.push([x0 + inner / 2, y0 + inner / 2, inner - 16, inner - 16]);
+          for (let a = 15; a <= inner - 15; a += 10)
+            (n % 3 === 1 ? greens : wheat).push(n % 2 ? [x0 + inner / 2, y0 + a, inner - 26, 4.6] : [x0 + a, y0 + inner / 2, 4.6, inner - 26]);
+        }
+        if (soil.length) slabs(soil, decal('#c39a6b', '#3a3350'), 0.3, 0.3);
+        if (greens.length) slabs(greens, decal('#7fbb5c', '#2c4a40'), 0.5, 0.5);
+        if (wheat.length) slabs(wheat, decal('#ecc95e', '#4c4762'), 0.5, 0.5);
+      }
+      if (theme === 'desert' || theme === 'beach') { // wind ripples on the sand; in the desert some lots hold a green-rimmed pool
+        const ripple = [], rim = [], pool = [];
+        for (const lot of open) {
+          const [x0, y0, inner] = lot, n = pick(lot);
+          for (let i = 0; i < 4; i++) ripple.push([x0 + inner * (0.2 + 0.2 * i), y0 + inner * (0.2 + 0.2 * ((n >> (i * 2)) % 4)), inner * 0.15, 2.6]);
+          if (theme === 'desert' && n % 2) {
+            const [px, py] = corner(lot, n), r = inner * 0.15;
+            rim.push([px, py, r + 5, r * 0.78 + 5]); pool.push([px, py, r, r * 0.78]);
+          }
+        }
+        if (ripple.length) discs(ripple, decal(theme === 'beach' ? '#fbefd0' : '#f8e7c2', '#3a3454'), 0.22, 0.3);
+        if (rim.length) { discs(rim, decal('#a9cf78', '#2c4a40'), 0.24, 0.36); discs(pool, decal('#6fcbd8', '#243a5c'), 0.26, 0.44); }
+      }
+      if (theme === 'oasis') { // on each lawn: a pond in a pale stone ring, and a flower bed across from it
+        const rim = [], pool = [], pink = [], gold = [];
+        for (const lot of open) {
+          const n = pick(lot), [px, py] = corner(lot, n), [bx, by] = corner(lot, n, true), r = lot[2] * 0.14;
+          rim.push([px, py, r + 4, r * 0.75 + 4]); pool.push([px, py, r, r * 0.75]);
+          (n % 2 ? pink : gold).push([bx, by, 10, 10]);
+        }
+        if (rim.length) { discs(rim, decal('#ece5d6', '#4b4868'), 0.66, 0.4); discs(pool, decal('#7fd1e8', '#243a5c'), 0.7, 0.44); }
+        if (pink.length) discs(pink, decal('#ffa3c6', '#5a4672'), 0.66, 0.4);
+        if (gold.length) discs(gold, decal('#ffd76a', '#5c5470'), 0.66, 0.4);
+      }
+      if (theme === 'park' && open.length) { // a round paved plaza in each lot: cream, a pink band, cream again
+        const ring = k => open.map(([x0, y0, inner]) => [x0 + inner / 2, y0 + inner / 2, inner * k, inner * k]);
+        const cream = decal('#fff6e6', '#4b4868');
+        discs(ring(0.37), cream, 0.22, 0.3); discs(ring(0.31), decal('#f6bccb', '#5a4672'), 0.24, 0.34); discs(ring(0.2), cream, 0.26, 0.38);
+      }
+      if (waterY < WORLD && theme === 'beach') { // the waterline: a band of wet sand, and foam lapping at it
+        slabs([[WORLD / 2, waterY - 13, WORLD, 12]], decal('#e2c88f', '#34304e'), 0.17, 0.3);
+        const foam = [];
+        for (let x = 0, i = 0; x <= WORLD; x += 20, i++) foam.push([x, waterY + 2.5 + (i % 2) * 2.5, 12 + (i % 3) * 3, 5 + (i % 2) * 1.5]);
+        discs(foam, decal('#ffffff', '#6a78a8'), -1.3, 0.3);
+      }
+      if (waterY < WORLD && theme === 'harbor') { // the quay's edge: a yellow safety line and mooring bollards
+        slabs([[WORLD / 2, waterY - 0.8, WORLD, 2.4]], decal('#f2c14e', '#5c5470'), 1.6, 0.3);
+        const posts = [];
+        for (let x = 18; x < WORLD; x += 36) posts.push([x, waterY - 3.4, 2.1, 2.1]);
+        const iron = decal('#3d3b4a', '#23223c');
+        discs(posts, iron, 3.6, 4.2, unit.cyl); discs(posts.map(([x, z]) => [x, z, 3, 3]), iron, 6.1, 1.2, unit.cyl);
+      }
       const poleMat = lambert('#3d3b4a');
       w.lampMat = new T.MeshBasicMaterial({ color: col('#d8d4c8') });
       w.haloMat = new T.MeshBasicMaterial({ color: col('#ffb84d'), transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending });
@@ -891,6 +1009,9 @@
       const mats = {};
       w.wallMats = []; w.rideCars = [];
       const propMat = lambert('#a19d94');
+      // Rooftop units come in three kinds (machine gray, a roof garden, a solar panel), so the skyline is not all one gray.
+      const roofProps = [propMat, lambert('#8ccf86'), lambert('#6f8fc9')];
+      const AWNINGS = ['#ff7575', '#ffd166', '#7fd1e8', '#8fd694'], awnMats = {}, awnTrim = lambert('#fff6e6');
       // The theme's look: which wall texture, and what color the walls take (default: the roof color lightened).
       const look = w.stage.look || {};
       const WALL_BASE = { glass: '#cfe3f5', brick: '#b86a4e', adobe: '#e9d3a8', hanok: '#f3e7cf', concrete: '#b9b7b0' };
@@ -947,12 +1068,20 @@
           }
           for (let k = 0; k <= hash % 2; k++) {
             const tank = flat && k === 0 && hash % 3 === 0, sz = 9 + (hash >> (k + 2)) % 8, h = tank ? 8 : 5;
-            const prop = new T.Mesh(tank ? unit.cyl : unit.rbox, propMat);
+            const prop = new T.Mesh(tank ? unit.cyl : unit.rbox, tank ? propMat : roofProps[(hash >> 5) % 3]);
             prop.scale.set((tank ? sz / 2 : sz) / b.w, h / b.h, (tank ? sz / 2 : sz) / b.d);
             prop.position.set((((hash >> (k * 3)) % 5) - 2) * 0.12, 0.5 + h / 2 / b.h, (((hash >> (k * 3 + 4)) % 5) - 2) * 0.12);
             prop.receiveShadow = true;
             mesh.add(prop);
           }
+        }
+        if (look.awning && !b.crane && b.h >= 18) { // a shop awning over the wall that faces the camera, with a pale valance; drawn, casting nothing
+          const c = AWNINGS[hash % AWNINGS.length], am = awnMats[c] || (awnMats[c] = lambert(c));
+          const top = new T.Mesh(unit.box, am), val = new T.Mesh(unit.box, awnTrim);
+          top.scale.set(0.86, 1.4 / b.h, 6 / b.d); top.position.set(0, -0.5 + 12.5 / b.h, 0.5 + 3 / b.d);
+          val.scale.set(0.86, 2.6 / b.h, 0.8 / b.d); val.position.set(0, -0.5 + 11.2 / b.h, 0.5 + 6 / b.d);
+          top.receiveShadow = val.receiveShadow = true;
+          mesh.add(top, val);
         }
         placeBuilding(b, b.x + b.w / 2, b.y + b.d / 2, 1, 0);
       }
@@ -1265,6 +1394,7 @@
       // Sun: same vector the game rule uses, so rendered shadows match the eat polygons.
       world.groundMat.color.copy(dayColor(world.stage.ground, world.stage.groundNight, phase));
       if (world.waterMat) world.waterMat.color.copy(dayColor(world.stage.water, world.stage.waterNight, phase));
+      for (const d of world.terrain) d.mat.color.set(phase.night ? d.night : d.day);
       const lowSun = 1 - Math.min(1, sun.elev / (40 * Math.PI / 180));
       // castShadow stays on at night: toggling it recompiles every shader right as the climax starts.
       if (phase.night) {
@@ -1350,6 +1480,7 @@
           dummy.position.set(x, py * r + lift + (o.zf || 0), y); // zf: per-object height hair against z-fighting
           dummy.rotation.set(0, -o.rot, 0);
           if (po) { dummy.translateX(po[0] * r); dummy.translateZ(po[1] * r); }
+          if (part.rot) { dummy.rotateY(part.rot[0]); dummy.rotateZ(part.rot[1]); }
           dummy.scale.set(part.s[0] * r || 1e-6, part.s[1] * r || 1e-6, part.s[2] * r || 1e-6);
           dummy.updateMatrix();
           im.setMatrixAt(i, dummy.matrix);
@@ -1439,8 +1570,8 @@
       armMat.color.copy(bodyMat.color).multiplyScalar(0.94);
       // First person looks over the top of the head; the eyes high on its front would peek over it.
       eyes.forEach(o => { o.e.visible = o.p.visible = k < 0.6; });
-      tuft.visible = moon.visible = k < 0.6;
-      tuft.position.copy(body.position); tuft.scale.copy(body.scale); tuft.rotation.copy(body.rotation);
+      wear.visible = moon.visible = k < 0.6; tuft.visible = wear.visible && !wearBare;
+      for (const o of [tuft, wear]) { o.position.copy(body.position); o.scale.copy(body.scale); o.rotation.copy(body.rotation); }
       // gold crescent high on the brow, off to one side; belly star low in front, glowing brighter as it grows
       onBody(player, L + 0.62, 0.8, 0.01, moon.position); outward(moon, player); moon.scale.setScalar(R * 0.3);
       onBody(player, L, 0.02, 0.03, bellyStar.position); outward(bellyStar, player);
@@ -1542,7 +1673,7 @@
     }
 
     // `debug` is read by the QA scripts (pixel checks, memory counters); the game never uses it.
-    // Cosmetic skin: body, unlit rim (also the growth glow) and eye colors. The lit warning stays red regardless.
+    // Cosmetic skin: body, unlit rim (also the growth glow), eye colors and what it wears. The lit warning stays red regardless.
     function setSkin(skin) {
       carOn = !!skin.car;
       bodyColor.setHex(skin.body);
@@ -1550,6 +1681,10 @@
       rimColor = skin.rim;
       eyeMat.color.setHex(skin.eye);
       pupilMat.color.setHex(skin.pupil !== undefined ? skin.pupil : 0x16122a); // the eye sparkle stays warm gold-white on every skin, like the painted art
+      const [kind, color, accent = 0xffffff] = skin.wear || [];
+      for (const name in WEAR) WEAR[name].visible = name === kind;
+      wearBare = kind === 'hat' || kind === 'beret';
+      if (kind) { wearMat.color.setHex(color); pinMat.color.setHex(color); wearMat2.color.setHex(accent); }
     }
     // Summoning circle: a CIRCLES entry, or null for none.
     function setCircle(c) {

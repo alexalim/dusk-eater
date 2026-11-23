@@ -118,6 +118,24 @@ test('every skin has a description for its shop box', () => {
   for (const s of S.SKINS) assert.ok(typeof s.desc === 'string' && s.desc.length > 10, s.id);
 });
 
+test('every skin but the first friend and the car wears one small thing, drawn in play and on its shop picture', () => {
+  const fs = require('node:fs'), path = require('node:path'), www = path.join(__dirname, '../www');
+  const r3d = fs.readFileSync(path.join(www, 'render3d.js'), 'utf8'), html = fs.readFileSync(path.join(www, 'index.html'), 'utf8');
+  const red = [0xff, 0x6b, 0x6b];
+  for (const s of S.SKINS) {
+    if (s.id === S.SKINS[0].id || s.car) { assert.equal(s.wear, undefined, s.id); continue; }
+    const [kind, ...colors] = s.wear;
+    assert.ok(r3d.includes(`wearKind('${kind}'`), `${s.id}: render3d draws no ${kind}`);
+    assert.match(html, new RegExp(`\\n    ${kind}: \\(?c`), `${s.id}: the shop picture draws no ${kind}`);
+    assert.ok(colors.length >= 1 && colors.length <= 2, s.id);
+    for (const c of colors) {
+      assert.ok(Number.isInteger(c) && c >= 0 && c <= 0xffffff, `${s.id}: color ${c}`);
+      const d = Math.hypot((c >> 16) - red[0], ((c >> 8) & 255) - red[1], (c & 255) - red[2]);
+      assert.ok(d > 60, `${s.id}: what it wears is too close to the warning red (${d.toFixed(0)})`);
+    }
+  }
+});
+
 test('a paid skin also sells for gems: owned and paid once, refused when short, already owned, or not for gems', () => {
   const mint = S.SKINS.find(s => s.id === 'mint');
   assert.ok(mint.gems > 0 && mint.product, 'mint has both a product and a gem price');

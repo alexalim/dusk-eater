@@ -146,7 +146,7 @@
       eat: [['student', 12, 70], ['bicycle', 3, 22], ['bench', 2, 14]],
     },
     market: {
-      look: { wall: 'pastel', roof: 'gable', rise: 0.35 }, // building walls and roofs (render3d.js)
+      look: { wall: 'pastel', roof: 'gable', rise: 0.35, awning: true }, // building walls and roofs, shop awnings (render3d.js)
       theme: 'market',
       name: '전통시장',
       desc: '다닥다닥 붙은 가게 사이 좁은 그늘을 누벼요. 스쿠터 조심!',

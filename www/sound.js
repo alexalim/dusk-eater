@@ -142,41 +142,41 @@
     lose() { [67, 64, 60].forEach((n, i) => tone(note(n), note(n), 0.4, { type: 'triangle', vol: 0.25, at: i * 0.16 })); },
   };
 
-  // Background music: a small neo-pop band, scheduled a little ahead of time (TestFlight: the old 16th-note
-  // square arp "just ticks the beat").
-  //   pad: seventh chords on detuned saws through a low-pass that ducks on every beat (the sidechain pump)
-  //   keys: soft electric-piano chord stabs on a 3+3+2 (tresillo) rhythm, with a dotted-8th echo
-  //   bass: a round sub on the same tresillo   lead: a soft pentatonic line   drums: deep kick, clap on 2 and 4, shaker
-  // mode 'title' keeps it to pad + keys; 'play' brings in bass and drums; 'night' opens the filter and adds sparkle.
-  // Every region has its own tune: key, tempo, four-chord progression, lead timbre, and a melody grown from
-  // a seed over the key's pentatonic scale (so it stays the same each visit). `tropical` swaps the keys and
-  // lead for marimba and steel pan over a four-on-the-floor kick (the beach).
+  // Background music: a small band, scheduled a little ahead of time. Every region shares one core (a soft pad
+  // of seventh chords, chord stabs, a bass, a light kit, a pentatonic lead) and swaps in its own players:
+  //   lead: who carries the melody      keys: who plays the chords (`strum` rolls them like a strummed string)
+  //   comp: the steps the chords land on (default: a 3+3+2 feel)      fill: [player, steps, semitones up] chord-tone sparkle
+  //   bass: [player, line]      drums: the kit      waltz: three beats a bar (12 steps)      swing: late off-beats
+  // mode 'title' keeps it to pad + keys; 'play' brings in bass, drums and lead; 'night' opens the filter and adds
+  // sparkle; 'boss' puts a kick on every beat. Tempo and players follow the art direction's list per region; the
+  // melody grows from a seed over the key's five-note scale (so it stays the same each visit).
   const DEG = { I: [0, 4, 7], ii: [2, 5, 9], iii: [4, 7, 11], IV: [5, 9, 12], V: [7, 11, 14], vi: [9, 12, 16],
     i: [0, 3, 7], iv: [5, 8, 12], v: [7, 10, 14], III: [3, 7, 10], VI: [8, 12, 15], VII: [10, 14, 17] };
+  const OFF = [2, 6, 10, 14]; // the off-beats: where a strummed or plucked chord answers the bass
   const TUNES = {
-    town: { key: 60, bpm: 96, prog: ['vi', 'IV', 'I', 'V'], lead: 'triangle', seed: 1 },
-    city: { key: 62, bpm: 112, prog: ['i', 'VII', 'VI', 'VII'], lead: 'square', seed: 2, minor: true },
-    oasis: { key: 64, bpm: 90, prog: ['i', 'VI', 'VII', 'i'], lead: 'sine', seed: 3, minor: true },
-    hanok: { key: 55, bpm: 50, prog: ['I', 'I', 'I', 'I'], lead: 'sine', seed: 4, korean: true }, // 아리랑 over 세마치 장단 (scheduleKorean); a pulse (S16) is 0.3 s
-    campus: { key: 65, bpm: 104, prog: ['I', 'V', 'vi', 'IV'], lead: 'triangle', seed: 5 },
-    snow: { key: 57, bpm: 88, prog: ['I', 'iii', 'IV', 'V'], lead: 'sine', seed: 6, bells: true },
-    market: { key: 58, bpm: 110, prog: ['I', 'IV', 'V', 'IV'], lead: 'square', seed: 7 },
-    crossing: { key: 61, bpm: 100, prog: ['i', 'VI', 'VII', 'i'], lead: 'triangle', seed: 8, minor: true },
-    stadium: { key: 62, bpm: 122, prog: ['I', 'V', 'IV', 'V'], lead: 'square', seed: 9 },
-    harbor: { key: 52, bpm: 90, prog: ['i', 'VII', 'VI', 'VII'], lead: 'triangle', seed: 10, minor: true },
-    construction: { key: 54, bpm: 108, prog: ['i', 'iv', 'VII', 'i'], lead: 'square', seed: 11, minor: true },
-    park: { key: 55, bpm: 116, prog: ['I', 'vi', 'IV', 'V'], lead: 'square', seed: 12 },
-    beach: { key: 57, bpm: 104, prog: ['IV', 'V', 'iii', 'vi'], lead: 'pan', seed: 13, tropical: true },
-    desert: { key: 62, bpm: 86, prog: ['i', 'VI', 'VII', 'i'], lead: 'sine', seed: 14, minor: true },
-    farm: { key: 65, bpm: 100, prog: ['I', 'IV', 'I', 'V'], lead: 'triangle', seed: 15 },
-    xmas: { key: 60, bpm: 104, prog: ['I', 'IV', 'V', 'I'], lead: 'sine', seed: 16, bells: true },
+    town: { key: 60, bpm: 100, prog: ['vi', 'IV', 'I', 'V'], seed: 1, lead: 'marimba', keys: 'guitar', strum: true, fill: ['glock', [4, 12], 12], bass: ['sub', 'tresillo'], drums: 'brush' },
+    city: { key: 62, bpm: 115, prog: ['i', 'VII', 'VI', 'VII'], seed: 2, minor: true, lead: 'marimba', keys: 'epiano', bass: ['upright', 'tresillo'], drums: 'snap' },
+    oasis: { key: 64, bpm: 95, prog: ['i', 'VI', 'VII', 'i'], seed: 3, minor: true, lead: 'flute', keys: 'guitar', strum: true, fill: ['kalimba', OFF, 12], bass: ['sub', 'tresillo'], drums: 'soft' },
+    hanok: { key: 55, bpm: 50, prog: ['I', 'I', 'I', 'I'], seed: 4, korean: true }, // 아리랑 over 세마치 장단 (scheduleKorean); a pulse (S16) is 0.3 s
+    campus: { key: 65, bpm: 112, prog: ['I', 'V', 'vi', 'IV'], seed: 5, lead: 'whistle', keys: 'banjo', strum: true, comp: OFF, bass: ['upright', 'oompah'], drums: 'brush' },
+    snow: { key: 57, bpm: 90, prog: ['I', 'iii', 'IV', 'V'], seed: 6, lead: 'box', keys: 'epiano', fill: ['glock', [4, 12], 12], bass: ['sub', 'tresillo'], drums: 'soft' },
+    market: { key: 58, bpm: 120, prog: ['I', 'IV', 'V', 'IV'], seed: 7, lead: 'accordion', keys: 'pizz', comp: OFF, bass: ['upright', 'oompah'], drums: 'wood' },
+    crossing: { key: 61, bpm: 118, prog: ['i', 'VI', 'VII', 'i'], seed: 8, minor: true, swing: true, lead: 'clarinet', keys: 'marimba', bass: ['upright', 'walk'], drums: 'brush' },
+    stadium: { key: 62, bpm: 124, prog: ['I', 'V', 'IV', 'V'], seed: 9, lead: 'trumpet', keys: 'marimba', comp: OFF, bass: ['tuba', 'oompah'], drums: 'march' },
+    harbor: { key: 52, bpm: 105, prog: ['i', 'VII', 'VI', 'VII'], seed: 10, minor: true, waltz: true, lead: 'accordion', keys: 'guitar', strum: true, fill: ['mandolin', [6], 12], bass: ['upright', 'waltz'], drums: 'waltz' },
+    construction: { key: 54, bpm: 110, prog: ['i', 'iv', 'VII', 'i'], seed: 11, minor: true, lead: 'marimba', keys: 'pizz', comp: OFF, bass: ['bassoon', 'oompah'], drums: 'clink' },
+    park: { key: 55, bpm: 115, prog: ['I', 'vi', 'IV', 'V'], seed: 12, waltz: true, lead: 'glock', keys: 'organ', bass: ['upright', 'waltz'], drums: 'carousel' },
+    beach: { key: 57, bpm: 108, prog: ['IV', 'V', 'iii', 'vi'], seed: 13, lead: 'pan', keys: 'guitar', strum: true, comp: [0, 3, 6, 10, 13], bass: ['sub', 'bossa'], drums: 'bossa' },
+    desert: { key: 62, bpm: 102, prog: ['i', 'VI', 'iv', 'i'], seed: 14, minor: true, scale: [0, 1, 3, 7, 8], lead: 'oud', keys: 'marimba', bass: ['sub', 'tresillo'], drums: 'darbuka' }, // a flat second: the caravan colour
+    farm: { key: 65, bpm: 110, prog: ['I', 'IV', 'I', 'V'], seed: 15, lead: 'harmonica', keys: 'guitar', strum: true, comp: OFF, fill: ['banjo', [0, 3, 6, 8, 11, 14], 12], bass: ['upright', 'oompah'], drums: 'brush' },
+    xmas: { key: 60, bpm: 116, prog: ['I', 'IV', 'V', 'I'], seed: 16, lead: 'box', keys: 'pizz', fill: ['glock', [4, 12], 12], bass: ['sub', 'tresillo'], drums: 'sleigh' },
   };
   function melody(t) {
-    const pent = t.minor ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9];
+    const pent = t.scale || (t.minor ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9]), per = t.waltz ? 6 : 8; // eighths in a bar
     let x = t.seed * 9301 + 49297, at = 2; // tiny LCG: same tune for the same region every time
     const rnd = () => (x = (x * 9301 + 49297) % 233280) / 233280;
-    return Array.from({ length: 32 }, (_, k) => {
-      if (k % 8 === 7 || rnd() < 0.3) return null; // breathe at phrase ends
+    return Array.from({ length: per * 4 }, (_, k) => {
+      if (k % per === per - 1 || rnd() < 0.3) return null; // breathe at phrase ends
       at = Math.max(0, Math.min(9, at + Math.round((rnd() - 0.5) * 3)));
       return t.key + 12 + pent[at % 5] + 12 * Math.floor(at / 5);
     });
@@ -301,36 +301,100 @@
     voice(freq * 2.01, at, 0.5, { type: 'sine', vol: vol * 0.5, attack: 0.004, release: 0.5 });
     voice(freq * 3, at, 0.25, { type: 'sine', vol: vol * 0.15, attack: 0.004, release: 0.25 });
   }
-  const TRESILLO = [0, 3, 6, 8, 11, 14], KEYS = { play: [0, 3, 6, 10], title: [0, 6] };
+  // A held note (reeds, winds, brass): rises, stays level for the note and lets go, where voice() only dies away.
+  function reed(freq, at, dur, { type = 'square', vol = 0.05, detune = [0], cutoff = 1400, attack = 0.03, vib = 0 }) {
+    const t = ctx.currentTime + at, g = ctx.createGain(), lp = ctx.createBiquadFilter(), end = t + dur + 0.08;
+    lp.type = 'lowpass'; lp.frequency.value = cutoff;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + attack);
+    g.gain.setValueAtTime(vol, t + Math.max(attack + 0.001, dur * 0.8)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.06);
+    const lfo = vib ? ctx.createOscillator() : null, lg = vib ? ctx.createGain() : null;
+    if (lfo) { lfo.frequency.value = vib; lg.gain.value = freq * 0.006; lfo.connect(lg); lfo.start(t); lfo.stop(end); }
+    for (const dt of detune) { const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq; o.detune.value = dt; if (lg) lg.connect(o.frequency); o.connect(lp); o.start(t); o.stop(end); }
+    lp.connect(g).connect(musicBus);
+  }
+  // The players: (frequency, when, level, length). Plucked and struck ones ring on their own and ignore the length.
+  const INST = {
+    epiano: (f, at, v) => epiano(f, at, v), marimba: (f, at, v) => marimba(f, at, v), pan: (f, at, v) => pan(f, at, v),
+    guitar: (f, at, v) => voice(f, at, 0.7, { type: 'sawtooth', vol: v * 1.5, attack: 0.004, release: 0.7, cutoff: 650, to: [musicBus, fx.echo] }), // nylon: bright at the pluck, dull at once
+    banjo: (f, at, v) => voice(f, at, 0.28, { type: 'square', vol: v * 0.9, attack: 0.002, release: 0.28, cutoff: 1500 }), // also the ukulele: short and twangy
+    oud: (f, at, v) => voice(f, at, 0.5, { type: 'sawtooth', detune: [-7, 7], vol: v * 1.0, attack: 0.003, release: 0.5, cutoff: 900, to: [musicBus, fx.echo] }), // double strings
+    pizz: (f, at, v) => voice(f, at, 0.24, { type: 'sawtooth', vol: v * 1.6, attack: 0.003, release: 0.24, cutoff: 520 }),
+    mandolin: (f, at, v, d) => { for (let k = 0; k < 4; k++) voice(f, at + k * d / 4, 0.15, { type: 'sawtooth', vol: v * (k ? 0.5 : 0.8), attack: 0.002, release: 0.15, cutoff: 1400 }); }, // tremolo
+    glock: (f, at, v) => { voice(f, at, 0.9, { type: 'sine', vol: v * 0.8, attack: 0.002, release: 0.9, to: [musicBus, fx.echo] }); voice(f * 2.76, at, 0.12, { type: 'sine', vol: v * 0.2, attack: 0.002, release: 0.12 }); },
+    box: (f, at, v) => { voice(f, at, 0.6, { type: 'sine', vol: v * 0.9, attack: 0.002, release: 0.6, to: [musicBus, fx.echo] }); voice(f * 3, at, 0.08, { type: 'sine', vol: v * 0.15, attack: 0.002, release: 0.08 }); }, // 오르골, celesta
+    kalimba: (f, at, v) => { voice(f, at, 0.5, { type: 'sine', vol: v * 1.2, attack: 0.002, release: 0.5, to: [musicBus, fx.echo] }); voice(f * 5.4, at, 0.05, { type: 'sine', vol: v * 0.3, attack: 0.002, release: 0.05 }); },
+    flute: (f, at, v, d) => daegeum(f, at, d * 0.95, v * 1.1), // the breathy flute without its Korean ornaments
+    whistle: (f, at, v, d) => reed(f, at, d * 0.9, { type: 'sine', vol: v * 0.8, cutoff: 8000, attack: 0.04, vib: 5.5 }),
+    accordion: (f, at, v, d) => reed(f, at, d * 0.95, { type: 'square', detune: [-9, 9], vol: v * 0.5, cutoff: 1500, attack: 0.04 }), // two reeds a little apart
+    organ: (f, at, v, d) => reed(f, at, d * 0.9, { type: 'triangle', detune: [0, 1200], vol: v * 0.9, cutoff: 3000, attack: 0.012, vib: 6 }), // a pipe and its octave
+    harmonica: (f, at, v, d) => reed(f, at, d * 0.95, { type: 'square', detune: [-5, 5], vol: v * 0.38, cutoff: 2000, attack: 0.05, vib: 5 }),
+    clarinet: (f, at, v, d) => reed(f, at, d * 0.92, { type: 'square', vol: v * 0.58, cutoff: 1100, attack: 0.03, vib: 5 }),
+    trumpet: (f, at, v, d) => reed(f, at, d * 0.8, { type: 'sawtooth', vol: v * 0.62, cutoff: 1800, attack: 0.015 }), // muted: short and round
+  };
+  // bass players (frequency, when, steps it may ring) and bass lines (step, chord -> semitones above the root, or nothing)
+  const BASS = {
+    sub: (f, at, len) => voice(f, at, 3 * S16, { type: 'triangle', vol: 0.2, detune: [0, 5], attack: 0.01, release: len * S16, cutoff: 420 }),
+    upright: (f, at) => voice(f, at, 0.4, { type: 'triangle', vol: 0.3, attack: 0.006, release: 0.4, cutoff: 500 }),
+    tuba: (f, at) => reed(f, at, S16 * 1.6, { type: 'sawtooth', vol: 0.15, cutoff: 380, attack: 0.02 }),
+    bassoon: (f, at) => reed(f * 2, at, S16 * 1.4, { type: 'sawtooth', vol: 0.1, cutoff: 600, attack: 0.015 }),
+  };
+  const TRESILLO = [0, 3, 6, 8, 11, 14], BOSSA = { 0: 0, 6: 7, 8: 7, 14: 0 };
+  const LINES = {
+    tresillo: s => TRESILLO.includes(s) ? (s === 14 ? 12 : 0) : null,
+    oompah: s => s % 4 ? null : s % 8 ? 7 : 0,                        // root, fifth, root, fifth
+    walk: (s, c) => s % 4 ? null : c[[0, 1, 2, 1][s >> 2]] - c[0],    // up the chord and back, one step a beat
+    waltz: s => s ? null : 0,
+    bossa: s => s in BOSSA ? BOSSA[s] : null,
+  };
+  // small percussion: a brush swish, a finger snap, a wood block (or a metal clink), a hand-drum 'tek', a triangle, sleigh bells
+  function brush(at, vol = 0.1) { noiseHit(at, { f: 3200, q: 0.6, vol, attack: 0.03, dur: 0.16 }); }
+  function snap(at) { noiseHit(at, { f: 2300, q: 3, vol: 0.2, dur: 0.05 }); }
+  function block(at, f = 820, vol = 0.14, type = 'sine') { voice(f, at, 0.07, { type, vol, attack: 0.001, release: 0.07 }); }
+  function tek(at, vol = 0.16) { noiseHit(at, { f: 3400, q: 2, vol, dur: 0.05 }); }
+  function ting(at) { voice(4200, at, 0.5, { type: 'sine', vol: 0.03, attack: 0.001, release: 0.5 }); voice(6150, at, 0.3, { type: 'sine', vol: 0.015, attack: 0.001, release: 0.3 }); }
+  function sleigh(at, vol) { noiseHit(at, { f: 7500, type: 'highpass', vol, attack: 0.004, dur: 0.07 }); }
+  // the kits: what is hit on step s of the bar (16 steps; 12 in a waltz); k scales the kit's own kicks
+  const DRUMS = {
+    brush(s, at, k) { if (s === 0 || s === 8) kick(at, 0.4 * k); if (s === 4 || s === 12) brush(at, 0.13); if (s % 4 === 2) shaker(at, 0.04); },
+    snap(s, at, k) { if (s === 0 || s === 8 || s === 10) kick(at, 0.55 * k); if (s === 4 || s === 12) snap(at); if (s % 4 === 2) shaker(at, 0.05); },
+    soft(s, at, k) { if (s === 0) kick(at, 0.3 * k); if (s % 4 === 2) shaker(at, 0.05); },
+    wood(s, at, k) { if (s === 0 || s === 8) kick(at, 0.5 * k); if ([2, 6, 7, 10, 14].includes(s)) block(at, s === 7 ? 1100 : 820); if (s === 4 || s === 12) brush(at, 0.1); },
+    march(s, at, k) { if (s % 4 === 0) kick(at, 0.5 * k); if (s === 4 || s === 12) clap(at); if (s === 14 || s === 15) brush(at, 0.09); },
+    clink(s, at, k) { if (s === 0 || s === 8) kick(at, 0.55 * k); if (s === 4 || s === 7 || s === 12) { block(at, 2400, 0.05, 'square'); block(at, 3550, 0.03, 'square'); } if (s % 4 === 2) shaker(at, 0.05); },
+    waltz(s, at, k) { if (s === 0) kick(at, 0.4 * k); if (s === 4 || s === 8) brush(at, 0.1); },
+    carousel(s, at, k) { if (s === 0) { kick(at, 0.35 * k); ting(at); } if (s === 4 || s === 8) brush(at, 0.08); },
+    bossa(s, at, k) { if (s in BOSSA) kick(at, 0.35 * k); if ([0, 3, 6, 10, 13].includes(s)) block(at, 1700, 0.07); if (s % 2 === 0) shaker(at, s % 4 === 2 ? 0.06 : 0.035); },
+    darbuka(s, at, k) { if (s === 0 || s === 8) kick(at, 0.5 * k); if (s === 2 || s === 6 || s === 12) tek(at); if (s === 14) tek(at, 0.08); },
+    sleigh(s, at, k) { if (s === 0 || s === 8) kick(at, 0.35 * k); if (s % 2 === 0) sleigh(at, s % 4 ? 0.035 : 0.06); },
+  };
+  const COMP = { play: [0, 3, 6, 10], title: [0, 6], waltz: [4, 8] };
 
   function schedule() {
     const { echo, padLp, pump } = buildFx();
     while (nextT < ctx.currentTime + 0.3) {
-      const at = Math.max(0, nextT - ctx.currentTime), play = mode !== 'title', night = mode === 'night', boss = mode === 'boss';
-      if (tune.korean) { scheduleKorean(at, play, night, boss); nextT += rushOn ? S16 / 1.2 : S16; step++; continue; }
-      const bar = (step >> 4) % 4, s = step % 16, chord = CHORDS[bar];
-      const t0 = ctx.currentTime + at, trop = !!tune.tropical;
+      const at0 = Math.max(0, nextT - ctx.currentTime), play = mode !== 'title', night = mode === 'night', boss = mode === 'boss';
+      if (tune.korean) { scheduleKorean(at0, play, night, boss); nextT += rushOn ? S16 / 1.2 : S16; step++; continue; }
+      const N = tune.waltz ? 12 : 16, bar = Math.floor(step / N) % 4, s = step % N, chord = CHORDS[bar];
+      const t0 = ctx.currentTime + at0, at = at0 + (tune.swing && s % 4 === 2 ? S16 * 0.6 : 0); // swung off-beats land late
       if (s === 0) { // pad: the whole bar, filter breathing with the bar
         padLp.frequency.setTargetAtTime(night ? 2600 : play ? 1400 : 900, t0, 0.8);
-        for (const n of chord) voice(note(n), at, 16 * S16, { vol: 0.04, detune: [-9, 0, 9], attack: 0.35, release: 16 * S16 + 0.3, to: [padLp] });
+        for (const n of chord) voice(note(n), at0, N * S16, { vol: 0.04, detune: [-9, 0, 9], attack: 0.35, release: N * S16 + 0.3, to: [padLp] });
       }
-      if (s % 4 === 0) { // the pump: the pad ducks on each beat and swells back before the next
-        pump.gain.cancelScheduledValues(t0); pump.gain.setValueAtTime(play ? 0.3 : 0.7, t0); pump.gain.linearRampToValueAtTime(1, t0 + 3.2 * S16);
+      if (s % 4 === 0) { // the pump: the pad ducks on each beat and swells back before the next (deepest under the boss's kick)
+        pump.gain.cancelScheduledValues(t0); pump.gain.setValueAtTime(boss ? 0.3 : play ? 0.55 : 0.7, t0); pump.gain.linearRampToValueAtTime(1, t0 + 3.2 * S16);
       }
-      // keys: chord stabs (upper three notes, an octave up) on the tresillo; marimba plucks on the beach
-      if (trop) { if (s % 4 === 2 || s === 7 || s === 15) marimba(note(chord[[1, 2, 3, 2][(s >> 2) % 4]] + 12), at, play ? 0.09 : 0.06); }
-      else if (KEYS[play ? 'play' : 'title'].includes(s)) for (const n of chord.slice(1)) epiano(note(n + 12), at, play ? 0.035 : 0.03);
+      // keys: the chord's upper three notes, an octave up
+      if ((tune.comp || COMP[tune.waltz ? 'waltz' : play ? 'play' : 'title']).includes(s))
+        chord.slice(1).forEach((n, i) => INST[tune.keys](note(n + 12), at + (tune.strum ? i * 0.02 : 0), play ? 0.04 : 0.03, 3 * S16));
       if (play) {
-        if (TRESILLO.includes(s)) voice(note(ROOTS[bar] + (s === 14 ? 12 : 0)), at, 3 * S16, { type: 'triangle', vol: 0.2, detune: [0, 5], attack: 0.01, release: (s === 6 || s === 14 ? 2 : 3) * S16, cutoff: 420 });
-        if (trop || boss ? s % 4 === 0 : s === 0 || s === 8 || s === 10) kick(at); // four on the floor on the beach and for the boss
-        if (s === 4 || s === 12) clap(at);
-        if (s % 4 === 2 || ((trop || night || boss) && s % 2 === 1)) shaker(at, s % 4 === 2 ? 0.07 : 0.035);
+        const b = LINES[tune.bass[1]](s, chord);
+        if (b !== null) BASS[tune.bass[0]](note(ROOTS[bar] + b), at, s === 6 || s === 14 ? 2 : 3);
+        DRUMS[tune.drums](s, at, boss ? 0.5 : 1);
+        if (boss) { if (s % 4 === 0) kick(at, 0.5); if (s === 4 || s === 12) clap(at); } // the boss: four on the floor over the region's (halved) kicks
+        if ((night || boss) && s % 2 === 1) shaker(at, 0.035);
         const m = LEAD[(step >> 1) % LEAD.length];
-        if (s % 2 === 0 && m) {
-          if (tune.lead === 'pan') pan(note(m), at, 0.09);
-          else voice(note(m), at, 2 * S16, { type: tune.lead === 'square' ? 'sawtooth' : tune.lead, vol: tune.lead === 'square' ? 0.07 : 0.11, attack: 0.03, release: 0.5, cutoff: tune.lead === 'square' ? 1400 : 0, to: [musicBus, echo] });
-        }
-        if (tune.bells && s % 8 === 4) voice(note(chord[1] + 24), at, S16, { type: 'sine', vol: 0.06, release: 0.9, to: [musicBus, echo] });
+        if (s % 2 === 0 && m) INST[tune.lead](note(m), at, 0.12, 2 * S16);
+        if (tune.fill && tune.fill[1].includes(s)) INST[tune.fill[0]](note(chord[(s >> 1) % 4] + 12 + tune.fill[2]), at, 0.05, 2 * S16);
       }
       if (night && s % 4 === 3) voice(note(chord[2] + 24), at, S16, { type: 'sine', vol: 0.05, release: 0.4, to: [musicBus, echo] });
       nextT += rushOn ? S16 / 1.2 : S16; step++; // the last-stretch rush plays 20% faster
@@ -387,5 +451,5 @@
     bus.gain.setTargetAtTime(v ? level : 0, ctx.currentTime, 0.05);
   }
 
-  root.DuskSound = { sfx, music, setOn, get on() { return Object.assign({}, on); }, get ctx() { return ctx; } };
+  root.DuskSound = { sfx, music, setOn, band: { TUNES, INST, BASS, LINES, DRUMS }, get on() { return Object.assign({}, on); }, get ctx() { return ctx; } };
 })(this);

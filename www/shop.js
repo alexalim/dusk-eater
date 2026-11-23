@@ -13,42 +13,44 @@
   // A paid skin also sells for `gems` (buySkin), so a patient player gets it without paying.
   const SKINS = [
     // `pupil` is the eye highlight; it defaults to dark for skins with light eyes.
+    // `wear`: [kind, color, accent (white if left out)], the one small thing on its head, so a skin is more than a
+    // color. The kinds are drawn by render3d (wearKind) and by the shop picture (index.html WEAR_ART).
     { id: 'night', name: '밤 그림자', body: 0xfff7f8, rim: 0xb78cff, eye: 0x241640, pupil: 0xffffff,
       desc: '처음부터 함께하는 기본 친구예요. 하얀 몸에 보랏빛 테두리가 포근해요.' },
-    { id: 'mint', name: '박하 그림자', body: 0x0f2226, rim: 0x7ff0d2, eye: 0xffffff, product: PREFIX + 'skin.mint', gems: 300, price: '₩1,500',
+    { id: 'mint', name: '박하 그림자', body: 0x0f2226, rim: 0x7ff0d2, eye: 0xffffff, product: PREFIX + 'skin.mint', gems: 300, price: '₩1,500', wear: ['bow', 0x7ff0d2],
       desc: '어두운 몸에 시원한 박하색 테두리를 둘렀어요. 그늘 속에서도 산뜻하게 보여요.' },
-    { id: 'starry', name: '별밤 그림자', body: 0x101833, rim: 0x9fd0ff, eye: 0xfff3c4, product: PREFIX + 'skin.starry', gems: 300, price: '₩1,500',
+    { id: 'starry', name: '별밤 그림자', body: 0x101833, rim: 0x9fd0ff, eye: 0xfff3c4, product: PREFIX + 'skin.starry', gems: 300, price: '₩1,500', wear: ['pin', 0xffe08a],
       desc: '밤하늘처럼 짙은 몸에 하늘빛 테두리가 은은해요. 별빛 같은 노란 눈이 반짝여요.' },
-    { id: 'gold', name: '황금 그림자', body: 0x221a0c, rim: 0xffe08a, eye: 0xffffff, product: PREFIX + 'skin.gold', gems: 500, price: '₩2,200',
+    { id: 'gold', name: '황금 그림자', body: 0x221a0c, rim: 0xffe08a, eye: 0xffffff, product: PREFIX + 'skin.gold', gems: 500, price: '₩2,200', wear: ['crown', 0xffd45e, 0x7fd6ff],
       desc: '반짝반짝 황금빛 테두리를 두른 특별한 아이예요. 어디에 있어도 눈에 쏙 들어와요.' },
     // Gems only (no App Store product): `reward: 'gems'` keeps it through entitlement rebuilds like the earned skins.
     // `car`: the renderer seats the body on a little car (render3d setSkin).
     { id: 'car', name: '붕붕 그림자', body: 0xffe3ee, rim: 0x7fc8ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, car: true,
       desc: '작은 자동차에 쏙 올라탄 친구예요. 달리면 바퀴가 데굴데굴 굴러가요.' },
     // Earned, not bought: `reward` names the event whose stars unlock it.
-    { id: 'santa', name: '산타 그림자', body: 0x3a0d14, rim: 0x7fe08a, eye: 0xffffff, reward: 'xmas',
+    { id: 'santa', name: '산타 그림자', body: 0x3a0d14, rim: 0x7fe08a, eye: 0xffffff, reward: 'xmas', wear: ['hat', 0xc8323c],
       desc: '크리스마스 이벤트 선물이에요. 빨간 몸에 초록 테두리로 겨울 기분을 내요.' },
     // Level rewards: granted on reaching `level` (level.js), shown with the level they open at.
-    { id: 'candy', name: '솜사탕 그림자', body: 0xffeef8, rim: 0xffa6ec, eye: 0x3a1240, pupil: 0xffffff, reward: 'level', level: 5,
+    { id: 'candy', name: '솜사탕 그림자', body: 0xffeef8, rim: 0xffa6ec, eye: 0x3a1240, pupil: 0xffffff, reward: 'level', level: 5, wear: ['flower', 0xff8fc8, 0xfff3b0],
       desc: 'Lv.5가 되면 찾아오는 달콤한 친구예요. 분홍 솜사탕처럼 폭신폭신해요.' },
-    { id: 'aurora', name: '오로라 그림자', body: 0x0a1f2a, rim: 0x5ee7ff, eye: 0xffffff, reward: 'level', level: 10,
+    { id: 'aurora', name: '오로라 그림자', body: 0x0a1f2a, rim: 0x5ee7ff, eye: 0xffffff, reward: 'level', level: 10, wear: ['hat', 0x5ee7ff],
       desc: 'Lv.10을 넘긴 그림자만 입을 수 있어요. 북쪽 하늘처럼 푸른빛이 일렁여요.' },
-    { id: 'galaxy', name: '은하 그림자', body: 0x120a2a, rim: 0xe0c3ff, eye: 0xffe08a, reward: 'level', level: 20,
+    { id: 'galaxy', name: '은하 그림자', body: 0x120a2a, rim: 0xe0c3ff, eye: 0xffe08a, reward: 'level', level: 20, wear: ['glasses', 0xe0c3ff],
       desc: 'Lv.20, 밤의 지배자에게 주는 선물이에요. 몸 안에 은하수가 반짝여요.' },
-    { id: 'ember', name: '잿불 그림자', body: 0x2b1008, rim: 0xe8a800, eye: 0xfff3c4, reward: 'level', level: 40,
+    { id: 'ember', name: '잿불 그림자', body: 0x2b1008, rim: 0xe8a800, eye: 0xfff3c4, reward: 'level', level: 40, wear: ['beret', 0xe8622a],
       desc: 'Lv.40, 달빛 포식자의 상이에요. 꺼지지 않는 잿불처럼 주황빛 테두리가 일렁여요.' },
-    { id: 'tide', name: '밀물 그림자', body: 0xe6fbff, rim: 0x00b8d4, eye: 0x0a2a3a, pupil: 0xffffff, reward: 'level', level: 60,
+    { id: 'tide', name: '밀물 그림자', body: 0xe6fbff, rim: 0x00b8d4, eye: 0x0a2a3a, pupil: 0xffffff, reward: 'level', level: 60, wear: ['bow', 0x00b8d4],
       desc: 'Lv.60, 황혼의 군주에게 주는 선물이에요. 밀려오는 바닷물처럼 맑은 청록 테두리예요.' },
-    { id: 'obsidian', name: '흑요석 그림자', body: 0x0a0a12, rim: 0xe040ff, eye: 0xffffff, reward: 'level', level: 80,
+    { id: 'obsidian', name: '흑요석 그림자', body: 0x0a0a12, rim: 0xe040ff, eye: 0xffffff, reward: 'level', level: 80, wear: ['glasses', 0xe040ff],
       desc: 'Lv.80, 심연의 입만 입는 옷이에요. 새까만 몸에 자홍빛 테두리가 날카롭게 빛나요.' },
-    { id: 'dusk', name: '황혼 그림자', body: 0x3a1a4a, rim: 0xffffff, eye: 0xffd25c, reward: 'level', level: 100,
+    { id: 'dusk', name: '황혼 그림자', body: 0x3a1a4a, rim: 0xffffff, eye: 0xffd25c, reward: 'level', level: 100, wear: ['crown', 0xffd25c],
       desc: '만렙 Lv.100, 황혼 그 자체가 된 그림자예요. 보랏빛 몸을 하얀 빛이 감싸요.' },
     // Hidden: shown as ??? until its collection-book set is filled (`reward` is the set, dex.js SETS).
-    { id: 'dawn', name: '새벽 그림자', body: 0x1d1430, rim: 0xf6a8ff, eye: 0xffffff, reward: 'dex', hidden: true,
+    { id: 'dawn', name: '새벽 그림자', body: 0x1d1430, rim: 0xf6a8ff, eye: 0xffffff, reward: 'dex', hidden: true, wear: ['pin', 0xf6a8ff],
       desc: '도감 첫 다섯 지도를 모두 채운 친구만 만나요. 새벽빛 분홍 테두리가 살랑거려요.' },
-    { id: 'forest', name: '숲 그림자', body: 0x0e1f14, rim: 0xb8f06b, eye: 0xfff3c4, reward: 'dex', hidden: true,
+    { id: 'forest', name: '숲 그림자', body: 0x0e1f14, rim: 0xb8f06b, eye: 0xfff3c4, reward: 'dex', hidden: true, wear: ['flower', 0xffffff, 0xffd45e],
       desc: '도감 가운데 다섯 지도를 채우면 나타나요. 연둣빛 테두리가 풀숲처럼 싱그러워요.' },
-    { id: 'sky', name: '하늘 그림자', body: 0xeaf4ff, rim: 0x4f86ff, eye: 0x10203a, pupil: 0xffffff, reward: 'dex', hidden: true,
+    { id: 'sky', name: '하늘 그림자', body: 0xeaf4ff, rim: 0x4f86ff, eye: 0x10203a, pupil: 0xffffff, reward: 'dex', hidden: true, wear: ['beret', 0x4f86ff],
       desc: '도감 마지막 다섯 지도까지 다 채운 수집왕의 상이에요. 맑은 하늘색 몸이 시원해요.' },
   ];
 
