@@ -494,11 +494,15 @@
       return t;
     })();
     const FELT_TILE = 14, KNIT_TILE = 30; // world units per fibre tile, per eight stitches
-    function felt(mat, knit) {
+    // mode: undefined (felt), true (knit), 'body' (the player: fibres fixed to the body, so they stay fine at every size,
+    // and pitched darker because a near-white body clips any brightening), 'fuzz' (the player's fuzz shell: only fibre
+    // tips show, thicker toward the outline, so the silhouette goes soft like needle-felted wool).
+    function felt(mat, mode) {
       if (mat.userData.felt) return mat;
       mat.userData.felt = true;
-      const TILE = knit ? KNIT_TILE : FELT_TILE, lo = knit ? 0.5 : 0.4, amp = knit ? 0.85 : 1.2;
-      mat.customProgramCacheKey = () => knit ? 'knit' : 'felt';
+      const knit = mode === true, own = mode === 'body' || mode === 'fuzz';
+      const TILE = knit ? KNIT_TILE : own ? 1.1 : FELT_TILE, lo = knit ? 0.5 : own ? 0.42 : 0.4, amp = knit ? 0.85 : own ? 1.0 : 1.2;
+      mat.customProgramCacheKey = () => knit ? 'knit' : own ? mode : 'felt';
       mat.onBeforeCompile = sh => {
         sh.uniforms.feltMap = { value: knit ? knitTex : feltTex };
         sh.vertexShader = sh.vertexShader
@@ -508,7 +512,7 @@
             #ifdef USE_INSTANCING
               feltW = instanceMatrix * feltW; feltN = mat3(instanceMatrix) * feltN;
             #endif
-            vFeltP = (modelMatrix * feltW).xyz; vFeltN = normalize(mat3(modelMatrix) * feltN); vFeltVN = normalize(normalMatrix * feltN);`);
+            vFeltP = ${own ? 'transformed' : '(modelMatrix * feltW).xyz'}; vFeltN = normalize(${own ? 'normal' : 'mat3(modelMatrix) * feltN'}); vFeltVN = normalize(normalMatrix * feltN);`);
         sh.fragmentShader = sh.fragmentShader
           .replace('#include <common>', '#include <common>\nuniform sampler2D feltMap;\nvarying vec3 vFeltP;\nvarying vec3 vFeltN;\nvarying vec3 vFeltVN;')
           .replace('#include <color_fragment>', `#include <color_fragment>
@@ -517,7 +521,8 @@
             float feltF = texture2D(feltMap, feltQ.zy).r * feltB.x + texture2D(feltMap, feltQ.xz).r * feltB.y + texture2D(feltMap, feltQ.xy).r * feltB.z;
             diffuseColor.rgb *= ${lo.toFixed(2)} + feltF * ${amp.toFixed(2)}; // felt about ±20%: never enough to make sunlit ground read as shade`)
           .replace('#include <output_fragment>', `float feltFz = pow(1.0 - abs(dot(normalize(vFeltVN), vec3(0.0, 0.0, 1.0))), 2.0);
-            outgoingLight += diffuseColor.rgb * feltFz * 0.35;
+            outgoingLight += diffuseColor.rgb * feltFz * ${mode === 'body' ? '0.12' : '0.35'};
+            ${mode === 'fuzz' ? 'diffuseColor.a *= smoothstep(0.48, 0.58, feltF) * (0.5 + feltFz * 0.5);' : ''}
             #include <output_fragment>`);
       };
       return mat;
@@ -554,9 +559,12 @@
     }
     bodyGeo.computeBoundingSphere();
     bodyGeo.setAttribute('color', new T.Float32BufferAttribute(bodyCols, 3));
-    const bodyMat = felt(new T.MeshBasicMaterial({ color: bodyColor, vertexColors: true }));
+    const bodyMat = felt(new T.MeshBasicMaterial({ color: bodyColor, vertexColors: true }), 'body');
     const body = new T.Mesh(bodyGeo, bodyMat);
-    const armMat = felt(new T.MeshBasicMaterial({ color: 0xf1e8ff })); // the shared sphere has no vertex colors
+    const armMat = felt(new T.MeshBasicMaterial({ color: 0xf1e8ff }), 'body'); // the shared sphere has no vertex colors
+    // Fuzz: a slightly bigger copy of the body where only stray fibres show, so the outline goes soft like felted wool
+    const fuzzMat = felt(new T.MeshBasicMaterial({ color: bodyColor, vertexColors: true, transparent: true, depthWrite: false }), 'fuzz');
+    const fuzz = new T.Mesh(bodyGeo, fuzzMat);
     const arms = [0, 1].map(() => new T.Mesh(unit.sphere, armMat));
     // Mouth: a small dark void (deep violet rim, near-black throat) — it eats darkness, so the mouth is a hole, not a red lip.
     const mouth = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x2a0b55 }));
@@ -586,7 +594,7 @@
     aura.renderOrder = 7;
     const cheekMat = new T.MeshBasicMaterial({ color: 0xb78cff, transparent: true, opacity: 0.22, depthWrite: false }); // a faint violet glow, not pink blush
     const cheeks = [0, 1].map(() => new T.Mesh(unit.sphere, cheekMat));
-    scene.add(body, aura, mouth, throat, ...arms, ...cheeks);
+    scene.add(body, fuzz, aura, mouth, throat, ...arms, ...cheeks);
     // A point on the body's surface: horizontal angle a, elevation el (radians), pushed out by `out`·r.
     let bodyLift = 0; // share of r the body sits up (the car skin's seat)
     const onBody = (player, a, el, out, v) => {
@@ -1370,6 +1378,7 @@
       if (player.slow) bodyMat.color.lerp(tmpCol.set(0x9bd38a), 0.45); // queasy green while a zombie bite slows it
       // Growth stages: the darkness it has eaten swirls inside, brighter the bigger it gets.
       aura.position.copy(body.position); aura.scale.copy(body.scale).multiplyScalar(1.01); aura.rotation.copy(body.rotation);
+      fuzz.position.copy(body.position); fuzz.scale.copy(body.scale).multiplyScalar(1.12); fuzz.rotation.copy(body.rotation); fuzzMat.color.copy(bodyMat.color);
       auraMat.opacity = grown * 0.8; auraMat.color.copy(glowColor);
       swirl.offset.set(t * 0.05, 0); swirl.rotation = t * 0.4;
       armMat.color.copy(bodyMat.color).multiplyScalar(0.94);
