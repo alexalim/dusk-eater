@@ -1,9 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs>
-<radialGradient id="b" cx=".36" cy=".28" r=".85"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#fbf4ff"/><stop offset=".85" stop-color="#e2cfff"/><stop offset="1" stop-color="#c9aef5"/></radialGradient>
-<radialGradient id="a" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d9c2ff"/></radialGradient>
+<radialGradient id="b" cx=".36" cy=".26" r=".9"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#ecdfff"/><stop offset=".82" stop-color="#cfb8f8"/><stop offset="1" stop-color="#b393e6"/></radialGradient>
+<radialGradient id="a" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d3bcfa"/></radialGradient>
 <radialGradient id="g" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#1a0f2e" stop-opacity=".45"/><stop offset="1" stop-color="#1a0f2e" stop-opacity="0"/></radialGradient>
-<radialGradient id="m" cx=".45" cy=".4" r=".75"><stop offset="0" stop-color="#3a1a6a"/><stop offset=".6" stop-color="#160a33"/><stop offset="1" stop-color="#06030f"/></radialGradient>
+<radialGradient id="m" cx=".45" cy=".4" r=".75"><stop offset="0" stop-color="#5a2470"/><stop offset="1" stop-color="#2a1048"/></radialGradient>
+<radialGradient id="e" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#5b2a9a"/><stop offset="1" stop-color="#1d0f3d"/></radialGradient>
+<radialGradient id="w" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".95"/><stop offset=".5" stop-color="#ffcf8a" stop-opacity=".5"/><stop offset="1" stop-color="#ffcf8a" stop-opacity="0"/></radialGradient>
+<mask id="c"><rect width="64" height="64" fill="#fff"/><circle cx="22.7" cy="19" r="4.3" fill="#000"/></mask>
 </defs><ellipse cx="32" cy="61" rx="20" ry="3" fill="url(#g)"/>
-<path d="M32 11C46.5 11 55.5 23 55.5 38C55.5 48 51 54 44 56.5C41 57.5 38.5 60 37 62.5C35.5 60 33.5 58.5 31 58.5C28.5 58.5 26 60.5 24.5 63C23.5 60 21 57.5 18 56.5C11.5 54 8.5 48 8.5 38C8.5 23 17.5 11 32 11Z" fill="url(#b)"/>
-<ellipse cx="22" cy="19.5" rx="7" ry="4" fill="#fff" opacity=".85" transform="rotate(-25 22 19.5)"/>
-<ellipse cx="12" cy="47" rx="5.2" ry="4.4" fill="url(#a)"/><ellipse cx="52" cy="47" rx="5.2" ry="4.4" fill="url(#a)"/><path d="M20.5 31Q24.5 25 28.5 31M35.5 31Q39.5 25 43.5 31" fill="none" stroke="#241640" stroke-width="2.8" stroke-linecap="round"/><ellipse cx="32" cy="44" rx="5" ry="4.6" fill="url(#m)"/><circle cx="30.5" cy="42.62" r=".7" fill="#ead9ff"/><circle cx="33.75" cy="45.15" r=".5" fill="#7debff"/><path d="M9 8l1.5 3.5 3.5 1.5-3.5 1.5-1.5 3.5-1.5-3.5-3.5-1.5 3.5-1.5z" fill="#ffd25c"/><path d="M55 6l1.2 2.8 2.8 1.2-2.8 1.2-1.2 2.8-1.2-2.8-2.8-1.2 2.8-1.2z" fill="#ffd25c"/><path d="M57 21.4l0.78 1.8199999999999998 1.8199999999999998 0.78-1.8199999999999998 0.78-0.78 1.8199999999999998-0.78-1.8199999999999998-1.8199999999999998-0.78 1.8199999999999998-0.78z" fill="#ffd25c"/></svg>
+<path d="M28 15C28.5 8 34 2.5 40 3.6C44.2 4.4 45.4 8.8 42.8 10.4C41 11.5 39 10.3 39.6 8.6C36.6 8.4 35.4 11.4 36.4 15Z" fill="#e4d6ff"/>
+<path d="M32 11.5C46 11.5 55.5 23.5 55.5 38C55.5 46.5 53 52.5 49 55.5Q45 59.5 41 56.5Q36.5 60.5 32 57.5Q27.5 60.5 23 56.5Q19 59.5 15 55.5C11 52.5 8.5 46.5 8.5 38C8.5 23.5 18 11.5 32 11.5Z" fill="url(#b)"/>
+<ellipse cx="32" cy="50" rx="17" ry="10" fill="url(#w)"/>
+<ellipse cx="24" cy="16.5" rx="5" ry="2.6" fill="#fff" opacity=".7" transform="rotate(-25 24 16.5)"/>
+<ellipse cx="11.5" cy="46" rx="5.2" ry="4.4" fill="url(#a)"/><ellipse cx="52.5" cy="46" rx="5.2" ry="4.4" fill="url(#a)"/>
+<circle cx="20.5" cy="21" r="5" fill="#f6c443" mask="url(#c)"/>
+<ellipse cx="17" cy="37.5" rx="3.7" ry="2.3" fill="#ff9fb0" opacity=".8"/><ellipse cx="47" cy="37.5" rx="3.7" ry="2.3" fill="#ff9fb0" opacity=".8"/>
+<path d="M32.00 45.80L33.53 48.90L36.95 49.39L34.47 51.80L35.06 55.21L32.00 53.60L28.94 55.21L29.53 51.80L27.05 49.39L30.47 48.90Z" fill="#ffd45e" stroke="#fff3c4" stroke-width="1" stroke-linejoin="round"/><path d="M20.5 32.5Q24.5 26 28.5 32.5M35.5 32.5Q39.5 26 43.5 32.5" fill="none" stroke="#2a1452" stroke-width="2.8" stroke-linecap="round"/><path d="M27.4 39.5Q32 38.1 36.6 39.5Q35.68 45.1 32 45.1Q28.32 45.1 27.4 39.5Z" fill="url(#m)"/><ellipse cx="32" cy="43.868" rx="2.3" ry="1.456" fill="#ff8fa3"/><path d="M8 7l1.5 3.5 3.5 1.5-3.5 1.5-1.5 3.5-1.5-3.5-3.5-1.5 3.5-1.5z" fill="#ffd25c"/><path d="M56 8l1.2 2.8 2.8 1.2-2.8 1.2-1.2 2.8-1.2-2.8-2.8-1.2 2.8-1.2z" fill="#ffd25c"/><path d="M58 22.4l0.78 1.8199999999999998 1.8199999999999998 0.78-1.8199999999999998 0.78-0.78 1.8199999999999998-0.78-1.8199999999999998-1.8199999999999998-0.78 1.8199999999999998-0.78z" fill="#ffd25c"/></svg>
