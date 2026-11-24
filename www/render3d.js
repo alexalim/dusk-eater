@@ -504,18 +504,18 @@
       return t;
     })();
     const FELT_TILE = 14, KNIT_TILE = 30; // world units per fibre tile, per eight stitches
-    // mode: undefined (felt), true (knit), 'body' (the player: fibres fixed to the body, so they stay fine at every size,
-    // and pitched darker because a near-white body clips any brightening), 'fuzz' (the player's fuzz shell: only fibre
-    // tips show, thicker toward the outline, so the silhouette goes soft like needle-felted wool).
+    // mode: undefined (felt), true (knit), 'body' (the player and what it wears: smooth and glossy like the painted
+    // character, see gloss below).
     // 'clay' (redesign guide: fibre noise on roads and walls read as low-res concrete): matte and smooth, no fibres; walls
     // darken toward their base like soft ambient occlusion, so blocks sit on the ground like toys on a diorama.
     function felt(mat, mode) {
       if (mat.userData.felt) return mat;
       mat.userData.felt = true;
       if (mode === 'clay') return clay(mat);
-      const knit = mode === true, own = mode === 'body' || mode === 'fuzz';
-      const TILE = knit ? KNIT_TILE : own ? 1.1 : FELT_TILE, lo = knit ? 0.5 : own ? 0.42 : 0.4, amp = knit ? 0.85 : own ? 1.0 : 1.2;
-      mat.customProgramCacheKey = () => knit ? 'knit' : own ? mode : 'felt';
+      if (mode === 'body') return gloss(mat);
+      const knit = mode === true;
+      const TILE = knit ? KNIT_TILE : FELT_TILE, lo = knit ? 0.5 : 0.4, amp = knit ? 0.85 : 1.2;
+      mat.customProgramCacheKey = () => knit ? 'knit' : 'felt';
       mat.onBeforeCompile = sh => {
         sh.uniforms.feltMap = { value: knit ? knitTex : feltTex };
         sh.vertexShader = sh.vertexShader
@@ -525,7 +525,7 @@
             #ifdef USE_INSTANCING
               feltW = instanceMatrix * feltW; feltN = mat3(instanceMatrix) * feltN;
             #endif
-            vFeltP = ${own ? 'transformed' : '(modelMatrix * feltW).xyz'}; vFeltN = normalize(${own ? 'normal' : 'mat3(modelMatrix) * feltN'}); vFeltVN = normalize(normalMatrix * feltN);`);
+            vFeltP = (modelMatrix * feltW).xyz; vFeltN = normalize(mat3(modelMatrix) * feltN); vFeltVN = normalize(normalMatrix * feltN);`);
         sh.fragmentShader = sh.fragmentShader
           .replace('#include <common>', '#include <common>\nuniform sampler2D feltMap;\nvarying vec3 vFeltP;\nvarying vec3 vFeltN;\nvarying vec3 vFeltVN;')
           .replace('#include <color_fragment>', `#include <color_fragment>
@@ -534,8 +534,26 @@
             float feltF = texture2D(feltMap, feltQ.zy).r * feltB.x + texture2D(feltMap, feltQ.xz).r * feltB.y + texture2D(feltMap, feltQ.xy).r * feltB.z;
             diffuseColor.rgb *= ${lo.toFixed(2)} + feltF * ${amp.toFixed(2)}; // felt about ±20%: never enough to make sunlit ground read as shade`)
           .replace('#include <output_fragment>', `float feltFz = pow(1.0 - abs(dot(normalize(vFeltVN), vec3(0.0, 0.0, 1.0))), 2.0);
-            outgoingLight += diffuseColor.rgb * feltFz * ${mode === 'body' ? '0.12' : '0.35'};
-            ${mode === 'fuzz' ? 'diffuseColor.a *= smoothstep(0.48, 0.58, feltF) * (0.5 + feltFz * 0.5);' : ''}
+            outgoingLight += diffuseColor.rgb * feltFz * 0.35;
+            #include <output_fragment>`);
+      };
+      return mat;
+    }
+
+    // The player (tester, build 75: "why isn't the main character in the game?"): smooth like the painted art, no fibres.
+    // Shape comes from the view, not from the sun, so it looks the same by day and night: a little darker away from an
+    // upper-left light, a soft light along the outline, and a small sheen where the top catches it.
+    function gloss(mat) {
+      mat.customProgramCacheKey = () => 'gloss';
+      mat.onBeforeCompile = sh => {
+        sh.vertexShader = sh.vertexShader
+          .replace('#include <common>', '#include <common>\nvarying vec3 vGlossN;')
+          .replace('#include <project_vertex>', '#include <project_vertex>\nvGlossN = normalize(normalMatrix * normal);');
+        sh.fragmentShader = sh.fragmentShader
+          .replace('#include <common>', '#include <common>\nvarying vec3 vGlossN;')
+          .replace('#include <output_fragment>', `vec3 glossN = normalize(vGlossN); float glossL = dot(glossN, normalize(vec3(-0.4, 0.6, 0.7)));
+            outgoingLight *= 0.84 + 0.16 * smoothstep(-0.3, 0.8, glossL);
+            outgoingLight += diffuseColor.rgb * pow(1.0 - abs(glossN.z), 2.5) * 0.2 + vec3(smoothstep(0.9, 0.99, glossL) * 0.22);
             #include <output_fragment>`);
       };
       return mat;
@@ -581,31 +599,30 @@
     const litRing = new T.Mesh(ringGeo, rimMat);
     litRing.renderOrder = 6;
     // Body: a round bean (sphere squashed to BODY_SY, centered BODY_Y·r up, its bottom under the ground)
-    // with the face on its front. Shading is baked into vertex colors (white top, lavender underside)
-    // so it needs no lights and looks the same by day and night.
+    // with the face on its front. Its colors are baked into the vertices (lavender-white top, lavender underside,
+    // warm where the belly star glows through, as in the painted art), so it needs no lights.
     // Mochi shape: the lower half spreads out and the top stays round, like a soft rice cake sitting down.
     const BODY_Y = 0.5, BODY_SY = 0.86;
     const bodyGeo = new T.SphereGeometry(1, 32, 20);
-    const bodyCols = [], under = col(0xc9b2f2), top = col(0xffffff), bp = bodyGeo.attributes.position;
+    const bodyCols = [], under = col(0xcbb6f3), top = col(0xf6eeff), warm = col(0xffe2b0), bp = bodyGeo.attributes.position;
     for (let i = 0; i < bp.count; i++) {
       const y = bp.getY(i), hem = Math.max(0, Math.min(1, (-y - 0.3) / 0.3)); // the hem ripples in soft scallops (painted art)
-      const spread = (1 + Math.max(0, -y) * 0.14 - Math.max(0, y) * 0.04) * (1 + hem * 0.07 * Math.cos(6 * Math.atan2(bp.getZ(i), bp.getX(i))));
+      const spread = (1 + Math.max(0, -y) * 0.14 - Math.max(0, y) * 0.04) * (1 + hem * 0.11 * Math.cos(6 * Math.atan2(bp.getZ(i), bp.getX(i))));
+      const glow = Math.max(0, 1 - Math.hypot(bp.getX(i) - 0.95, y + 0.15, bp.getZ(i)) / 1.05); // how near the belly star (+x is the face)
       bp.setXYZ(i, bp.getX(i) * spread, y, bp.getZ(i) * spread);
-      const c = under.clone().lerp(top, Math.pow((y + 1) / 2, 0.6));
+      const c = under.clone().lerp(top, Math.pow((y + 1) / 2, 0.6)).lerp(warm, glow * glow * 0.7);
       bodyCols.push(c.r, c.g, c.b);
     }
     bodyGeo.computeBoundingSphere();
     bodyGeo.setAttribute('color', new T.Float32BufferAttribute(bodyCols, 3));
     const bodyMat = felt(new T.MeshBasicMaterial({ color: bodyColor, vertexColors: true }), 'body');
     const body = new T.Mesh(bodyGeo, bodyMat);
-    const armMat = felt(new T.MeshBasicMaterial({ color: 0xf1e8ff }), 'body'); // the shared sphere has no vertex colors
-    // Fuzz: a slightly bigger copy of the body where only stray fibres show, so the outline goes soft like felted wool
-    const fuzzMat = felt(new T.MeshBasicMaterial({ color: bodyColor, vertexColors: true, transparent: true, depthWrite: false }), 'fuzz');
-    const fuzz = new T.Mesh(bodyGeo, fuzzMat);
+    const armMat = felt(new T.MeshBasicMaterial({ color: 0xe3d5fa }), 'body'), ARM_TINT = col(0xe3d5fa); // the shared sphere has no vertex colors: the body's tone at arm height
     const arms = [0, 1].map(() => new T.Mesh(unit.sphere, armMat));
-    // Mouth: a small dark void (deep violet rim, near-black throat) — it eats darkness, so the mouth is a hole, not a red lip.
+    // Mouth: an open smile onto a dark void (deep violet rim, near-black throat: it eats darkness) with a pink tongue.
     const mouth = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x2a0b55 }));
     const throat = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0x06030f }));
+    const tongue = new T.Mesh(unit.sphere, new T.MeshBasicMaterial({ color: 0xff7fa6 }));
     const eyeMat = new T.MeshBasicMaterial({ color: 0x1b1240 });
     const pupilMat = new T.MeshBasicMaterial({ color: 0xffffff });
     const planeGeo0 = new T.PlaneGeometry(1, 1), sparkMat0 = new T.MeshBasicMaterial({ color: 0xfff1b8, transparent: true, depthWrite: false }); // map set below
@@ -632,15 +649,56 @@
     aura.renderOrder = 7;
     const cheekMat = new T.MeshBasicMaterial({ color: 0xff9fb0, transparent: true, opacity: 0.5, depthWrite: false }); // pink blush, as in the painted art
     const cheeks = [0, 1].map(() => new T.Mesh(unit.sphere, cheekMat));
-    // The painted character (design/art): a curl of a tuft on top, a gold crescent on the brow, sparkle-star eyes, a star
-    // glowing in the belly and a thin gold swirl around it. Looks only: the footprint and every rule stay the r-disc.
+    // The painted character (design/art): the head runs up into a curl, a gold crescent on the brow, sparkle-star eyes,
+    // a star glowing in the belly and gold swirls around it. Looks only: the footprint and every rule stay the r-disc.
     const flat = (draw, n = 128) => { const c = document.createElement('canvas'); c.width = c.height = n; draw(c.getContext('2d'), n); return new T.CanvasTexture(c); };
     const starPath = (g, cx, cy, R, r, k) => { g.beginPath(); for (let i = 0; i < k * 2; i++) { const a = -Math.PI / 2 + i * Math.PI / k, q = i % 2 ? r : R; g.lineTo(cx + Math.cos(a) * q, cy + Math.sin(a) * q); } g.closePath(); };
     const planeGeo = new T.PlaneGeometry(1, 1);
-    const tuft = new T.Group(); // body-local units: +x is the face, y up; it leans back and curls over to one side
-    for (const [x, y, z, r] of [[-0.05, 0.74, 0, 0.42], [-0.18, 0.98, 0.04, 0.31], [-0.27, 1.18, 0.1, 0.23], [-0.24, 1.35, 0.17, 0.165], [-0.1, 1.44, 0.22, 0.115], [0.05, 1.43, 0.25, 0.08]]) {
-      const m = new T.Mesh(unit.sphere, armMat); m.position.set(x, y, z); m.scale.setScalar(r); tuft.add(m); // armMat: the shared sphere has no vertex colors
-    }
+    // A tapering tube swept along a spine [x, y, z, radius] in body-local units (+x is the face, y up). `ref` is any
+    // direction the spine never runs along. u runs along the spine, v around it.
+    const sweep = (SPINE, ref, RINGS = 33, SIDES = 14) => {
+      const spine = new T.CatmullRomCurve3(SPINE.map(([x, y, z]) => new T.Vector3(x, y, z)));
+      const pos = [], nor = [], uv = [], idx = [], p = new T.Vector3(), d = new T.Vector3(), a = new T.Vector3(), b = new T.Vector3();
+      for (let i = 0; i < RINGS; i++) {
+        const u = i / (RINGS - 1), at = u * (SPINE.length - 1), k = Math.min(SPINE.length - 2, Math.floor(at)), r = SPINE[k][3] + (SPINE[k + 1][3] - SPINE[k][3]) * (at - k);
+        spine.getPoint(u, p); spine.getTangent(u, d); a.crossVectors(d, ref).normalize(); b.crossVectors(a, d);
+        for (let j = 0; j <= SIDES; j++) { // the seam is doubled so a texture can wrap round
+          const w = j / SIDES * Math.PI * 2, c = Math.cos(w), sn = Math.sin(w), nx = a.x * c + b.x * sn, ny = a.y * c + b.y * sn, nz = a.z * c + b.z * sn;
+          pos.push(p.x + nx * r, p.y + ny * r, p.z + nz * r); nor.push(nx, ny, nz); uv.push(u, j / SIDES);
+          if (i && j) { const q = (i - 1) * (SIDES + 1) + j - 1; idx.push(q, q + SIDES + 1, q + 1, q + 1, q + SIDES + 1, q + SIDES + 2); }
+        }
+      }
+      const g = new T.BufferGeometry(); g.setIndex(idx);
+      for (const [name, v, n] of [['position', pos, 3], ['normal', nor, 3], ['uv', uv, 2]]) g.setAttribute(name, new T.Float32BufferAttribute(v, n));
+      return g;
+    };
+    // The tuft: a broad cone that starts inside the head and leaves it at a shallow angle, so the two read as one
+    // teardrop; it leans back and thins to a tip hooking over to the side away from the crescent.
+    // Its foot sits a little behind the crown of the head, which keeps the brow clear for the face.
+    const tuftGeo = sweep([[-0.08, 0.55, 0, 0.72], [-0.1, 0.75, 0, 0.57], [-0.13, 0.92, -0.01, 0.44], [-0.17, 1.08, -0.04, 0.34], [-0.21, 1.24, -0.1, 0.25], [-0.24, 1.38, -0.2, 0.18],
+      [-0.24, 1.48, -0.33, 0.12], [-0.21, 1.5, -0.46, 0.075], [-0.18, 1.44, -0.55, 0.04], [-0.17, 1.36, -0.56, 0.012]], new T.Vector3(1, 0, 0), 49, 24);
+    tuftGeo.setAttribute('color', new T.Float32BufferAttribute(Array.from({ length: tuftGeo.attributes.position.count }, () => [top.r, top.g, top.b]).flat(), 3));
+    const tuft = new T.Mesh(tuftGeo, bodyMat); // the body's own material: the head's color carries on up
+    // The darkness it eats (title art): a purple, star-flecked stream curling round into the mouth while it sucks
+    // something in. It thins and fades out at both ends (vertex alpha); the stars drift toward the mouth.
+    const wispTex = flat((g, n) => {
+      g.fillStyle = '#5a25b8'; g.fillRect(0, 0, n, n);
+      for (const [x, y, r, c] of [[0.15, 0.25, 0.3, 'rgba(160,110,255,.55)'], [0.6, 0.7, 0.34, 'rgba(160,110,255,.5)'], [0.85, 0.2, 0.26, 'rgba(46,16,110,.6)'], [0.35, 0.85, 0.24, 'rgba(46,16,110,.55)']]) {
+        for (const dx of [-1, 0, 1]) for (const dy of [-1, 0, 1]) { // soft puffs, drawn across the edges too so it tiles
+          const grd = g.createRadialGradient(n * (x + dx), n * (y + dy), 0, n * (x + dx), n * (y + dy), n * r); grd.addColorStop(0, c); grd.addColorStop(1, c.replace(/[\d.]+\)$/, '0)'));
+          g.fillStyle = grd; g.fillRect(0, 0, n, n);
+        }
+      }
+      for (const [x, y, r, c] of [[0.2, 0.3, 0.06, '#ffe9a8'], [0.62, 0.14, 0.04, '#ffffff'], [0.45, 0.6, 0.075, '#ffd36b'], [0.85, 0.72, 0.045, '#ffe9a8'], [0.1, 0.82, 0.035, '#ffffff'], [0.78, 0.4, 0.03, '#ffd36b'], [0.36, 0.1, 0.025, '#ffffff'], [0.6, 0.9, 0.03, '#ffe9a8']]) {
+        g.fillStyle = c; starPath(g, n * x, n * y, n * r, n * r * 0.28, 4); g.fill();
+      }
+    }, 256);
+    wispTex.wrapS = wispTex.wrapT = T.RepeatWrapping; wispTex.repeat.set(3, 2);
+    const wispGeo = sweep([[0.92, 0.28, 0, 0.09], [1.2, 0.25, -0.08, 0.17], [1.48, 0.2, -0.3, 0.24], [1.6, 0.14, -0.64, 0.27], [1.5, 0.2, -1, 0.25],
+      [1.24, 0.36, -1.26, 0.18], [0.98, 0.56, -1.34, 0.08]], new T.Vector3(0, 1, 0), 41, 16);
+    wispGeo.setAttribute('color', new T.Float32BufferAttribute(Array.from({ length: wispGeo.attributes.uv.count }, (_, i) => { const u = wispGeo.attributes.uv.getX(i); return [1, 1, 1, Math.min(1, u * 8, (1 - u) * 1.6)]; }).flat(), 4));
+    const wispMat = new T.MeshBasicMaterial({ map: wispTex, vertexColors: true, transparent: true, depthWrite: false });
+    const wisp = new T.Mesh(wispGeo, wispMat);
     // Skin accessories (shop `wear`): one small thing on the head, so a skin is more than a color. Body-local units like
     // the tuft; the side pieces sit on the brow the crescent leaves free, a hat or beret takes the tuft's place. Looks only.
     const wearMat = felt(new T.MeshBasicMaterial({ color: 0xffffff }), 'body'), wearMat2 = felt(new T.MeshBasicMaterial({ color: 0xffffff }), 'body'); // the piece, its accent
@@ -651,7 +709,7 @@
     const faceOut = o => o.quaternion.setFromRotationMatrix(facing.lookAt(o.position, CENTRE, o.up)); // +z along the body's normal, +y up the slope
     const wearKind = (name, x = 0, y = 0, z = 0) => { const g = new T.Group(); g.position.set(x, y, z); g.visible = false; wear.add(g); return WEAR[name] = g; };
     const wearPart = (g, geo, mat, s, p = [0, 0, 0], r = [0, 0, 0]) => { const m = new T.Mesh(unit[geo] || geo, mat); m.scale.set(...s); m.position.set(...p); m.rotation.set(...r); g.add(m); return m; };
-    const BROW = [0.395, 0.84, -0.368]; // on the unit body: 0.75 rad round from the face, 1.0 rad up
+    const BROW = [0.254, 0.841, -0.476]; // on the unit body: 1.08 rad round from the face, 1.0 rad up, mirroring the crescent
     {
       const bow = wearKind('bow', ...BROW.map(v => v * 1.06)); faceOut(bow); bow.rotateZ(0.3); // two wings meeting at a knot
       wearPart(bow, 'cone', wearMat, [0.17, 0.27, 0.06], [-0.15, 0, 0], [0, 0, -Math.PI / 2]); wearPart(bow, 'cone', wearMat, [0.17, 0.27, 0.06], [0.15, 0, 0], [0, 0, Math.PI / 2]);
@@ -661,13 +719,13 @@
       const flower = wearKind('flower', ...BROW.map(v => v * 1.05)); faceOut(flower); // five petals round a centre
       for (let i = 0; i < 5; i++) wearPart(flower, 'sphere', wearMat, [0.11, 0.11, 0.05], [Math.cos(i * Math.PI * 0.4) * 0.15, Math.sin(i * Math.PI * 0.4) * 0.15, 0]);
       wearPart(flower, 'sphere', wearMat2, [0.08, 0.08, 0.06], [0, 0, 0.03]);
-      const glasses = wearKind('glasses'); // a ring round each eye (the eyes sit 0.7 rad up, 0.27 rad to each side) and a bridge
-      for (const z of [0.222, -0.222]) faceOut(wearPart(glasses, rimGeo, wearMat, [0.185, 0.24, 0.185], [0.803, 0.702, z]));
-      wearPart(glasses, 'cyl', wearMat, [0.018, 0.09, 0.018], [0.805, 0.704, 0], [Math.PI / 2, 0, 0]);
-      const hat = wearKind('hat', -0.04, 0.84, -0.02); hat.rotation.set(-0.12, 0, 0.16); // a pointed hat leaning back: trim, cone, pompom
+      const glasses = wearKind('glasses'); // a ring round each eye (the eyes sit 0.86 rad up, 0.4 rad to each side) and a bridge
+      for (const z of [0.277, -0.277]) faceOut(wearPart(glasses, rimGeo, wearMat, [0.245, 0.3, 0.245], [0.655, 0.826, z]));
+      wearPart(glasses, 'cyl', wearMat, [0.018, 0.09, 0.018], [0.711, 0.826, 0], [Math.PI / 2, 0, 0]);
+      const hat = wearKind('hat', -0.2, 0.84, -0.02); hat.rotation.set(-0.12, 0, 0.26); // a pointed hat set back off the brow and leaning back: trim, cone, pompom
       wearPart(hat, trimGeo, wearMat2, [0.5, 0.5, 0.5], [0, 0.02, 0], [Math.PI / 2, 0, 0]);
       wearPart(hat, 'cone', wearMat, [0.46, 0.85, 0.46], [0, 0.47, 0]); wearPart(hat, 'sphere', wearMat2, [0.13, 0.13, 0.13], [0, 0.92, 0]);
-      const beret = wearKind('beret', 0, 0.93, -0.1); beret.rotation.set(-0.3, 0, 0.1); // a soft disc tipped to one side, with its stalk
+      const beret = wearKind('beret', -0.2, 0.88, -0.1); beret.rotation.set(-0.3, 0, 0.28); // a soft disc set back off the brow and tipped to one side, with its stalk
       wearPart(beret, 'sphere', wearMat, [0.58, 0.17, 0.58], [0, 0.05, 0]); wearPart(beret, 'sphere', wearMat, [0.045, 0.07, 0.045], [0, 0.24, 0]);
       const crown = wearKind('crown', -0.05, 0.93, 0); crown.rotation.set(0, 0, 0.1); // a band round the tuft's foot, five points with a gem each
       wearPart(crown, 'cyl', wearMat, [0.42, 0.14, 0.42], [0, 0.05, 0]);
@@ -677,8 +735,9 @@
       }
     }
     const moon = new T.Mesh(planeGeo, new T.MeshBasicMaterial({ transparent: true, depthWrite: false, map: flat((g, n) => {
-      g.fillStyle = '#f6c443'; g.beginPath(); g.arc(n / 2, n / 2, n * 0.42, 0, Math.PI * 2); g.fill();
-      g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(n * 0.66, n * 0.4, n * 0.36, 0, Math.PI * 2); g.fill();
+      const grd = g.createLinearGradient(0, n * 0.1, n * 0.5, n * 0.9); grd.addColorStop(0, '#ffe07a'); grd.addColorStop(1, '#f0a630'); // lit from the upper left, like the body
+      g.fillStyle = grd; g.beginPath(); g.arc(n / 2, n / 2, n * 0.44, 0, Math.PI * 2); g.fill();
+      g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(n * 0.7, n * 0.36, n * 0.36, 0, Math.PI * 2); g.fill();
     }) }));
     const sparkleTex = flat((g, n) => { g.fillStyle = '#fff'; starPath(g, n / 2, n / 2, n * 0.48, n * 0.12, 4); g.fill(); });
     const sparkMat = sparkMat0; sparkMat.map = sparkleTex;
@@ -688,8 +747,10 @@
       g.shadowColor = '#ffd25c'; g.shadowBlur = n * 0.08; g.fillStyle = '#fff3b0'; starPath(g, n / 2, n * 0.53, n * 0.4, n * 0.2, 5); g.fill();
       g.shadowBlur = 0; g.fillStyle = '#ffffff'; starPath(g, n / 2, n * 0.53, n * 0.2, n * 0.1, 5); g.fill();
     }) }));
-    const swirlRing = new T.Mesh(new T.TorusGeometry(1, 0.012, 6, 72), new T.MeshBasicMaterial({ color: 0xffd36b, transparent: true, opacity: 0.6, depthWrite: false }));
-    scene.add(body, fuzz, aura, mouth, throat, ...arms, ...cheeks, tuft, wear, moon, bellyGlow, bellyStar, swirlRing);
+    // two gold swirls crossing round the belly: [radius, tube, opacity, tilt, turns per second]
+    const SWIRLS = [[1.24, 0.026, 0.9, 0.3, 0.6], [1.36, 0.016, 0.6, -0.22, -0.45]];
+    const swirlRings = SWIRLS.map(([, tube, opacity]) => new T.Mesh(new T.TorusGeometry(1, tube, 6, 72), new T.MeshBasicMaterial({ color: 0xffd36b, transparent: true, opacity, depthWrite: false })));
+    scene.add(body, aura, mouth, throat, tongue, ...arms, ...cheeks, tuft, wear, moon, bellyGlow, bellyStar, ...swirlRings, wisp);
     const lookV = new T.Vector3(), outward = (m, player) => m.lookAt(lookV.set(m.position.x * 2 - player.x, m.position.y * 2 - player.r * (BODY_Y + bodyLift), m.position.z * 2 - player.y));
     // A point on the body's surface: horizontal angle a, elevation el (radians), pushed out by `out`·r.
     let bodyLift = 0; // share of r the body sits up (the car skin's seat)
@@ -1560,58 +1621,65 @@
       if (player.slow) { const w = Math.sin(t * 14); body.scale.x *= 1 + w * 0.08; body.scale.z *= 1 - w * 0.08; body.scale.y *= 1 + Math.sin(t * 14 + 1) * 0.06; } // poisoned: a wobbling jelly
       body.rotation.set(0, -L, Math.sin(t * 1.7) * 0.035); // a slow idle sway, like humming to itself
       const grown = Math.min(1, Math.max(0, (player.r / (player.r0 || player.r) - 1) / 4));
-      bodyMat.color.copy(bodyColor).lerp(glowColor, grown * 0.25);
+      bodyMat.color.copy(bodyColor).lerp(glowColor, grown * 0.08);
       if (player.slow) bodyMat.color.lerp(tmpCol.set(0x9bd38a), 0.45); // queasy green while a zombie bite slows it
-      // Growth stages: the darkness it has eaten swirls inside, brighter the bigger it gets.
+      // Growth stages: the darkness it has eaten swirls faintly inside, and the belly star glows brighter the bigger it gets.
       aura.position.copy(body.position); aura.scale.copy(body.scale).multiplyScalar(1.01); aura.rotation.copy(body.rotation);
-      fuzz.position.copy(body.position); fuzz.scale.copy(body.scale).multiplyScalar(1.12); fuzz.rotation.copy(body.rotation); fuzzMat.color.copy(bodyMat.color);
-      auraMat.opacity = grown * 0.8; auraMat.color.copy(glowColor);
+      auraMat.opacity = grown * 0.28; auraMat.color.copy(glowColor);
       swirl.offset.set(t * 0.05, 0); swirl.rotation = t * 0.4;
-      armMat.color.copy(bodyMat.color).multiplyScalar(0.94);
+      armMat.color.copy(bodyMat.color).multiply(ARM_TINT);
       // First person looks over the top of the head; the eyes high on its front would peek over it.
       eyes.forEach(o => { o.e.visible = o.p.visible = k < 0.6; });
       wear.visible = moon.visible = k < 0.6; tuft.visible = wear.visible && !wearBare;
-      for (const o of [tuft, wear]) { o.position.copy(body.position); o.scale.copy(body.scale); o.rotation.copy(body.rotation); }
+      for (const o of [tuft, wear, wisp]) { o.position.copy(body.position); o.scale.copy(body.scale); o.rotation.copy(body.rotation); }
+      wisp.visible = gulp > 0.04 && k < 0.6; wispMat.opacity = Math.min(1, gulp * 1.8) * 0.82; wispTex.offset.set(t * 0.9, t * 0.15);
       // gold crescent high on the brow, off to one side; belly star low in front, glowing brighter as it grows
-      onBody(player, L + 0.62, 0.8, 0.01, moon.position); outward(moon, player); moon.scale.setScalar(R * 0.3);
-      onBody(player, L, 0.02, 0.03, bellyStar.position); outward(bellyStar, player);
+      onBody(player, L + 1.08, 1.0, 0.09, moon.position); outward(moon, player); moon.scale.setScalar(R * 0.46); // out: clear of the tuft's foot
+      onBody(player, L, 0.1, 0.03, bellyStar.position); outward(bellyStar, player);
       const starBeat = 1 + Math.sin(t * 2.4) * 0.06;
-      bellyStar.scale.setScalar(R * 0.5 * starBeat);
-      bellyGlow.position.copy(bellyStar.position); bellyGlow.quaternion.copy(bellyStar.quaternion); bellyGlow.scale.setScalar(R * (0.8 + grown * 0.4) * starBeat);
-      bellyGlow.material.opacity = 0.35 + grown * 0.3; bellyStar.renderOrder = 9; bellyGlow.renderOrder = 8;
-      swirlRing.position.set(player.x, R * (BODY_Y + bodyLift - 0.08), player.y);
-      swirlRing.rotation.set(Math.PI / 2 - 0.32, Math.sin(t * 0.7) * 0.15, t * 0.6); swirlRing.scale.setScalar(R * 1.22);
-      arms.forEach((m, k) => {
-        onBody(player, L + (k ? 1 : -1) * (1.05 - gulp * 0.45), -0.28, 0.06, m.position);
-        m.scale.set(R * 0.3, R * 0.24, R * 0.3);
+      bellyStar.scale.setScalar(R * 0.68 * starBeat);
+      bellyGlow.position.copy(bellyStar.position); bellyGlow.quaternion.copy(bellyStar.quaternion); bellyGlow.scale.setScalar(R * (1.15 + grown * 0.45) * starBeat);
+      bellyGlow.material.opacity = 0.5 + grown * 0.4; bellyStar.renderOrder = 9; bellyGlow.renderOrder = 8;
+      swirlRings.forEach((m, i) => {
+        const [size, , , tilt, turn] = SWIRLS[i];
+        m.position.set(player.x, R * (BODY_Y + bodyLift - 0.2), player.y);
+        m.rotation.set(Math.PI / 2 - tilt, Math.sin(t * 0.7 + i * 2) * 0.15, t * turn); m.scale.setScalar(R * size);
       });
-      // Mouth: a small round "o" at rest that stretches into a big tall O while it sucks something in.
-      const MOUTH_EL = 0.26 - gulp * 0.16;
+      arms.forEach((m, k) => {
+        onBody(player, L + (k ? 1 : -1) * (1.12 - gulp * 0.45), -0.24, 0.03, m.position);
+        m.scale.set(R * 0.22, R * 0.19, R * 0.22);
+      });
+      // Mouth: a small open smile at rest (wider than tall, the tongue showing) that stretches into a big tall O while
+      // it sucks something in. The whole face sits high on the body: the camera looks down on it.
+      const MOUTH_EL = 0.5 - gulp * 0.2; // the big O drops clear of the eyes
       onBody(player, L, MOUTH_EL, 0.02, mouth.position);
-      mouth.rotation.set(0, -L, 0);
-      mouth.scale.set(R * 0.1, R * (0.1 + gulp * 0.34), R * (0.13 + gulp * 0.24));
+      mouth.rotation.set(0, -L, MOUTH_EL); // lying on the surface, like every piece of the face
+      mouth.scale.set(R * 0.1, R * (0.16 + gulp * 0.3), R * (0.22 + gulp * 0.17));
       onBody(player, L, MOUTH_EL, 0.08, throat.position);
       throat.rotation.copy(mouth.rotation);
-      throat.scale.set(R * 0.06, mouth.scale.y * (0.45 + gulp * 0.35), mouth.scale.z * (0.5 + gulp * 0.3));
+      throat.scale.set(R * 0.06, mouth.scale.y * (0.6 + gulp * 0.2), mouth.scale.z * (0.66 + gulp * 0.14));
+      onBody(player, L, MOUTH_EL - 0.07 - gulp * 0.12, 0.115, tongue.position);
+      tongue.rotation.copy(mouth.rotation); tongue.visible = k < 0.6;
+      tongue.scale.set(R * 0.05, mouth.scale.y * 0.45, mouth.scale.z * 0.55);
       // Eyes: big round glossy eyes; they squeeze shut happily (^^) for a moment after each gulp, and stay a little
       // squinted while a combo is going (player.cheer 0..1). A blink every few seconds keeps it alive.
       const cheer = player.cheer || 0, blink = (t + 1.3) % 4.1 < 0.11 ? 1 : 0;
       const happy = Math.max(Math.min(1, bulge * 1.6), cheer * 0.55), wide = player.fast ? 1 : 0; // fast: the eyes open even bigger
-      const EYE_EL = 0.7 + gulp * 0.08;
+      const EYE_EL = 0.86 + gulp * 0.05;
       eyes.forEach(({ e, p, p2 }, k) => {
-        const a = L + (k ? 1 : -1) * 0.27, shut = (1 - happy) * (1 - blink);
+        const a = L + (k ? 1 : -1) * 0.4, shut = (1 - happy) * (1 - blink);
         onBody(player, a, EYE_EL, 0.0, e.position);
-        e.rotation.set(0, -L, 0);
-        e.scale.set(R * 0.09, R * (0.19 + wide * 0.04) * Math.max(0.15, shut), R * (0.14 + wide * 0.03));
-        onBody(player, a + (k ? 1 : -1) * 0.02, EYE_EL + 0.02, 0.17, p.position); // just in front of the eye's bulge outward(p, player);
-        p.scale.setScalar(R * (0.22 + wide * 0.03) * Math.max(0.001, shut)); p.renderOrder = 9;
+        e.rotation.set(0, -a, EYE_EL);
+        e.scale.set(R * 0.09, R * (0.25 + wide * 0.04) * Math.max(0.15, shut), R * (0.2 + wide * 0.03));
+        onBody(player, a + (k ? 1 : -1) * 0.02, EYE_EL + 0.03, 0.11, p.position); outward(p, player); // just in front of the eye's bulge
+        p.scale.setScalar(R * (0.3 + wide * 0.03) * Math.max(0.001, shut)); p.renderOrder = 9;
       });
       // Cheeks: a pink blush that deepens and grows while a combo is going.
-      cheekMat.color.set(0xff9fb0).lerp(tmpCol.set(0xff7f9e), cheer); cheekMat.opacity = 0.5 + cheer * 0.3;
+      cheekMat.color.set(0xff9fb0).lerp(tmpCol.set(0xff7f9e), cheer); cheekMat.opacity = 0.62 + cheer * 0.25;
       cheeks.forEach((m, i) => {
-        onBody(player, L + (i ? 1 : -1) * 0.62, 0.42, 0.0, m.position);
-        m.rotation.set(0, -L, 0);
-        m.scale.set(R * 0.05, R * (0.06 + cheer * 0.02), R * (0.12 + cheer * 0.04));
+        onBody(player, L + (i ? 1 : -1) * 0.82, 0.58, 0.0, m.position);
+        m.rotation.set(0, -L - (i ? 1 : -1) * 0.82, 0.58);
+        m.scale.set(R * 0.05, R * (0.08 + cheer * 0.02), R * (0.15 + cheer * 0.04));
         m.visible = k < 0.6;
       });
 
