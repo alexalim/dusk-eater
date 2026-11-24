@@ -1,9 +1,10 @@
 # Layer: E2E — daily check-in, booster tickets, today's missions and the mid-run bolt mission in real Chromium.
-# Usage: python3 test/e2e/daily.e2e.py www
+# Usage: python3 test/e2e/daily.e2e.py www [screenshot folder]
 import sys, pathlib
 from playwright.sync_api import sync_playwright
 www = pathlib.Path(sys.argv[1]).resolve()
 URL = (www / 'index.html').as_uri()
+out = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else None
 GL = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']
 A = 'window.__DUSK_TEST__.api'
 res = []
@@ -78,6 +79,19 @@ with sync_playwright() as p:
     rec('C4', 'missions fill, pay once each, the chest opens after all three, and the monthly quest card counts five points', badge == '3' and w4['challenge']['chest'] and len(w4['challenge']['claimed']) == 3 and w4['gems'] > g0
         and w4['monthly']['points'] == 5 and '5 / 30' in mcard and '퀘스트' in mcard,
         f'badge={badge!r} claimed={w4["challenge"]["claimed"]} chest={w4["challenge"]["chest"]} gems {g0}->{w4["gems"]} monthly={w4.get("monthly")}')
+    pg.screenshot(path=str(out / 'month-idle.png')) if out else None
+
+    # C5 the month's reward is a plain label until it can be claimed: no pill, no press effect; at the goal it turns into a button
+    look = "(() => { const e = document.querySelector('#btn-month'), c = getComputedStyle(e); return [e.classList.contains('ready'), c.backgroundColor, c.borderTopWidth, e.matches('.claim.ready')]; })()"
+    idle = pg.evaluate(look)
+    press = pg.evaluate("[...document.styleSheets].flatMap(s => [...s.cssRules]).filter(r => r.selectorText && r.selectorText.includes('.claim') && r.selectorText.includes(':active')).map(r => r.selectorText).join()")
+    pg.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ monthly: Object.assign({{}}, {A}.Store.wallet.monthly, {{ points: 30 }}) }}))"); frames_wait(pg)
+    ready = pg.evaluate(look); pg.screenshot(path=str(out / 'month-ready.png')) if out else None
+    g0 = wallet(pg)['gems']; pg.tap('#btn-month'); frames_wait(pg); w5 = wallet(pg)
+    rec('C5', 'month reward is a label until claimable, then a button that pays once', not idle[0] and idle[1] == 'rgba(0, 0, 0, 0)' and idle[2] == '0px'
+        and '.claim.ready:active' in press and '.claim:active' not in press and ready[0] and ready[1] != 'rgba(0, 0, 0, 0)'
+        and w5['monthly']['claimed'] and w5['gems'] > g0 and '2026-11' in w5['monthBadges'],
+        f'idle={idle} ready={ready} press={press!r} gems {g0}->{w5["gems"]} badges={w5.get("monthBadges")}')
     pg.tap('#btn-missions-back'); frames_wait(pg)
 
     rec('C0', 'no page errors', not errs, '; '.join(errs[:3]))
