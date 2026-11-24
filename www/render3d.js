@@ -855,7 +855,19 @@
     })();
     const circleMotes = new T.Points(moteGeo, new T.PointsMaterial({ map: moteTex, size: 9, transparent: true, depthWrite: false, blending: T.AdditiveBlending }));
     circleMotes.renderOrder = 8; circleMotes.frustumCulled = false; scene.add(circleMotes);
-    const circleParts = [circleShade, circleMesh, circleRunes, circleMotes];
+    // The circle's tail: a string of little stars that trail after the blob like ducklings, each one a fixed step
+    // behind the one before it (a rope, so no frame time is needed), shrinking and fading toward the end. Looks only.
+    const TRAIL = 6, starTex = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+      g.fillStyle = '#ffffff'; g.shadowColor = '#ffffff'; g.shadowBlur = 8; g.beginPath();
+      for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? 10 : 22; k ? g.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r) : g.moveTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r); }
+      g.closePath(); g.fill(); return new T.CanvasTexture(c);
+    })();
+    const circleTrail = Array.from({ length: TRAIL }, () => {
+      const sp = new T.Sprite(new T.SpriteMaterial({ map: starTex, transparent: true, depthWrite: false, blending: T.AdditiveBlending }));
+      sp.renderOrder = 8; sp.userData.at = null; scene.add(sp); return sp;
+    });
+    const circleParts = [circleShade, circleMesh, circleRunes, circleMotes, ...circleTrail];
     circleParts.forEach(m => { m.visible = false; });
 
     const TEX = makeTextures();
@@ -1598,6 +1610,18 @@
           mp.setXYZ(i, player.x + Math.cos(a) * rr, 2 + life * player.r * 1.6, player.y + Math.sin(a) * rr);
         }
         mp.needsUpdate = true; circleMotes.material.size = Math.max(6, player.r * 0.5); circleMotes.material.opacity = 0.85;
+        let lx = player.x, ly = player.y;
+        circleTrail.forEach((sp, i) => { // follow the leader: pulled along only once the one ahead is a full step away
+          const gap = player.r * (i ? 0.95 : 1.9), at = sp.userData.at || (sp.userData.at = { x: lx, y: ly + gap });
+          let dx = at.x - lx, dy = at.y - ly, d = Math.hypot(dx, dy);
+          if (d > gap * 12 || d < 1e-6) { dx = 0; dy = gap; d = gap; at.x = lx; at.y = ly + gap; } // a new run or a jump: line up afresh
+          if (d > gap) { at.x = lx + dx / d * gap; at.y = ly + dy / d * gap; }
+          const tw = 0.5 + 0.5 * Math.sin(t * 5 + i * 1.3), k = 1 - i / TRAIL;
+          sp.position.set(at.x, 2 + player.r * (0.5 + 0.18 * Math.sin(t * 3 + i * 0.9)), at.y);
+          sp.scale.setScalar(player.r * (0.45 + 0.5 * k) * (0.85 + 0.15 * tw)); sp.material.rotation = Math.sin(t * 2 + i) * 0.35;
+          sp.material.opacity = (0.45 + 0.5 * k) * (0.75 + 0.25 * tw);
+          lx = at.x; ly = at.y;
+        });
       }
       bubble.visible = !!player.bubble;
       if (player.bubble) { bubble.position.set(player.x, 2, player.y); bubble.scale.set(player.bubble, player.bubble * 0.35, player.bubble); }
@@ -1769,10 +1793,10 @@
       g.fillStyle = grd; g.fillRect(0, 0, 256, 256); g.globalCompositeOperation = 'source-over';
       circleShade.material.map.needsUpdate = true;
       circleShade.material.color.set(0x1a0b3a); circleShade.material.opacity = 0.55;
-      for (const m of [circleMesh, circleRunes, circleMotes]) m.material.color.setHex(c.color);
+      for (const m of [circleMesh, circleRunes, circleMotes, ...circleTrail]) m.material.color.setHex(c.color);
     }
 
-    return { build, resize, draw, setSkin, setCircle, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh } };
+    return { build, resize, draw, setSkin, setCircle, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh, circleTrail } };
   }
 
   root.DuskRender = { create, drawCircle, PARTS, GEO: unit }; // PARTS and the unit shapes also feed tools/icons (collection-book pictures)

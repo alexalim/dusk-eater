@@ -462,8 +462,19 @@
   .item .nm { font-weight: 800; font-size: 14px; }
   .item .pr { font-size: 13px; font-weight: 800; color: var(--accent); }
   .item .pr.own { color: var(--muted); }
+  /* skin sections (element, costume, season): a heading across both columns */
+  .grid .cat { grid-column: 1 / -1; margin: 10px 0 0; font-size: 15px; color: var(--text); text-align: left; }
+  .grid .cat:first-child { margin-top: 0; }
+  .grid .cat small { margin-left: 4px; font-size: 12px; font-weight: 400; color: var(--muted); }
+  .item .swatch { width: 84px; height: 84px; }
   .swatch { display: inline-block; width: 60px; height: 60px; }
   .swatch svg, .swatch img { display: block; width: 100%; height: 100%; }
+  /* a summoning circle's picture: the pattern turns slowly while its tail of stars runs round it the other way */
+  .circ { position: relative; display: block; width: 100%; height: 100%; }
+  .circ img { animation: circ-turn 16s linear infinite; }
+  .circ .tail { position: absolute; inset: 0; overflow: visible; animation: circ-turn 4.5s linear infinite reverse; filter: drop-shadow(0 0 2px rgba(255,255,255,.7)); }
+  @keyframes circ-turn { to { rotate: 360deg; } }
+  @media (prefers-reduced-motion: reduce) { .circ img, .circ .tail { animation: none; } }
   #shop-msg { min-height: 1.4em; }
   /* Skin detail: tapping a skin opens this box; buying or equipping happens only from its button. */
   #skin-box { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px;
@@ -2532,55 +2543,73 @@
   const hex = n => '#' + n.toString(16).padStart(6, '0');
   const skinById = id => Shop.SKINS.find(s => s.id === id) || Shop.SKINS[0];
   // `secret`: a hidden skin not earned yet shows only its outline.
-  // Skin picture: the mochi character itself in the skin's colors, shaded like the 3D body (lighter top, darker
-  // base, gloss, little arms), standing on a ring in its rim color as in play. A hidden skin is a plain silhouette.
+  // Skin picture: the character as painted (design/art) and as render3d builds it, in the skin's colors: a glossy
+  // teardrop whose tuft hooks to one side, a gold crescent on the brow, big shiny eyes, an open smile with a tongue,
+  // blush, a scalloped hem, standing on a ring in its rim color as in play. A hidden skin is a plain silhouette.
   const mix = (a, b, t) => '#' + [16, 8, 0].map(k => Math.round(((a >> k) & 255) * (1 - t) + ((b >> k) & 255) * t).toString(16).padStart(2, '0')).join('');
   let artN = 0;
-  // What a skin wears (shop `wear`), drawn flat where render3d puts it: on the brow to one side, round the eyes, or on top.
+  // What a skin wears (shop `wear`), drawn flat where render3d puts it: on the brow the crescent leaves free, round
+  // the eyes, round the tuft's foot (crown), or on top in the tuft's place (hat, beret).
   const starD = (cx, cy, R, r) => 'M' + Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r : R; return (cx + Math.cos(a) * q).toFixed(1) + ' ' + (cy + Math.sin(a) * q).toFixed(1); }).join('L') + 'Z';
   const WEAR_ART = {
-    bow: (c, d) => `<g transform="rotate(18 45 15)"><path d="M45 15L37 10V20ZM45 15L53 10V20Z" fill="${c}"/><circle cx="45" cy="15" r="2.6" fill="${d}"/></g>`,
-    pin: c => `<path d="${starD(45, 16, 7.2, 3.2)}" fill="${c}"/>`,
-    flower: (c, d) => [0, 1, 2, 3, 4].map(i => `<circle cx="${(45 + Math.cos(i * Math.PI * 0.4) * 3.9).toFixed(1)}" cy="${(16 + Math.sin(i * Math.PI * 0.4) * 3.9).toFixed(1)}" r="2.9" fill="${c}"/>`).join('') + `<circle cx="45" cy="16" r="2.3" fill="${d}"/>`,
-    glasses: c => `<g fill="none" stroke="${c}" stroke-width="1.8"><ellipse cx="24.5" cy="31" rx="6.2" ry="7.4"/><ellipse cx="39.5" cy="31" rx="6.2" ry="7.4"/><path d="M30.7 30.5H33.3"/></g>`,
-    hat: (c, d) => `<path d="M21 15L35 1L45 15Z" fill="${c}"/><rect x="18" y="12" width="29" height="5.4" rx="2.7" fill="${d}"/><circle cx="35" cy="3" r="2.8" fill="${d}"/>`,
-    beret: c => `<ellipse cx="33" cy="11.5" rx="15.5" ry="5.6" fill="${c}" transform="rotate(-9 33 11.5)"/><path d="M35 5.8V3" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/>`,
-    crown: (c, d) => `<path d="M23 15V5.5L27.5 9.5L32 3.5L36.5 9.5L41 5.5V15Z" fill="${c}"/>` + [[23, 5.5], [32, 3.5], [41, 5.5]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.4" fill="${d}"/>`).join(''),
+    bow: (c, d) => `<g transform="rotate(18 46 22)"><path d="M46 22L38 17V27ZM46 22L54 17V27Z" fill="${c}"/><circle cx="46" cy="22" r="2.6" fill="${d}"/></g>`,
+    pin: c => `<path d="${starD(46, 22, 7.2, 3.2)}" fill="${c}"/>`,
+    flower: (c, d) => [0, 1, 2, 3, 4].map(i => `<circle cx="${(46 + Math.cos(i * Math.PI * 0.4) * 3.9).toFixed(1)}" cy="${(22 + Math.sin(i * Math.PI * 0.4) * 3.9).toFixed(1)}" r="2.9" fill="${c}"/>`).join('') + `<circle cx="46" cy="22" r="2.3" fill="${d}"/>`,
+    glasses: c => `<g fill="none" stroke="${c}" stroke-width="1.8"><ellipse cx="24" cy="30.5" rx="6.6" ry="7.4"/><ellipse cx="40" cy="30.5" rx="6.6" ry="7.4"/><path d="M30.6 30H33.4"/></g>`,
+    hat: (c, d) => `<path d="M20 17L34 2L45 17Z" fill="${c}"/><rect x="17" y="14" width="31" height="5.6" rx="2.8" fill="${d}"/><circle cx="34" cy="3.4" r="3" fill="${d}"/>`,
+    beret: c => `<ellipse cx="33" cy="13.5" rx="16" ry="5.8" fill="${c}" transform="rotate(-9 33 13.5)"/><path d="M35 7.6V4.6" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/>`,
+    crown: (c, d) => `<path d="M22 19.5V10.5L26.5 14.5L31 8.5L35.5 14.5L40 10.5V19.5Z" fill="${c}"/>` + [[22, 10.5], [31, 8.5], [40, 10.5]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.4" fill="${d}"/>`).join(''),
   };
+  const HEM = 'C8 47 11 53 16 55.5Q20 58 24 55.8Q28 58.2 32 56Q36 58.2 40 55.8Q44 58 48 55.5C53 53 56 47 56 38'; // left side down, the scalloped hem, right side up
+  const BODY_D = `M42 4.5C35 2.5 27 6.5 24.5 14C14.5 17.5 8 27 8 38${HEM}C56 27.5 49.5 19 39.5 15C38 11 38.5 7 42 4.5Z`; // teardrop: the tuft hooks to the right
+  const BARE_D = `M32 14C18 14 8 25 8 38${HEM}C56 25 46 14 32 14Z`; // under a hat or beret: no tuft
   function skinArt(s, secret) {
-    const id = 'sk' + (artN++), body = s.body;
-    const light = ((body >> 16) & 255) + ((body >> 8) & 255) + (body & 255) > 500; // white-ish bodies get pink cheeks
+    const id = 'sk' + (artN++), body = s.body, bare = !!s.wear && (s.wear[0] === 'hat' || s.wear[0] === 'beret'), shape = bare ? BARE_D : BODY_D;
+    const light = ((body >> 16) & 255) + ((body >> 8) & 255) + (body & 255) > 500;
     // dark bodies catch their rim color along the bottom, so the skin's color reads at a glance
-    const top = mix(body, 0xffffff, light ? 0.45 : 0.3), base = mix(body, s.rim, light ? 0.35 : 0.6), arm = mix(body, light ? 0xffffff : s.rim, light ? 0.2 : 0.35);
-    if (secret) return `<svg viewBox="0 0 64 64"><ellipse cx="32" cy="57" rx="20" ry="3.4" fill="#000" opacity=".25"/>
-      <path d="M32 11C46.5 11 55.5 23 55.5 38C55.5 50.5 49.5 56.5 40 56.5H24C14.5 56.5 8.5 50.5 8.5 38C8.5 23 17.5 11 32 11Z" fill="#241c3a"/>
-      <ellipse cx="12" cy="47" rx="5.2" ry="4.4" fill="#241c3a"/><ellipse cx="52" cy="47" rx="5.2" ry="4.4" fill="#241c3a"/>
-      <text x="32" y="43" text-anchor="middle" font-size="20" font-family="Jua, sans-serif" fill="#6b5f8f">?</text></svg>`;
+    const top = mix(body, 0xffffff, light ? 0.6 : 0.34), base = mix(body, s.rim, light ? 0.4 : 0.62), arm = mix(body, light ? 0xffffff : s.rim, light ? 0.25 : 0.4);
+    if (secret) return `<svg viewBox="0 0 64 64"><ellipse cx="32" cy="58.5" rx="20" ry="3.2" fill="#000" opacity=".25"/>
+      <ellipse cx="9.5" cy="45" rx="5" ry="4.4" fill="#241c3a"/><ellipse cx="54.5" cy="45" rx="5" ry="4.4" fill="#241c3a"/><path d="${BODY_D}" fill="#241c3a"/>
+      <text x="32" y="45" text-anchor="middle" font-size="20" font-family="Jua, sans-serif" fill="#6b5f8f">?</text></svg>`;
+    if (s.art) return `<img src="img/skins/${s.art}.webp" alt="">`; // the painted picture; the drawing below is for skins without one
     const pupil = s.pupil !== undefined ? hex(s.pupil) : '#ffffff';
     const wear = s.wear ? WEAR_ART[s.wear[0]](hex(s.wear[1]), hex(s.wear[2] === undefined ? 0xffffff : s.wear[2])) : '';
-    // car skin: the bean, a little smaller, sits in the felt car seen from the front (same colors as render3d's car)
-    const [inCar, car] = s.car ? ['<g transform="translate(32 6) scale(.78) translate(-32 0)">', `</g>
+    // car skin: the character, a little smaller, sits in the car seen from the front (same colors as render3d's car)
+    const [inCar, car] = s.car ? ['<g transform="translate(32 4) scale(.78) translate(-32 0)">', `</g>
       <rect x="8" y="51" width="9" height="7" rx="2.5" fill="#2a2d3a"/><rect x="47" y="51" width="9" height="7" rx="2.5" fill="#2a2d3a"/>
       <rect x="5" y="39" width="54" height="15" rx="6" fill="#8fd3e8"/><rect x="5" y="39" width="54" height="4" rx="2" fill="#fff" opacity=".3"/>
       <rect x="7" y="50.5" width="50" height="4" rx="2" fill="#f4f1ea"/>
       <circle cx="13" cy="45.5" r="3" fill="#fff3b0"/><circle cx="51" cy="45.5" r="3" fill="#fff3b0"/>`] : ['', ''];
-    return `<svg viewBox="0 0 64 64"><defs><radialGradient id="${id}" cx=".36" cy=".28" r=".85"><stop offset="0" stop-color="${top}"/>
-      <stop offset=".55" stop-color="${hex(body)}"/><stop offset="1" stop-color="${base}"/></radialGradient></defs>
-      <ellipse cx="32" cy="57" rx="22" ry="4.2" fill="none" stroke="${hex(s.rim)}" stroke-width="2.4" opacity=".9"/>${inCar}
-      <path d="M32 11C46.5 11 55.5 23 55.5 38C55.5 50.5 49.5 56.5 40 56.5H24C14.5 56.5 8.5 50.5 8.5 38C8.5 23 17.5 11 32 11Z" fill="url(#${id})"/>
-      <ellipse cx="22" cy="19.5" rx="7" ry="4" fill="#fff" opacity="${light ? .85 : .35}" transform="rotate(-25 22 19.5)"/>
-      <ellipse cx="12" cy="47" rx="5.2" ry="4.4" fill="${arm}"/><ellipse cx="52" cy="47" rx="5.2" ry="4.4" fill="${arm}"/>
-      ${light ? '<ellipse cx="17.5" cy="39" rx="4.6" ry="2.8" fill="#ff8fb8" opacity=".5"/><ellipse cx="46.5" cy="39" rx="4.6" ry="2.8" fill="#ff8fb8" opacity=".5"/>' : ''}
-      <ellipse cx="24.5" cy="31" rx="3.8" ry="5.2" fill="${hex(s.eye)}"/><ellipse cx="39.5" cy="31" rx="3.8" ry="5.2" fill="${hex(s.eye)}"/>
-      <circle cx="25.8" cy="28.8" r="1.5" fill="${pupil}"/><circle cx="40.8" cy="28.8" r="1.5" fill="${pupil}"/>
-      <path d="M28 41Q32 45.5 36 41Z" fill="#d8436a"/>${wear}${car}</svg>`;
+    // eyes: a four-point star glint, as painted; an eye as light as its glint gets the glint in the body's dark color
+    const glint = pupil === hex(s.eye) ? mix(body, 0x000000, 0.2) : pupil, spark = (x, y, r) => `M${x} ${y - r}Q${x} ${y} ${x + r} ${y}Q${x} ${y} ${x} ${y + r}Q${x} ${y} ${x - r} ${y}Q${x} ${y} ${x} ${y - r}Z`;
+    const eye = x => `<ellipse cx="${x}" cy="30.5" rx="4.7" ry="5.6" fill="${hex(s.eye)}"/><path d="${spark(x + 0.6, 29.8, 3.4)}" fill="${glint}"/><circle cx="${x - 1.7}" cy="33.6" r=".8" fill="${glint}" opacity=".8"/>`;
+    // the swirl of light round the waist (behind, then in front) and the star in the belly: the character's own marks
+    const ring = hex(s.rim), swirl = d => `<path d="${d}" fill="none" stroke="${ring}" stroke-width="2" stroke-linecap="round" transform="rotate(-9 32 49)"/>`;
+    return `<svg viewBox="0 0 64 64"><defs><radialGradient id="${id}" cx=".36" cy=".3" r=".8"><stop offset="0" stop-color="${top}"/>
+      <stop offset=".55" stop-color="${hex(body)}"/><stop offset="1" stop-color="${base}"/></radialGradient>
+      <radialGradient id="${id}g"><stop offset="0" stop-color="#fff6c8"/><stop offset=".45" stop-color="#ffd95e" stop-opacity=".7"/><stop offset="1" stop-color="#ffd95e" stop-opacity="0"/></radialGradient></defs>
+      <ellipse cx="32" cy="59.5" rx="19" ry="2.6" fill="#000" opacity=".22"/>${inCar}${swirl('M4 49A28 6.5 0 0 1 60 49')}
+      <ellipse cx="9.5" cy="45" rx="5" ry="4.4" fill="${arm}"/><ellipse cx="54.5" cy="45" rx="5" ry="4.4" fill="${arm}"/>
+      <path d="${shape}" fill="url(#${id})"/>
+      <path d="${shape}" fill="none" stroke="${hex(s.rim)}" stroke-width="1.2" opacity="${light ? .35 : .55}"/>
+      <ellipse cx="45.5" cy="${bare ? 24 : 27.5}" rx="5.2" ry="2.5" fill="#fff" opacity="${light ? .9 : .4}" transform="rotate(38 45.5 ${bare ? 24 : 27.5})"/>
+      ${bare ? '' : `<ellipse cx="31" cy="9.5" rx="3.4" ry="1.5" fill="#fff" opacity="${light ? .8 : .3}" transform="rotate(-38 31 9.5)"/>`}
+      <path d="M21.5 17.2A5.4 5.4 0 1 0 25.6 26A4.3 4.3 0 0 1 21.5 17.2Z" fill="#ffd45e"/>
+      <ellipse cx="16.5" cy="37.5" rx="4.8" ry="2.8" fill="#ff8fa8" opacity="${light ? .6 : .45}"/><ellipse cx="47.5" cy="37.5" rx="4.8" ry="2.8" fill="#ff8fa8" opacity="${light ? .6 : .45}"/>
+      ${eye(24)}${eye(40)}
+      <path d="M27.4 37Q32 38.8 36.6 37Q36.4 43.6 32 43.6Q27.6 43.6 27.4 37Z" fill="#3a1440"/><ellipse cx="32" cy="41.8" rx="2.5" ry="1.5" fill="#ff7fa6"/>
+      <circle cx="32" cy="50.5" r="9" fill="url(#${id}g)"/><path d="${starD(32, 50.8, 5.4, 2.7)}" fill="#ffe27a" stroke="#fff6c8" stroke-width=".7" stroke-linejoin="round"/>
+      ${swirl('M4 49A28 6.5 0 0 0 60 49')}
+      ${wear}${car}</svg>`;
   }
   const swatch = (s, secret) => `<span class="swatch">${skinArt(s, secret)}</span>`;
-  // Summoning circle picture: the same art the ground decal uses (render3d drawCircle), in the circle's color.
+  // Summoning circle picture: the same art the ground decal uses (render3d drawCircle), in the circle's color, turning
+  // slowly, with its tail of stars (render3d circleTrail) chasing one another round it, biggest first.
   const circleArts = {};
   function circleArt(c) {
     if (!circleArts[c.id]) { const cv = document.createElement('canvas'); cv.width = cv.height = 128; window.DuskRender.drawCircle(cv.getContext('2d'), 128, c.id, hex(c.color)); circleArts[c.id] = cv.toDataURL(); }
-    return `<img src="${circleArts[c.id]}" alt="">`;
+    const tail = [0, 1, 2, 3, 4].map(i => { const a = -Math.PI / 2 - i * 0.42, R = 6 - i * 0.95; return `<path d="${starD(32 + Math.cos(a) * 27, 32 + Math.sin(a) * 27, R, R * 0.45)}" opacity="${(1 - i * 0.16).toFixed(2)}"/>`; }).join('');
+    return `<span class="circ"><img src="${circleArts[c.id]}" alt=""><svg class="tail" viewBox="0 0 64 64" fill="${mix(c.color, 0xffffff, 0.45)}">${tail}</svg></span>`;
   }
   const circleById = id => Shop.CIRCLES.find(c => c.id === id);
   let shopReturn = 'title', busy = false;
@@ -2591,12 +2620,14 @@
 
   function renderShop() {
     const w = Store.wallet;
-    $('shop-skins').innerHTML = Shop.SKINS.map(s => {
+    const CATS = { element: ['속성 스킨', '어떤 어둠을 먹고 자랐는지에 따라 달라져요'], costume: ['코스튬 스킨', '옷을 갈아입어요'], season: ['시즌 한정 스킨', '그 계절에만 만나요'] };
+    $('shop-skins').innerHTML = Shop.SKINS.map((s, i) => {
+      const head = i && Shop.SKINS[i - 1].cat === s.cat ? '' : `<h4 class="cat">${CATS[s.cat][0]} <small>${Shop.SKINS.filter(k => k.cat === s.cat).length}종 · ${CATS[s.cat][1]}</small></h4>`;
       const own = (!s.product && !s.reward) || w.owned.includes(s.id), on = w.equipped === s.id, price = s.product && Store.price(s.product);
       const ev = s.reward && EVENTS.find(e => e.id === s.reward), set = Dex.setFor(s.id), secret = s.hidden && !own;
       const label = on ? '장착 중' : own ? '장착하기' : ev ? `${mapIco(ev.theme)} 이벤트 별 ${ev.reward.stars}개`
         : set ? `${ico('book')} ${set.name}` : s.level ? `${ico('sparkle')} Lv.${s.level}` : s.gems ? `${price ? price + '<br>' : ''}<span class="gem">${GEM}${s.gems}</span>` : price || '준비 중';
-      return `<button class="item${on ? ' on' : ''}" data-skin="${s.id}">
+      return `${head}<button class="item${on ? ' on' : ''}" data-skin="${s.id}">
         ${swatch(s, secret)}<span class="nm">${secret ? '???' : s.name}</span><span class="pr${own ? ' own' : ''}">${label}</span></button>`;
     }).join('');
     $('shop-gems').innerHTML = Shop.GEM_PACKS.map(p => {

@@ -209,7 +209,7 @@ with sync_playwright() as p:
     jan = [T(), pg.evaluate(f'{A}.listKey')]
     rec('S17', 'Christmas event: tab only Dec 1 - Jan 6, 10 levels, santa skin at 15 stars',
         nov == [] and dec == ['main', 'xmas'] and nodes == 10 and '0/30' in note0 and owned == [False] * 4 + [True]
-        and '산타 그림자' in note and '획득' in note1 and jan == [[], 'main'],
+        and '크리스마스 결이' in note and '획득' in note1 and jan == [[], 'main'],
         f'nov={nov} dec={dec} nodes={nodes} owned_after_each={owned} note={note!r} jan={jan}')
     pg.evaluate("window.__DUSK_TEST__.today = null"); pg.evaluate(f'{A}.useList("main"); {A}.start(0)'); frames_wait(pg)
     # S18 third person: heading up the screen turns the body all the way round (back to the camera), not just sideways

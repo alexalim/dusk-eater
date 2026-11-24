@@ -43,10 +43,11 @@ with sync_playwright() as p:
     santa = pg.inner_text('.item[data-skin=santa] .pr')
     hidden = [pg.inner_text(f'.item[data-skin={k}] .nm') for k in ('dawn', 'forest', 'sky')]
     lvl = [pg.inner_text(f'.item[data-skin={k}] .pr').strip() for k in ('candy', 'aurora', 'galaxy')]
+    cats = len(pg.query_selector_all('#shop-skins .cat')); painted = pg.evaluate("[...document.querySelectorAll('#shop-skins .item:not([data-skin=dawn]):not([data-skin=forest]):not([data-skin=sky]) .swatch img')].filter(i => i.complete && i.naturalWidth > 0).length + 3")
     mint_pr = pg.inner_text('.item[data-skin=mint] .pr'); car_pr = pg.inner_text('.item[data-skin=car] .pr')
     car_art = pg.inner_html('.item[data-skin=car] .swatch'); plain_art = pg.inner_html('.item[data-skin=mint] .swatch')
-    rec('H1', 'shop lists 16 skins (santa locked to its event, 7 level skins with their level, 3 hidden as ???, paid ones priced in won and gems, the car for gems only, pictured in its car) + 3 gem packs, demo notice shown', pg.is_visible('#shop') and pg.is_visible('#shop-demo')
-        and len(skins) == 16 and '이벤트' in santa and hidden == ['???'] * 3 and lvl == ['Lv.5', 'Lv.10', 'Lv.20'] and len(packs) == 3 and all('₩' in x for x in prices)
+    rec('H1', 'shop lists 33 skins in three sections with painted pictures (santa locked to its event, 7 level skins with their level, 3 hidden as ???, paid ones priced in won and gems, the car for gems only, pictured in its car) + 3 gem packs, demo notice shown', pg.is_visible('#shop') and pg.is_visible('#shop-demo')
+        and len(skins) == 33 and cats == 3 and painted == 32 and '이벤트' in santa and hidden == ['???'] * 3 and lvl == ['Lv.5', 'Lv.10', 'Lv.20'] and len(packs) == 3 and all('₩' in x for x in prices)
         and '₩' in mint_pr and '300' in mint_pr and '600' in car_pr and '₩' not in car_pr
         and '#8fd3e8' in car_art and '#8fd3e8' not in plain_art, str(prices) + f' mint={mint_pr!r} car={car_pr!r}')
 
@@ -61,7 +62,7 @@ with sync_playwright() as p:
     rec('H3', 'cancelled purchase leaves wallet unchanged', wallet(pg)['gems'] == 100 and pg.inner_text('#shop-msg') == '', '')
 
     # H4 buying a skin owns + equips it; renderer rim = skin color in shade, red when lit, for every skin
-    pg.query_selector_all('#shop-skins .item')[1].tap(); frames_wait(pg)
+    pg.tap('.item[data-skin=mint]'); frames_wait(pg)
     pg.tap('#skin-box-act'); frames_wait(pg, 5)
     w = wallet(pg)
     bought = w['equipped'] == 'mint' and 'mint' in w['owned']
@@ -163,7 +164,7 @@ with sync_playwright() as p:
     santa_act = pg6.inner_text('#skin-box-act'); santa_off = pg6.evaluate("document.querySelector('#skin-box-act').classList.contains('off')")
     pg6.mouse.click(5, 5); frames_wait(pg6)  # outside the box
     rec('H12', 'skin box shows description and price, buys nothing until its button; event skin cannot be bought',
-        box[0] and box[1] == '별밤 그림자' and len(box[2]) > 10 and '구매하기' in box[3] and closed
+        box[0] and box[1] == '우주비행사 결이' and len(box[2]) > 10 and '구매하기' in box[3] and closed
         and '이벤트' in santa_act and santa_off and not pg6.is_visible('#skin-box') and not errs6, f'box={box} santa={santa_act!r}')
 
     # H13 a paid skin is also sold for gems: the box offers it (greyed while short), 300 gems buy and equip it
@@ -187,13 +188,15 @@ with sync_playwright() as p:
     pg6.tap('#skin-box-gems'); frames_wait(pg6, 4)
     w14 = wallet(pg6); msg14 = pg6.inner_text('#shop-msg') # the gem icon is drawn, not printed as <svg …> text
     deco = pg6.evaluate(f"(() => {{ const m = {A}.R.debug.circleMesh; return [m.visible, m.material.color.getHex()]; }})()")
+    # the circle's tail of stars: six sprites in its color in play, and five stars round the shop picture
+    tail = pg6.evaluate(f"(() => {{ const t = {A}.R.debug.circleTrail; return [t.length, t.every(s => s.visible && s.material.color.getHex() === 0xc9a8ff), document.querySelectorAll('.item[data-circle=moon] .circ .tail path').length]; }})()")
     pg6.tap('.item[data-circle=moon]'); frames_wait(pg6)
     off_label = pg6.inner_text('#skin-box-act'); pg6.tap('#skin-box-act'); frames_wait(pg6, 4)
-    after = [wallet(pg6)['circle'], pg6.evaluate(f"{A}.R.debug.circleMesh.visible")]
-    rec('H14', 'circles: the level one is not sold, 200 gems buy and wear the moon circle (decal on, a clean message), tapping it again takes it off',
+    after = [wallet(pg6)['circle'], pg6.evaluate(f"{A}.R.debug.circleMesh.visible || {A}.R.debug.circleTrail.some(s => s.visible)")]
+    rec('H14', 'circles: the level one is not sold, 200 gems buy and wear the moon circle (decal on, a clean message, a tail of stars in play and in the picture), tapping it again takes it off',
         'Lv.15' in petal[0] and petal[1] and petal[2] and w14['gems'] == 500 and w14['circles'] == ['moon'] and w14['circle'] == 'moon'
-        and deco == [True, 0xc9a8ff] and off_label == '빼기' and after == ['', False] and '샀어요' in msg14 and '<' not in msg14 and not errs6,
-        f'petal={petal} gems={w14["gems"]} circles={w14["circles"]} deco={deco} off={off_label!r} after={after} msg={msg14!r}')
+        and deco == [True, 0xc9a8ff] and tail == [6, True, 5] and off_label == '빼기' and after == ['', False] and '샀어요' in msg14 and '<' not in msg14 and not errs6,
+        f'petal={petal} gems={w14["gems"]} circles={w14["circles"]} deco={deco} tail={tail} off={off_label!r} after={after} msg={msg14!r}')
     b.close()
 
 print(f'{sum(res)}/{len(res)} passed')

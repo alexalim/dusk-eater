@@ -13,45 +13,91 @@
   // A paid skin also sells for `gems` (buySkin), so a patient player gets it without paying.
   const SKINS = [
     // `pupil` is the eye highlight; it defaults to dark for skins with light eyes.
-    // `wear`: [kind, color, accent (white if left out)], the one small thing on its head, so a skin is more than a
-    // color. The kinds are drawn by render3d (wearKind) and by the shop picture (index.html WEAR_ART).
-    { id: 'night', name: '밤 그림자', body: 0xfff7f8, rim: 0xb78cff, eye: 0x241640, pupil: 0xffffff,
-      desc: '처음부터 함께하는 기본 친구예요. 하얀 몸에 보랏빛 테두리가 포근해요.' },
-    { id: 'mint', name: '박하 그림자', body: 0x0f2226, rim: 0x7ff0d2, eye: 0xffffff, product: PREFIX + 'skin.mint', gems: 300, price: '₩1,500', wear: ['bow', 0x7ff0d2],
-      desc: '어두운 몸에 시원한 박하색 테두리를 둘렀어요. 그늘 속에서도 산뜻하게 보여요.' },
-    { id: 'starry', name: '별밤 그림자', body: 0x101833, rim: 0x9fd0ff, eye: 0xfff3c4, product: PREFIX + 'skin.starry', gems: 300, price: '₩1,500', wear: ['pin', 0xffe08a],
-      desc: '밤하늘처럼 짙은 몸에 하늘빛 테두리가 은은해요. 별빛 같은 노란 눈이 반짝여요.' },
-    { id: 'gold', name: '황금 그림자', body: 0x221a0c, rim: 0xffe08a, eye: 0xffffff, product: PREFIX + 'skin.gold', gems: 500, price: '₩2,200', wear: ['crown', 0xffd45e, 0x7fd6ff],
-      desc: '반짝반짝 황금빛 테두리를 두른 특별한 아이예요. 어디에 있어도 눈에 쏙 들어와요.' },
+    // `wear`: [kind, color, accent (white if left out)], the one small thing on its head in play. The kinds are drawn
+    // by render3d (wearKind) and by the drawn shop picture (index.html WEAR_ART).
+    // `art`: the painted picture (img/skins/<art>.webp) the shop shows; `cat` is the shop section it sits in:
+    // 'element' (what kind of dark it grew on), 'costume' (something to wear), 'season' (a time of year).
+    // The ids are the slots players already own or earn (bought, level, collection book, event): a slot's id, price and
+    // way in never change, only its name and look. So `aurora` is the Lv.10 slot (now Frost) and `tide` holds Aurora.
+    // The lists keep each section together, and the level skins in level order.
+
+    // ---- element ----
+    { id: 'night', cat: 'element', art: 'luna', name: '루나 결이', body: 0xfff7f8, rim: 0xb78cff, eye: 0x241640, pupil: 0xffffff,
+      desc: '처음부터 함께하는 기본 친구예요. 연보랏빛 달의 정령이라 늘 밝고 호기심이 가득해요.' },
+    // Level rewards: granted on reaching `level` (level.js), shown with the level they open at.
+    { id: 'candy', cat: 'element', art: 'cotton_candy', name: '솜사탕 결이', body: 0xffeef8, rim: 0xffa6ec, eye: 0x3a1240, pupil: 0xffffff, reward: 'level', level: 5, wear: ['flower', 0xff8fc8, 0xfff3b0],
+      desc: 'Lv.5가 되면 찾아오는 달콤한 친구예요. 분홍과 하늘빛이 몽글몽글 섞여 폭신폭신해요.' },
+    { id: 'aurora', cat: 'element', art: 'frost', name: '프로스트 결이', body: 0xe3f4ff, rim: 0x5ee7ff, eye: 0x12304a, pupil: 0xffffff, reward: 'level', level: 10, wear: ['pin', 0xbfeaff],
+      desc: 'Lv.10을 넘기면 만나요. 차가운 어둠을 먹고 자라 얼음 결정과 눈꽃이 피었어요.' },
+    { id: 'galaxy', cat: 'element', art: 'midnight', name: '은하수 결이', body: 0x1a1446, rim: 0xe0c3ff, eye: 0xffe08a, reward: 'level', level: 20, wear: ['pin', 0xffe08a],
+      desc: 'Lv.20, 밤의 지배자에게 주는 선물이에요. 검푸른 몸 안에서 은하수가 반짝여요.' },
+    { id: 'ember', cat: 'element', art: 'ember', name: '앰버 결이', body: 0xffd2ae, rim: 0xe8a800, eye: 0x3a1608, pupil: 0xffffff, reward: 'level', level: 40, wear: ['pin', 0xffb347],
+      desc: 'Lv.40, 달빛 포식자의 상이에요. 복숭아빛 몸에 따뜻한 불꽃이 일렁여요.' },
+    { id: 'tide', cat: 'element', art: 'aurora', name: '오로라 결이', body: 0xd9c8ff, rim: 0x3fe0c8, eye: 0x1a1040, pupil: 0xffffff, reward: 'level', level: 60, wear: ['bow', 0x5ee7d0],
+      desc: 'Lv.60, 황혼의 군주에게 주는 선물이에요. 청록과 보랏빛 오로라가 몸을 타고 흘러요.' },
+    { id: 'obsidian', cat: 'element', art: 'black_hole', name: '블랙홀 결이', body: 0x0a0a12, rim: 0xe040ff, eye: 0xffffff, reward: 'level', level: 80, wear: ['pin', 0xffd45e],
+      desc: 'Lv.80, 심연의 입만 입는 옷이에요. 새까만 몸을 황금빛 원반이 빙글빙글 감싸요.' },
+    { id: 'dusk', cat: 'element', art: 'eclipse', name: '이클립스 결이', body: 0x3a1a4a, rim: 0xffffff, eye: 0xffd25c, reward: 'level', level: 100, wear: ['crown', 0xffd25c],
+      desc: '만렙 Lv.100, 일식의 정령이에요. 빛과 어둠이 한 몸에 나란히 살아요.' },
+    { id: 'gold', cat: 'element', art: 'solaris', name: '솔라리스 결이', body: 0xffe9a8, rim: 0xffe08a, eye: 0x3a2408, pupil: 0xffffff, product: PREFIX + 'skin.gold', gems: 500, price: '₩2,200', wear: ['crown', 0xffd45e, 0x7fd6ff],
+      desc: '작은 태양처럼 빛나는 황금빛 정령이에요. 어디에 있어도 눈에 쏙 들어와요.' },
+    // Hidden: shown as ??? until its collection-book set is filled (`reward` is the set, dex.js SETS).
+    { id: 'dawn', cat: 'element', art: 'bloom', name: '블룸 결이', body: 0xffdcea, rim: 0xf6a8ff, eye: 0x3a1240, pupil: 0xffffff, reward: 'dex', hidden: true, wear: ['flower', 0xff9fc8, 0xfff3b0],
+      desc: '도감 첫 다섯 지도를 모두 채운 친구만 만나요. 꽃잎으로 된 몸에서 꽃가루가 살랑거려요.' },
+    { id: 'forest', cat: 'element', art: 'moss', name: '모스 결이', body: 0xe9f2dc, rim: 0xb8f06b, eye: 0x1c2a14, pupil: 0xffffff, reward: 'dex', hidden: true, wear: ['flower', 0xffffff, 0xffd45e],
+      desc: '도감 가운데 다섯 지도를 채우면 나타나요. 이끼와 새싹, 작은 버섯이 자라는 숲의 정령이에요.' },
+    { id: 'sky', cat: 'element', art: 'opal', name: '오팔 결이', body: 0xeef2ff, rim: 0x9fb8ff, eye: 0x10203a, pupil: 0xffffff, reward: 'dex', hidden: true, wear: ['bow', 0xbfd8ff],
+      desc: '도감 마지막 다섯 지도까지 다 채운 수집왕의 상이에요. 무지갯빛이 도는 반투명 보석 몸이에요.' },
+
+    // ---- costume ----
+    { id: 'mint', cat: 'costume', art: 'wizard', name: '마법사 결이', body: 0xf3e8ff, rim: 0x9f7bff, eye: 0x2a1640, pupil: 0xffffff, product: PREFIX + 'skin.mint', gems: 300, price: '₩1,500', wear: ['hat', 0x7a4fd0, 0xffd45e],
+      desc: '별 달린 고깔모자와 지팡이를 든 꼬마 마법사예요. 주문을 외우면 어둠이 모여들어요.' },
+    { id: 'starry', cat: 'costume', art: 'astronaut', name: '우주비행사 결이', body: 0xf3e8ff, rim: 0x9fd0ff, eye: 0x2a1640, pupil: 0xffffff, product: PREFIX + 'skin.starry', gems: 300, price: '₩1,500', wear: ['glasses', 0xdfe8ff],
+      desc: '동그란 헬멧을 쓰고 밤하늘을 유영해요. 별과 별 사이의 어둠도 놓치지 않아요.' },
     // Gems only (no App Store product): `reward: 'gems'` keeps it through entitlement rebuilds like the earned skins.
     // `car`: the renderer seats the body on a little car (render3d setSkin).
-    { id: 'car', name: '붕붕 그림자', body: 0xffe3ee, rim: 0x7fc8ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, car: true,
+    { id: 'car', cat: 'costume', name: '붕붕 결이', body: 0xffe3ee, rim: 0x7fc8ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, car: true,
       desc: '작은 자동차에 쏙 올라탄 친구예요. 달리면 바퀴가 데굴데굴 굴러가요.' },
-    // Earned, not bought: `reward` names the event whose stars unlock it.
-    { id: 'santa', name: '산타 그림자', body: 0x3a0d14, rim: 0x7fe08a, eye: 0xffffff, reward: 'xmas', wear: ['hat', 0xc8323c],
-      desc: '크리스마스 이벤트 선물이에요. 빨간 몸에 초록 테두리로 겨울 기분을 내요.' },
-    // Level rewards: granted on reaching `level` (level.js), shown with the level they open at.
-    { id: 'candy', name: '솜사탕 그림자', body: 0xffeef8, rim: 0xffa6ec, eye: 0x3a1240, pupil: 0xffffff, reward: 'level', level: 5, wear: ['flower', 0xff8fc8, 0xfff3b0],
-      desc: 'Lv.5가 되면 찾아오는 달콤한 친구예요. 분홍 솜사탕처럼 폭신폭신해요.' },
-    { id: 'aurora', name: '오로라 그림자', body: 0x0a1f2a, rim: 0x5ee7ff, eye: 0xffffff, reward: 'level', level: 10, wear: ['hat', 0x5ee7ff],
-      desc: 'Lv.10을 넘긴 그림자만 입을 수 있어요. 북쪽 하늘처럼 푸른빛이 일렁여요.' },
-    { id: 'galaxy', name: '은하 그림자', body: 0x120a2a, rim: 0xe0c3ff, eye: 0xffe08a, reward: 'level', level: 20, wear: ['glasses', 0xe0c3ff],
-      desc: 'Lv.20, 밤의 지배자에게 주는 선물이에요. 몸 안에 은하수가 반짝여요.' },
-    { id: 'ember', name: '잿불 그림자', body: 0x2b1008, rim: 0xe8a800, eye: 0xfff3c4, reward: 'level', level: 40, wear: ['beret', 0xe8622a],
-      desc: 'Lv.40, 달빛 포식자의 상이에요. 꺼지지 않는 잿불처럼 주황빛 테두리가 일렁여요.' },
-    { id: 'tide', name: '밀물 그림자', body: 0xe6fbff, rim: 0x00b8d4, eye: 0x0a2a3a, pupil: 0xffffff, reward: 'level', level: 60, wear: ['bow', 0x00b8d4],
-      desc: 'Lv.60, 황혼의 군주에게 주는 선물이에요. 밀려오는 바닷물처럼 맑은 청록 테두리예요.' },
-    { id: 'obsidian', name: '흑요석 그림자', body: 0x0a0a12, rim: 0xe040ff, eye: 0xffffff, reward: 'level', level: 80, wear: ['glasses', 0xe040ff],
-      desc: 'Lv.80, 심연의 입만 입는 옷이에요. 새까만 몸에 자홍빛 테두리가 날카롭게 빛나요.' },
-    { id: 'dusk', name: '황혼 그림자', body: 0x3a1a4a, rim: 0xffffff, eye: 0xffd25c, reward: 'level', level: 100, wear: ['crown', 0xffd25c],
-      desc: '만렙 Lv.100, 황혼 그 자체가 된 그림자예요. 보랏빛 몸을 하얀 빛이 감싸요.' },
-    // Hidden: shown as ??? until its collection-book set is filled (`reward` is the set, dex.js SETS).
-    { id: 'dawn', name: '새벽 그림자', body: 0x1d1430, rim: 0xf6a8ff, eye: 0xffffff, reward: 'dex', hidden: true, wear: ['pin', 0xf6a8ff],
-      desc: '도감 첫 다섯 지도를 모두 채운 친구만 만나요. 새벽빛 분홍 테두리가 살랑거려요.' },
-    { id: 'forest', name: '숲 그림자', body: 0x0e1f14, rim: 0xb8f06b, eye: 0xfff3c4, reward: 'dex', hidden: true, wear: ['flower', 0xffffff, 0xffd45e],
-      desc: '도감 가운데 다섯 지도를 채우면 나타나요. 연둣빛 테두리가 풀숲처럼 싱그러워요.' },
-    { id: 'sky', name: '하늘 그림자', body: 0xeaf4ff, rim: 0x4f86ff, eye: 0x10203a, pupil: 0xffffff, reward: 'dex', hidden: true, wear: ['beret', 0x4f86ff],
-      desc: '도감 마지막 다섯 지도까지 다 채운 수집왕의 상이에요. 맑은 하늘색 몸이 시원해요.' },
+    { id: 'bunny', cat: 'costume', art: 'bunny', name: '토끼 후드 결이', body: 0xf3e8ff, rim: 0xffb3d0, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, wear: ['bow', 0xffb3d0],
+      desc: '폭신한 토끼 후드를 뒤집어썼어요. 긴 귀가 걸을 때마다 쫑긋거려요.' },
+    { id: 'pirate', cat: 'costume', art: 'pirate', name: '해적 결이', body: 0xf3e8ff, rim: 0x8fd8e8, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, wear: ['beret', 0x2a2433],
+      desc: '해골 모자에 안대를 한 꼬마 선장이에요. 보물 대신 어둠을 찾아 항해해요.' },
+    { id: 'sports', cat: 'costume', art: 'sports', name: '운동복 결이', body: 0xf3e8ff, rim: 0x7f9bff, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, wear: ['beret', 0x26366e],
+      desc: '머리띠를 두르고 운동복을 입었어요. 가볍고 활동적이라 오늘도 한 바퀴 더 달려요.' },
+    { id: 'knight', cat: 'costume', art: 'knight', name: '기사 결이', body: 0xf3e8ff, rim: 0xb8c8ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, wear: ['hat', 0xb8c0d0, 0x7a4fd0],
+      desc: '반짝이는 투구와 별 방패를 든 기사예요. 마을의 밤을 씩씩하게 지켜요.' },
+    { id: 'chef', cat: 'costume', art: 'chef', name: '요리사 결이', body: 0xf3e8ff, rim: 0xffd9a8, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, wear: ['beret', 0xffffff],
+      desc: '높다란 요리사 모자를 썼어요. 오늘의 메뉴는 갓 구운 어둠 한 접시예요.' },
+    { id: 'detective', cat: 'costume', art: 'detective', name: '탐정 결이', body: 0xf3e8ff, rim: 0xbfd0e8, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, wear: ['beret', 0x9a7a4e],
+      desc: '체크무늬 모자에 돋보기를 든 명탐정이에요. 숨은 그늘을 단번에 찾아내요.' },
+    { id: 'vampire', cat: 'costume', art: 'vampire', name: '뱀파이어 결이', body: 0xf3e8ff, rim: 0xc79bff, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, wear: ['bow', 0x9a1f3a],
+      desc: '검붉은 망토를 두른 꼬마 뱀파이어예요. 햇빛은 싫고 어둠은 정말 좋아해요.' },
+    { id: 'royal', cat: 'costume', art: 'royal', name: '왕족 결이', body: 0xf3e8ff, rim: 0xe8c8ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, wear: ['crown', 0xffd45e, 0xd04fd0],
+      desc: '왕관과 망토를 갖춘 황혼 왕국의 주인이에요. 걸음걸이부터 우아해요.' },
+    { id: 'archer', cat: 'costume', art: 'archer', name: '궁수 결이', body: 0xf3e8ff, rim: 0xb8e08a, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, wear: ['hat', 0x6f8f3a, 0xf3e9c8],
+      desc: '깃털 모자를 쓰고 활을 멘 숲의 궁수예요. 멀리 있는 그늘도 정확히 겨눠요.' },
+    { id: 'santasuit', cat: 'costume', art: 'santa', name: '산타 결이', body: 0xf3e8ff, rim: 0x9fe0b8, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, wear: ['hat', 0xc8323c],
+      desc: '빨간 모자와 망토에 종을 단 산타예요. 선물 주머니에는 포근한 밤이 들어 있어요.' },
+
+    // ---- season ----
+    // Earned, not bought: `reward` names the event whose stars unlock it. `reward: 'season'` has no event yet, so the
+    // shop shows it as coming soon and nothing can grant it.
+    { id: 'santa', cat: 'season', art: 'christmas', name: '크리스마스 결이', body: 0xf3e8ff, rim: 0x7fe08a, eye: 0x2a1640, pupil: 0xffffff, reward: 'xmas', wear: ['hat', 0xc8323c],
+      desc: '크리스마스 이벤트 선물이에요. 호랑가시 장식 모자를 쓰고 선물 상자를 들었어요.' },
+    { id: 'cherry', cat: 'season', art: 'cherry_blossom', name: '벚꽃 결이', body: 0xf3e8ff, rim: 0xffb7d5, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['flower', 0xffb7d5, 0xfff3b0],
+      desc: '봄에만 만나는 친구예요. 벚꽃 가지를 머리에 꽂고 꽃잎을 흩날려요.' },
+    { id: 'halloween', cat: 'season', art: 'halloween', name: '할로윈 결이', body: 0xf3e8ff, rim: 0xb58cff, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['hat', 0x4a2a7a, 0xff9a2a],
+      desc: '할로윈 밤에 찾아와요. 호박 장식 마녀 모자를 쓰고 사탕을 모으러 다녀요.' },
+    { id: 'picnic', cat: 'season', art: 'picnic', name: '봄소풍 결이', body: 0xf3e8ff, rim: 0xc8e89a, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['beret', 0xe8cf8a],
+      desc: '봄 소풍 철의 친구예요. 꽃 달린 밀짚모자에 도시락 바구니를 챙겼어요.' },
+    { id: 'summer', cat: 'season', art: 'summer', name: '여름휴가 결이', body: 0xf3e8ff, rim: 0x6fd0ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['glasses', 0x4fc3ff],
+      desc: '여름휴가를 떠난 친구예요. 물안경을 쓰고 튜브를 타고 둥실둥실 떠다녀요.' },
+    { id: 'autumn', cat: 'season', art: 'autumn', name: '단풍 결이', body: 0xf3e8ff, rim: 0xd8e07a, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['beret', 0xb5562a],
+      desc: '가을에만 만나요. 체크 목도리를 두르고 단풍잎 사이를 사박사박 걸어요.' },
+    { id: 'newyear', cat: 'season', art: 'new_year', name: '신년 결이', body: 0xf3e8ff, rim: 0xc8b8ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['pin', 0xffd45e],
+      desc: '새해 첫날의 친구예요. 고운 옷을 차려입고 불꽃놀이 아래에서 소원을 빌어요.' },
+    { id: 'valentine', cat: 'season', art: 'valentine', name: '밸런타인 결이', body: 0xf3e8ff, rim: 0xffb0e8, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['bow', 0xff8fc0],
+      desc: '밸런타인데이의 친구예요. 분홍 리본을 매고 초콜릿 상자를 꼭 안았어요.' },
   ];
 
   // Summoning circles: a slow-turning pattern on the ground under the player. Looks only, no effect on play.
