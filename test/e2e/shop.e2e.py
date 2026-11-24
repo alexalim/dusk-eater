@@ -89,9 +89,15 @@ with sync_playwright() as p:
       d.artDraw(tmp, 1, false, 0); const open = lum(mx, my + 5);
       d.artDraw(tmp, 0, true, 1); const shut = lum(lx, ly + 4);
       return {{ rest, open, shut, spots: Object.keys(window.DuskSkinArt).filter(k => !(window.DuskSkinFace[k] || []).length).length }}; }})()""")
-    face_ok = face['open'] < 150 and face['rest'][0] > face['open'] + 150 and face['shut'] > face['rest'][1] + 150 and face['spots'] == 0
+    # the screens' faces (pause, title logo) follow the worn skin: its picture for a painted skin, the drawn face for the car, the title art for the first friend
+    ui = {}
+    for sid in ('pirate', 'car', 'night'):
+        pg.evaluate(f"{A}.Store.update({A}.Shop.equip({A}.Store.wallet, '{sid}'))"); frames_wait(pg, 6)
+        ui[sid] = pg.evaluate("[document.querySelector('#pause img[data-mood]').getAttribute('src').slice(0, 22), document.querySelector('#title .logo').getAttribute('src').slice(0, 22)]")
+    ui_ok = ui == {'pirate': ['data:image/webp;base64', 'data:image/webp;base64'], 'car': ['img/ui/face-sleepy.svg', 'img/art/ghost-eat.webp'], 'night': ['data:image/webp;base64', 'img/art/ghost-eat.webp']}
+    face_ok = ui_ok and face['open'] < 150 and face['rest'][0] > face['open'] + 150 and face['shut'] > face['rest'][1] + 150 and face['spots'] == 0
     art_ok = face_ok and all(v == ([False, True, False] if k == 'car' else [True, False, True]) for k, v in looks.items())
-    rec('H4', 'skin purchase equips; every skin keeps the red lit rim and shows as its own painted picture in play, whose mouth opens and eyes shut (the car keeps the 3D body)', bought and ok and art_ok, f'face={face} looks_bad={[k for k, v in looks.items() if v != ([False, True, False] if k == "car" else [True, False, True])]} ' + json.dumps({k: [hex(a), hex(c)] for k, (a, c) in rims.items()}))
+    rec('H4', 'skin purchase equips; every skin keeps the red lit rim and shows as its own painted picture in play, whose mouth opens and eyes shut (the car keeps the 3D body)', bought and ok and art_ok, f'ui={ui} face={face} looks_bad={[k for k, v in looks.items() if v != ([False, True, False] if k == "car" else [True, False, True])]} ' + json.dumps({k: [hex(a), hex(c)] for k, (a, c) in rims.items()}))
 
     # H5 a purchase the app died during (unfinished) is credited exactly once on the next launches
     pg.evaluate("localStorage.setItem('dusk-demo-unfinished', JSON.stringify([{productIdentifier: 'com.aspynlim.duskeater.gems.550', transactionId: 'killed-1'}]))")

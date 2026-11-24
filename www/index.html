@@ -366,7 +366,7 @@
     font: 13px var(--display); white-space: nowrap; box-shadow: 0 2px 0 rgba(0,0,0,.25); animation: bob 1.3s ease-in-out infinite; }
   .node .say::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #fff; border-bottom: 0; }
   @keyframes bob { 50% { transform: translateX(-50%) translateY(-4px); } }
-  .levels .me { position: absolute; width: 50px; height: 50px; top: calc(var(--k) * 66px + 4px); left: calc(50% + var(--x) * 1% + var(--side) * 56px); transform: translateX(-50%); pointer-events: none; }
+  .levels .me { position: absolute; width: 62px; height: 62px; top: calc(var(--k) * 66px - 2px); left: calc(50% + var(--x) * 1% + var(--side) * 56px); transform: translateX(-50%); pointer-events: none; }
   #select .sheet { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: min(100%, 420px); max-height: 44vh; overflow-y: auto; z-index: 3;
     border-radius: 26px 26px 0 0; background: var(--plum); border-top: 3px solid var(--plum-mid); box-shadow: 0 -6px 24px rgba(0,0,0,.45); padding-bottom: calc(env(safe-area-inset-bottom) + 14px); }
   .node .tw { position: absolute; top: -6px; right: -4px; width: 20px; height: 20px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
@@ -603,7 +603,7 @@
   <div id="banner">미션 완료! 밤이 일찍 와요 <img class="ico" src="img/ui/moon.svg" alt=""></div>
   <div id="dex-new"></div>
 </div>
-<div id="tutorial" class="hidden"><img class="face" src="img/ui/face-happy.svg" alt=""><span class="step" id="tut-step"></span><span id="tut-text"></span><br><span class="skip" id="tut-skip">설명 건너뛰기</span></div>
+<div id="tutorial" class="hidden"><img class="face" data-mood="happy" src="img/ui/face-happy.svg" alt=""><span class="step" id="tut-step"></span><span id="tut-text"></span><br><span class="skip" id="tut-skip">설명 건너뛰기</span></div>
 <div id="title" class="overlay">
   <div class="corner"><span class="left"><span class="chip round" id="btn-info" aria-label="정보">i</span><span class="chip lv" id="title-level"></span></span><span class="chip" id="btn-account">계정 · 친구</span></div>
   <div class="strip"><span class="chip gem gem-count"></span><span class="chip" id="title-streak"></span><span class="chip" id="title-region"></span></div><!-- status row: gems, check-ins, where you are -->
@@ -687,13 +687,13 @@
   <div class="sheet" id="sheet"></div>
 </div>
 <div id="fps" class="hidden"></div>
-<div id="pause" class="overlay hidden"><img class="face-big" src="img/ui/face-sleepy.svg" alt=""><p class="big">일시정지</p>
+<div id="pause" class="overlay hidden"><img class="face-big" data-mood="sleepy" src="img/ui/face-sleepy.svg" alt=""><p class="big">일시정지</p>
   <div class="btns"><div class="btn" id="btn-resume">계속</div><div class="btn ghost" id="btn-quit">그만두기</div></div>
   <p>그만두면 이번 판 기록은 안 남아요. 부스터에 쓴 보석은 돌려드려요.</p>
   <div class="sound-row"><div class="chip" id="btn-sfx"></div><div class="chip" id="btn-music"></div></div>
   <div class="chip" id="btn-fps">FPS 표시</div></div>
 <div id="cont" class="overlay hidden">
-  <img class="face-big" src="img/ui/face-surprised.svg" alt="">
+  <img class="face-big" data-mood="surprised" src="img/ui/face-surprised.svg" alt="">
   <h2>아깝다!</h2>
   <p id="cont-why"></p>
   <div class="btns"><div class="btn" id="btn-cont-yes"></div><div class="btn ghost" id="btn-cont-no">그만하기</div></div>
@@ -2285,7 +2285,30 @@
   const ico = name => `<img class="ico" src="img/ui/${name}.svg" alt="">`;
   // HUD chips stay short ("900점", "고양이 0/3", "불빛 피하기"); the full wording lives on the level card and the end screen.
   const hudGoal = g => g.kind === 'score' ? `${g.n.toLocaleString()}점` : g.kind === 'eat' ? (g.name || NAMES[g.what][0]) : g.kind === 'noBeam' ? '불빛 피하기' : goalLabel(g);
-  const face = name => `<img class="ico face" src="img/ui/face-${name}.svg" alt="">`;
+  // The character's face wherever the screens show it (map marker, title, banners, pause, end of a run): the worn
+  // skin's painted picture with the mood drawn on it by the renderer's own face drawing (render3d artDraw: mouth
+  // open 0..1, eyes shut, blush 0..1). A skin without a picture (the car) keeps the drawn faces (img/ui/face-*.svg).
+  const MOODS = { happy: [0, false, 0], excited: [0, true, 1], surprised: [0.7, false, 0], determined: [0.3, false, 0.4], sleepy: [0, true, 0], eat: [1, false, 0.4] };
+  const moodCache = {}, moodImg = {};
+  function faceSrc(mood) {
+    const sk = Shop.SKINS.find(k => k.id === Store.wallet.equipped) || Shop.SKINS[0], src = sk.art && window.DuskSkinArt[sk.art];
+    if (!src || !R) return `img/ui/face-${mood === 'eat' ? 'excited' : mood}.svg`;
+    const id = sk.art + ':' + mood;
+    if (moodCache[id]) return moodCache[id];
+    let img = moodImg[sk.art];
+    if (!img) { img = moodImg[sk.art] = new Image(); img.onload = paintFaces; img.src = src; } // decoded a moment later: the faces are painted again then
+    if (!img.complete || !img.naturalWidth) return src;
+    const c = document.createElement('canvas'); c.width = c.height = 384;
+    R.artDraw({ canvas: c, img, face: window.DuskSkinFace[sk.art], ready: true, step: -1, tex: {} }, ...MOODS[mood]);
+    return (moodCache[id] = c.toDataURL('image/webp', 0.9));
+  }
+  // every face on a screen that stays in the page carries its mood in data-mood; they follow the worn skin
+  function paintFaces() {
+    document.querySelectorAll('img[data-mood]').forEach(el => { const u = faceSrc(el.dataset.mood); if (el.getAttribute('src') !== u) el.src = u; });
+    const logo = document.querySelector('#title .logo'), worn = Store.wallet.equipped !== Shop.SKINS[0].id && faceSrc('eat');
+    if (logo) { const u = worn && !worn.startsWith('img/ui/') ? worn : 'img/art/ghost-eat.webp'; if (logo.getAttribute('src') !== u) logo.src = u; } // the first friend keeps its own title art
+  }
+  const face = name => `<img class="ico face" src="${faceSrc(name)}" alt="">`;
   const dexIco = e => `<img class="ico dex" src="${e.img}" alt="">`;
   const mapIco = theme => `<img class="ico map" src="img/map/${theme}.png" alt="">`;
   function starText(n) {
@@ -2329,7 +2352,7 @@
     const doneTo = onPage ? here - from : (here >= from + size ? size - 1 : -1);
     const road = `<svg class="path" viewBox="0 0 100 ${size * 66 + 12}" preserveAspectRatio="none"><polyline points="${Array.from({ length: size }, (_, k) => pt(k)).join(' ')}"/>` +
       (doneTo > 0 ? `<polyline class="done" points="${Array.from({ length: doneTo + 1 }, (_, k) => pt(k)).join(' ')}"/>` : '') + '</svg>';
-    const me = onPage ? `<img class="me" src="img/ui/face-happy.svg" alt="" style="--k:${here - from};--x:${PATH_X[(here - from) % PATH_X.length]};--side:${PATH_X[(here - from) % PATH_X.length] > 0 ? -1 : 1}">` : '';
+    const me = onPage ? `<img class="me" data-mood="happy" src="${faceSrc('happy')}" alt="" style="--k:${here - from};--x:${PATH_X[(here - from) % PATH_X.length]};--side:${PATH_X[(here - from) % PATH_X.length] > 0 ? -1 : 1}">` : '';
     // Ladder pages are regions: name, icon, stars collected there; a locked region says how it opens.
     const region = ev ? null : REGIONS[page];
     const got = list.slice(from, from + size).reduce((a, s) => a + (bestStars[s.id] || 0), 0);
@@ -2510,8 +2533,10 @@
     $('end-gems').classList.toggle('hidden', !notes.length);
 
     const title = !cleared ? '아쉬워요, 다시 도전!' : n === 3 ? `완벽한 밤이었어요! ${ico('sparkle')}` : '밤이 끝났어요';
-    // the character reacts to the stars: drawn faces for a miss or one star, the painted art (design/art) for two and three
-    const face = ['img/ui/face-sleepy.svg', 'img/ui/face-determined.svg', 'img/art/ghost-hold.webp', 'img/art/ghost-cheer.webp'][n];
+    // the character reacts to the stars, in the skin it wears; the first friend keeps its painted art (design/art) for two and three
+    const first = Store.wallet.equipped === Shop.SKINS[0].id, mood = ['sleepy', 'determined', 'happy', 'excited'][n];
+    const face = first && n >= 2 ? ['img/art/ghost-hold.webp', 'img/art/ghost-cheer.webp'][n - 2] : faceSrc(mood);
+    $('end-face').dataset.mood = mood; if (first && n >= 2) delete $('end-face').dataset.mood;
     $('end-title').innerHTML = title; $('end-face').src = face;
     $('end-stars').innerHTML = starText(n);
     $('result').textContent = `${stats.total}개 삼킴 · ${score.toLocaleString()}점`;
@@ -2766,6 +2791,7 @@
     if (lastWallet !== null && j !== lastWallet && !applying) { lastWallet = j; touched(); } else lastWallet = j;
     renderGems();
     if (R) { R.setSkin(skinById(w.equipped)); R.setCircle(circleById(w.circle) || null); }
+    paintFaces();
     if (!$('shop').classList.contains('hidden')) renderShop();
     if (!$('dex').classList.contains('hidden')) renderDex();
     if (!$('badges').classList.contains('hidden')) renderBadges();
@@ -2801,7 +2827,7 @@
   function renderOnboard() {
     const c = ONBOARD[obStep];
     $('ob-bar').innerHTML = ONBOARD.map((_, k) => `<i class="${k <= obStep ? 'on' : ''}"></i>`).join('');
-    $('ob-face').src = `img/ui/face-${c.face}.svg`; $('ob-say').textContent = c.say; $('ob-ico').src = `img/ui/${c.ico}.svg`; $('ob-body').textContent = c.body;
+    $('ob-face').dataset.mood = c.face; $('ob-face').src = faceSrc(c.face); $('ob-say').textContent = c.say; $('ob-ico').src = `img/ui/${c.ico}.svg`; $('ob-body').textContent = c.body;
     $('ob-days').classList.toggle('hidden', !c.days);
     if (c.days) $('ob-days').innerHTML = ['월', '화', '수', '목', '금', '토', '일'].map((d, k) => `<span class="${k === (new Date().getDay() + 6) % 7 ? 'on' : ''}">${d}</span>`).join('');
     $('btn-ob').textContent = obStep === ONBOARD.length - 1 ? '시작하기' : '계속';
@@ -2850,7 +2876,7 @@
   function openUpdate(u) {
     const force = u.kind === 'force', store = Update.storeName(u.url);
     updateShown = u;
-    $('up-face').src = `img/ui/face-${force ? 'determined' : 'excited'}.svg`;
+    $('up-face').dataset.mood = force ? 'determined' : 'excited'; $('up-face').src = faceSrc($('up-face').dataset.mood);
     $('up-say').textContent = force ? '업데이트가 필요해!' : '새 버전이 나왔어!';
     $('up-body').textContent = force
       ? `지금 버전(빌드 ${appBuild})은 더 쓸 수 없어요. ${store}에서 빌드 ${u.latest}로 업데이트하면 바로 이어서 할 수 있어요.`
