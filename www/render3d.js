@@ -823,7 +823,7 @@
     let carOn = false, carHead = 0, wheelTurn = 0, carT = 0;
 
     // Twists: cloud shade drifting on the ground and gold rings under golden friends, instanced; counts set per frame.
-    const MAX_CLOUDS = 12, MAX_GOLD = 6;
+    const MAX_CLOUDS = 28, MAX_GOLD = 6;
     const cloudGeo = new T.CircleGeometry(1, 36); cloudGeo.rotateX(-Math.PI / 2);
     const cloudShade = new T.InstancedMesh(cloudGeo, new T.MeshBasicMaterial({ color: 0x120a2a, transparent: true, opacity: 0.45, depthWrite: false }), MAX_CLOUDS);
     cloudShade.renderOrder = 4; cloudShade.count = 0; cloudShade.frustumCulled = false;

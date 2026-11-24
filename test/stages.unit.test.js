@@ -127,3 +127,14 @@ test('every region has its own boss, in the style of its map, and the boss goal 
   assert.equal(St.goalLabel(by.hanok.goals[2]), '도깨비 1명 삼키기');
   assert.deepEqual(Object.keys(St.BOSSES).sort(), St.REGIONS.map(r => r.theme).sort(), 'one boss per region theme, none spare');
 });
+
+test('a map rule belongs to its map: every level of that map carries it, the others carry none, and each says what it does', () => {
+  const { RULES } = St;
+  assert.deepEqual(Object.keys(RULES).sort(), ['beach', 'desert', 'farm', 'market', 'park', 'snow']);
+  for (const s of STAGES) assert.equal(s.rule, RULES[s.theme] || null, s.id);
+  for (const s of EVENT_LEVELS.xmas || []) assert.equal(s.rule, null, s.id);
+  for (const [theme, r] of Object.entries(RULES)) {
+    assert.ok(['wheel', 'caravan', 'awning', 'blizzard'].includes(r.kind), theme);
+    assert.ok(r.name.length >= 2 && r.text.length > 15, theme);
+  }
+});

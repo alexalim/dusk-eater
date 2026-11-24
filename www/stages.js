@@ -290,6 +290,18 @@
     { theme: 'farm', score: [800, 1300] },
   ];
   const EVENT_SCORE = { xmas: [700, 16000] }; // events borrow a ladder level's difficulty instead
+  // A map's own rule: something about its shade that only this map does, on every level of it (index.html ruleStart).
+  // The twists below are the same on every map; this is what tells the maps apart in play, not only in looks.
+  //   wheel    shade that turns in circles (the big wheel's shadow)        caravan  a row of shade crossing the map
+  //   awning   patches of shade that open and fold away again              blizzard now and then the sun is hidden
+  const RULES = {
+    park: { kind: 'wheel', name: '대관람차 그림자', text: '커다란 대관람차 그림자가 빙글빙글 돌아요. 그림자를 따라 같이 돌아요!' },
+    desert: { kind: 'caravan', name: '낙타 행렬', text: '낙타 행렬이 긴 그림자를 끌고 지나가요. 그림자를 타고 사막을 건너요!' },
+    farm: { kind: 'caravan', name: '건초 수레', text: '건초 수레가 줄지어 밭을 가로질러요. 수레 그림자에 숨어 따라가요!' },
+    market: { kind: 'awning', name: '여닫는 차양', text: '가게 차양이 펼쳐졌다 접혔다 해요. 펼쳐진 차양 아래가 그늘이에요!' },
+    beach: { kind: 'awning', name: '파라솔', text: '파라솔이 펴졌다 접혔다 해요. 펴진 파라솔 밑으로 옮겨 다녀요!' },
+    snow: { kind: 'blizzard', name: '눈보라', text: '가끔 눈보라가 몰아쳐 해를 가려요. 그동안은 어디든 갈 수 있어요!' },
+  };
   // Twist per position inside a region (0-based): clouds 2, golden 5, eclipse 8, boss 10.
   const TWISTS = { 1: 'clouds', 4: 'golden', 7: 'eclipse', 9: 'boss' };
   const TWIST_INFO = {
@@ -358,7 +370,7 @@
     // Hard levels: the 8th of a region needs two stars to clear, the boss (10th) needs the boss swallowed.
     const hard = region ? { 7: 'hard', 9: 'super' }[local] || null : null;
     return Object.assign({}, t, {
-      id: 'L' + n, n, name: `${n}. ${t.name}`, goals, guards, twist, boss, hard,
+      id: 'L' + n, n, name: `${n}. ${t.name}`, goals, guards, twist, boss, hard, rule: RULES[t.theme] || null,
       sunDrain: lerp(0.4, 1.6, ramp), beamDrain: lerp(3, 7, ramp),
       lighthouse: t.theme === 'harbor' ? { x: 0.5, y: 0.87, range: lerp(380, 560, ramp), half: 0.16, speed: lerp(0.35, 0.55, ramp) } : null,
     });
@@ -401,7 +413,7 @@
     return g.kind;
   }
 
-  const api = { THEMES, STAGES, NAMES, TWISTS, TWIST_INFO, BOSSES, TIME_SCALE, goalLabel, themeOf, REGIONS, REGION_SIZE, regionOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
+  const api = { RULES, THEMES, STAGES, NAMES, TWISTS, TWIST_INFO, BOSSES, TIME_SCALE, goalLabel, themeOf, REGIONS, REGION_SIZE, regionOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DuskStages = api;
 })(this);

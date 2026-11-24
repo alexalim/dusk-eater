@@ -236,7 +236,8 @@ with sync_playwright() as p:
     bands = {'beach': (2, 12), 'desert': (2, 12), 'farm': (3, 12), 'city': (15, 36), 'crossing': (15, 36)}
     noon = {}
     for i, th in enumerate(pg.evaluate("window.DuskStages.REGIONS.map(r => r.theme)")):
-        pg.evaluate(f'{A}.start({i * 10})'); pg.evaluate(f'{A}.skipTo(38)'); frames_wait(pg, 2)
+        # the snow map's blizzard (its own rule) hides the sun from 34 s to 40 s: read its standing shade just after
+        pg.evaluate(f'{A}.start({i * 10})'); pg.evaluate(f"{A}.skipTo({41 if th == 'snow' else 38})"); frames_wait(pg, 2)
         noon[th] = pg.evaluate(f'''(() => {{ const s = {A}.s; let n = 0, k = 0;
           for (let x = 15; x < 1785; x += 30) for (let y = 15; y < 1785; y += 30) {{
             if (s.buildings.some(b => b.state === 0 && x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.d)) continue;
@@ -396,6 +397,23 @@ with sync_playwright() as p:
 
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune
+    # W29 a map's own rule: the wheel's shade turns on the park, rows of shade cross the desert, awnings open and fold on the market,
+    # a blizzard hides the sun on the snow map; a patch is shade like any other; the first map has no rule
+    themes = pg.evaluate("window.DuskStages.STAGES.map(s => s.theme)"); seen = {}
+    for th in ('park', 'desert', 'market', 'town'):
+        pg.evaluate(f"{A}.start({themes.index(th) + 2})"); frames_wait(pg, 4)
+        p0 = pg.evaluate(f"{A}.s.clouds.filter(c => c.rule).map(c => [c.rule, Math.round(c.x), Math.round(c.y)])")
+        pg.wait_for_timeout(1500)
+        p1 = pg.evaluate(f"(() => {{ const a = {A}, on = a.s.clouds.filter(c => c.rule && c.x > 0); return [a.s.clouds.filter(c => c.rule).map(c => [c.rule, Math.round(c.x), Math.round(c.y)]), on.length ? on.every(c => a.isShaded({{ x: c.x, y: c.y }}) || a.inBeam(c.x, c.y)) : null]; }})()")
+        seen[th] = [len(p0), p0[0][0] if p0 else None, sum(1 for a0, a1 in zip(p0, p1[0]) if a0 != a1) if th != 'market' else len([c for c in p1[0] if c[1] < 0]) < len(p1[0]), p1[1]]
+    pg.evaluate(f"{A}.start({themes.index('snow') + 2})"); frames_wait(pg, 4)
+    calm = pg.evaluate(f"{A}.isShaded({{ x: -500, y: -500 }})"); pg.evaluate(f"{A}.skipTo(11)") ; frames_wait(pg, 6)
+    storm = [pg.evaluate(f"{A}.isShaded({{ x: -500, y: -500 }})"), pg.evaluate("document.querySelector('canvas').classList.contains('eclipse')"), pg.inner_text('#banner')]
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    rec('W29', "map rules: park 12 turning patches, desert 15 crossing, market 16 awnings (some open, some folded), none on the first map; the snow map's blizzard makes everywhere shade",
+        seen == {'park': [12, 'wheel', 12, True], 'desert': [15, 'caravan', 15, True], 'market': [16, 'awning', True, True], 'town': [0, None, 0, None]}
+        and not calm and storm[0] and storm[1] and '눈보라' in storm[2], f'seen={seen} calm={calm} storm={storm}')
+
     rec('W0', 'no page errors', not errs, '; '.join(errs[:3]))
     b.close()
 

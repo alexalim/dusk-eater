@@ -966,7 +966,7 @@
   let bannerUntil = 0; // elapsed second until which the banner shows
   // The bolt mission's target: a kind with plenty left on the map that the player can already swallow.
   // ---------- mid-run events ----------
-  const darkEvent = () => !!(mapEvent && (mapEvent.kind === 'rain' || mapEvent.kind === 'blackout'));
+  const darkEvent = () => blizzard || !!(mapEvent && (mapEvent.kind === 'rain' || mapEvent.kind === 'blackout')); // blizzard: the snow map's own rule (ruleStep)
   const EVENT_TEXT = { rain: '소나기! 잠깐 어디든 그늘이에요', parade: '행렬이 지나가요! 길을 보세요', blackout: '정전! 어둡지만 등불지기가 늘었어요', front: '구름 떼가 지나가요! 그늘 다리를 타요' };
   const openSpot = (ox, oy, d) => { // a point about d away from (ox, oy) that is not in a building, or null
     for (let i = 0; i < 24; i++) { const a = rnd() * Math.PI * 2, x = ox + Math.cos(a) * d, y = oy + Math.sin(a) * d;
@@ -1159,6 +1159,34 @@
   }
   // Twists (stages.js): drifting cloud shade, golden friends worth 5x, a short eclipse, a boss.
   let clouds = [], eclipse = false, nextGold = 0;
+  // The map's own rule (stages.js RULES): shade only this map has. The patches of shade ride in `clouds` (marked
+  // `rule`), so they shade, show and count exactly as cloud shade does; the blizzard hides the sun like a dark event.
+  let blizzard = false;
+  const BLIZZARD = { every: 24, first: 10, secs: 6 }, AWNING = { cycle: 11, open: 6.5 };
+  function ruleStart() {
+    blizzard = false;
+    const r = stage.rule; if (!r || tut) return;
+    const add = o => clouds.push(Object.assign({ rule: r.kind, x: -9999, y: -9999 }, o));
+    if (r.kind === 'wheel') for (const [fx, fy, dir] of [[0.3, 0.34, 1], [0.7, 0.66, -1]]) // two wheels turning opposite ways, six cars of shade each
+      for (let k = 0; k < 6; k++) add({ cx: WORLD * fx, cy: waterY * fy, R: 170, a: k * Math.PI / 3, w: 0.22 * dir, r: 58 });
+    if (r.kind === 'caravan') for (const [fy, dir] of [[0.28, 1], [0.55, -1], [0.8, 1]]) // three rows crossing, the middle one the other way
+      for (let k = 0; k < 5; k++) add({ row: waterY * fy, at: rnd() * 400 + k * 96, v: 30 * dir, r: 50 });
+    if (r.kind === 'awning') for (let k = 0; k < 16; k++) add({ hx: 80 + rnd() * (WORLD - 160), hy: 80 + rnd() * (waterY - 160), t0: rnd() * AWNING.cycle, r: 62 });
+    ruleStep(0);
+  }
+  function ruleStep(dt) {
+    const r = stage.rule; if (!r) return;
+    for (const c of clouds) {
+      if (c.rule === 'wheel') { c.a += c.w * dt; c.x = c.cx + Math.cos(c.a) * c.R; c.y = c.cy + Math.sin(c.a) * c.R; }
+      else if (c.rule === 'caravan') { c.at += c.v * dt; c.x = ((c.at % (WORLD + 200)) + WORLD + 200) % (WORLD + 200) - 100; c.y = c.row; }
+      else if (c.rule === 'awning') { const on = (elapsed + c.t0) % AWNING.cycle < AWNING.open; c.x = on ? c.hx : -9999; c.y = on ? c.hy : -9999; } // folded away: nowhere on the map
+    }
+    if (r.kind === 'blizzard' && !tut) {
+      const was = blizzard, u = elapsed - BLIZZARD.first;
+      blizzard = !(phase && phase.night) && u >= 0 && u % BLIZZARD.every < BLIZZARD.secs;
+      if (blizzard && !was) { banner(`${ico('cloud')} 눈보라! 지금은 어디든 그늘이에요`, BLIZZARD.secs); Sound.sfx.wind(BLIZZARD.secs); }
+    }
+  }
   const ECLIPSE_AT = 0.3, ECLIPSE_S = 6; // starts 30% into the run, lasts 6 s
   // Last-stretch rush: the final RUSH_S seconds of every run score double, with a countdown and faster music.
   const RUSH_S = 10;
@@ -1566,6 +1594,8 @@
     shards = []; nextShard = C.SHARD.from; lastShardKind = null; fastUntil = bubbleUntil = magnetUntil = 0; dashTick = 0;
     clouds = stage.twist === 'clouds' ? Array.from({ length: 7 }, (_, k) => ({ x: rnd() * WORLD, y: rnd() * waterY, r: 70 + rnd() * 50 })) : [];
     tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
+    ruleStart();
+    if (stage.rule && !tut) banner(`${ico('sparkle')} ${stage.rule.name} — ${stage.rule.text}`, 4);
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
     runDuration = C.DURATION + used.reduce((a, b) => a + (b.extraTime || 0), 0);
     stats = { score: 0, eaten: {}, beamHit: false, total: 0, lit: false, night: 0, maxR: 0, playT: 0, shadeT: 0 };
@@ -1702,7 +1732,8 @@
     // Clouds drift slowly with the wind (about a third of a map per run), with only a faint sideways sway.
     const CLOUD_V = 8;
     // past the right edge (+100) a cloud comes back in from the left (-100); the span is WORLD + 200
-    for (const c of clouds) { if (c.vx) { c.x += c.vx * dt; continue; } c.x = (c.x + 100 + CLOUD_V * dt) % (WORLD + 200) - 100; c.y += Math.sin(elapsed * 0.1 + c.r) * 1.5 * dt; } // a front (vx) just crosses
+    ruleStep(dt);
+    for (const c of clouds) { if (c.rule) continue; if (c.vx) { c.x += c.vx * dt; continue; } c.x = (c.x + 100 + CLOUD_V * dt) % (WORLD + 200) - 100; c.y += Math.sin(elapsed * 0.1 + c.r) * 1.5 * dt; } // a front (vx) just crosses
     // Mid-run event (core EVENTS): one per run, 40–60% in. Tests opt out with __DUSK_TEST__.noEvents and trigger kinds by hand.
     if (!mapEvent && !eventDone && !tut && !stage.boss && !phase.night && !eclipse && elapsed >= runDuration * eventFrac && !(window.__DUSK_TEST__ && window.__DUSK_TEST__.noEvents)) startEvent();
     if (mapEvent) { if (elapsed > mapEvent.until) endEvent(); else stepEvent(dt); }
@@ -1934,7 +1965,7 @@
       clouds, golden, eclipse, shards: shards.filter(h => h.state === 0).map(h => ({ kind: h.kind, x: h.x, y: h.y, blink: h.until - elapsed < 3 })),
       spits: spits.map(s => ({ x: s.x, y: s.y, r: s.r })), dark: guards.filter(g => g.darkUntil > elapsed) });
     $('vignette').classList.toggle('hidden', !phase.night && !eclipse && !(mapEvent && mapEvent.kind === 'blackout'));
-    canvas.classList.toggle('eclipse', eclipse);
+    canvas.classList.toggle('eclipse', eclipse || blizzard);
     if (state === 'play') renderHud();
   }
 
@@ -2397,7 +2428,7 @@
     }).join('');
     const rank = open && Account.user ? `<span class="chip" id="btn-rank">${ico('trophy')} 랭킹</span>` : '';
     $('sheet').innerHTML = `<div class="row"><span class="name">${s.name}</span>${rank}<span class="stars">${starText(bestStars[s.id] || 0)}</span></div>
-      <div class="desc">${open ? s.desc : '앞 레벨에서 별 1개를 따면 열려요.'}</div>` +
+      <div class="desc">${open ? s.desc : '앞 레벨에서 별 1개를 따면 열려요.'}${open && s.rule ? `<br><b class="rule">${ico('sparkle')} ${s.rule.name}</b> ${s.rule.text}` : ''}</div>` +
       (s.hard ? `<div class="hardnote">${s.hard === 'super' ? '아주 어려움 · 보스를 삼켜야 깨져요' : '어려움 · 별 2개를 따야 깨져요'}</div>` : '') +
       (s.twist ? `<div class="twist">${ico(twistIco[s.twist])} <b>${TWIST_INFO[s.twist].name}</b> ${TWIST_INFO[s.twist].text}</div>` : '') +
       (open ? `<ul>${s.goals.map(g => `<li>${goalLabel(g)}</li>`).join('')}</ul>
