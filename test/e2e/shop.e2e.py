@@ -77,11 +77,21 @@ with sync_playwright() as p:
             out.append(pg.evaluate(f'{A}.R.debug.rimMat.color.getHex()'))
         rims[sid] = out
         # in play the character is the skin's painted picture (a card facing the camera), the 3D body only where there is none (the car)
-        looks[sid] = pg.evaluate(f"(() => {{ const d = {A}.R.debug; return [d.artSprite.visible, d.body.visible, !!(d.artSprite.material.map && d.artSprite.material.map.image && d.artSprite.material.map.image.src === window.DuskSkinArt[{A}.Shop.SKINS.find(k => k.id === '{sid}').art])]; }})()")
+        looks[sid] = pg.evaluate(f"(() => {{ const d = {A}.R.debug; return [d.artSprite.visible, d.body.visible, !!(d.artSprite.material.map && d.art && d.artSprite.material.map === d.art.tex && d.art.img.src === window.DuskSkinArt[{A}.Shop.SKINS.find(k => k.id === '{sid}').art])]; }})()")
     expect = {s['id']: s['rim'] for s in pg.evaluate(f'{A}.Shop.SKINS')}
     ok = all(rims[k][0] == expect[k] and rims[k][1] == 0xff6b6b for k in rims)
-    art_ok = all(v == ([False, True, False] if k == 'car' else [True, False, True]) for k, v in looks.items())
-    rec('H4', 'skin purchase equips; every skin keeps the red lit rim and shows as its own painted picture in play (the car keeps the 3D body)', bought and ok and art_ok, f'looks_bad={[k for k, v in looks.items() if v != ([False, True, False] if k == "car" else [True, False, True])]} ' + json.dumps({k: [hex(a), hex(c)] for k, (a, c) in rims.items()}))
+    # the picture's face moves: the mouth is dark and tall when sucking in, the eyes are shut (no dark pupil) when happy; every picture has its face spots
+    pg.evaluate(f"{A}.Store.update({A}.Shop.equip({A}.Store.wallet, 'night'))"); frames_wait(pg, 3)
+    face = pg.evaluate(f"""(() => {{ const d = {A}.R.debug, a = d.art, c = document.createElement('canvas'); c.width = c.height = 384;
+      const tmp = {{ canvas: c, img: a.img, face: a.face, ready: true, step: -1, tex: {{}} }}, g = c.getContext('2d'), [mx, my, lx, ly] = a.face;
+      const lum = (x, y) => {{ const p = g.getImageData(Math.round(x * 2), Math.round(y * 2), 1, 1).data; return p[0] + p[1] + p[2]; }};
+      d.artDraw(tmp, 0, false, 0); const rest = [lum(mx, my + 5), lum(lx, ly + 4)];
+      d.artDraw(tmp, 1, false, 0); const open = lum(mx, my + 5);
+      d.artDraw(tmp, 0, true, 1); const shut = lum(lx, ly + 4);
+      return {{ rest, open, shut, spots: Object.keys(window.DuskSkinArt).filter(k => !(window.DuskSkinFace[k] || []).length).length }}; }})()""")
+    face_ok = face['open'] < 150 and face['rest'][0] > face['open'] + 150 and face['shut'] > face['rest'][1] + 150 and face['spots'] == 0
+    art_ok = face_ok and all(v == ([False, True, False] if k == 'car' else [True, False, True]) for k, v in looks.items())
+    rec('H4', 'skin purchase equips; every skin keeps the red lit rim and shows as its own painted picture in play, whose mouth opens and eyes shut (the car keeps the 3D body)', bought and ok and art_ok, f'face={face} looks_bad={[k for k, v in looks.items() if v != ([False, True, False] if k == "car" else [True, False, True])]} ' + json.dumps({k: [hex(a), hex(c)] for k, (a, c) in rims.items()}))
 
     # H5 a purchase the app died during (unfinished) is credited exactly once on the next launches
     pg.evaluate("localStorage.setItem('dusk-demo-unfinished', JSON.stringify([{productIdentifier: 'com.aspynlim.duskeater.gems.550', transactionId: 'killed-1'}]))")

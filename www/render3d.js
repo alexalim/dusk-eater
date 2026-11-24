@@ -766,7 +766,42 @@
     const artMat = new T.SpriteMaterial({ transparent: true, depthWrite: false, alphaTest: 0.02 });
     const artSprite = new T.Sprite(artMat); artSprite.center.set(0.5, 0.2); // pinned near its feet, so it stands on the ground
     artSprite.visible = false; artSprite.renderOrder = 7; scene.add(artSprite);
-    const artTex = {}; let artOn = false, artLean = 0, artHid = false;
+    const artTex = {}; let artOn = false, artLean = 0, artHid = false, artNow = null;
+    // The picture's face moves: over the painted smile the mouth opens into a tall dark O with its tongue while it
+    // sucks something in, the eyes squeeze shut happily (^^) after a gulp and during a combo, and the blush deepens
+    // with the combo. Drawn on the card's own canvas at the spots tools/skins/pack.py found (DuskSkinFace), and only
+    // when one of the three steps changes (`step` remembers the last one drawn).
+    function artDraw(a, gulp, happy, cheer) {
+      const step = Math.round(gulp * 6) + (happy ? 10 : 0) + Math.round(cheer * 3) * 100;
+      if (!a.ready || step === a.step) return;
+      a.step = step;
+      const g = a.canvas.getContext('2d'), n = a.canvas.width, u = n / 192, f = a.face;
+      g.clearRect(0, 0, n, n); g.drawImage(a.img, 0, 0, n, n);
+      if (!f) { a.tex.needsUpdate = true; return; }
+      const [mx, my, lx, ly, rx, ry, skin] = f, hexOf = c => '#' + c.toString(16).padStart(6, '0');
+      const soft = (x, y, r, color, alpha) => { // a round patch that fades out at its edge
+        const grd = g.createRadialGradient(x * u, y * u, 0, x * u, y * u, r * u);
+        grd.addColorStop(0, color); grd.addColorStop(0.65, color); grd.addColorStop(1, color + '00');
+        g.globalAlpha = alpha; g.fillStyle = grd; g.beginPath(); g.arc(x * u, y * u, r * u, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+      };
+      const c3 = Math.round(cheer * 3) / 3;
+      const there = ([x]) => x >= 0; // a covered eye (the pirate's patch) is written as -1 and left alone
+      if (c3 > 0) for (const [x, y] of [[lx, ly, -7], [rx, ry, 6]].filter(there).map(([x, y, dx]) => [x + dx, y + 12])) soft(x, y, 8.5, '#ff6f96', 0.55 * c3);
+      if (happy) for (const [x, y] of [[lx, ly], [rx, ry]].filter(there)) {
+        soft(x, y, 10, hexOf(skin), 1);
+        g.strokeStyle = '#2a1640'; g.lineWidth = 2.4 * u; g.lineCap = 'round';
+        g.beginPath(); g.moveTo((x - 5.5) * u, (y + 2.5) * u); g.quadraticCurveTo(x * u, (y - 5.5) * u, (x + 5.5) * u, (y + 2.5) * u); g.stroke();
+      }
+      const o = Math.round(gulp * 6) / 6;
+      if (o > 0) {
+        const cy = my + o * 5, w = 7 + o * 4.5, h = 5 + o * 11;
+        soft(mx, my, 10, hexOf(skin), 1); // the painted smile goes under
+        g.fillStyle = '#6a2a6a'; g.beginPath(); g.ellipse(mx * u, cy * u, (w + 1.4) * u, (h + 1.4) * u, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#1c0a24'; g.beginPath(); g.ellipse(mx * u, cy * u, w * u, h * u, 0, 0, Math.PI * 2); g.fill();
+        g.save(); g.clip(); g.fillStyle = '#ff7fa6'; g.beginPath(); g.ellipse(mx * u, (cy + h * 0.72) * u, w * 0.75 * u, h * 0.45 * u, 0, 0, Math.PI * 2); g.fill(); g.restore();
+      }
+      a.tex.needsUpdate = true;
+    }
     const artAlways = [body, mouth, throat, ...arms, bellyGlow, bellyStar, ...swirlRings]; // parts nothing else shows again each frame
     const artStandIns = [body, mouth, throat, tongue, ...arms, ...cheeks, tuft, wear, moon, bellyGlow, bellyStar, ...swirlRings, ...eyes.flatMap(o => [o.e, o.p, o.p2].filter(Boolean))];
     // Car skin (shop `car`): the bean sits on a little felt car that drives where it goes, wheels turning with the speed.
@@ -1728,6 +1763,7 @@
         artSprite.scale.set(R * 3.3 * (1 + swell - squash), R * 3.3 * (breathe + swell * 0.6 + squash), 1);
         artMat.rotation = artLean + Math.sin(t * 1.7) * 0.03 + (player.slow ? Math.sin(t * 14) * 0.08 : 0);
         artMat.color.setHex(0xffffff); if (player.slow) artMat.color.lerp(tmpCol.set(0x9bd38a), 0.45);
+        if (artNow) artDraw(artNow, Math.min(1, gulp), happy > 0.5, cheer);
       } else if (artHid) { artHid = false; for (const o of artAlways) o.visible = true; } // back to the 3D body (the car, first person)
 
       const clouds = f.clouds || [], golden = f.golden || [];
@@ -1802,8 +1838,17 @@
       if (kind) { wearMat.color.setHex(color); pinMat.color.setHex(color); wearMat2.color.setHex(accent); }
       // its painted picture, if it has one (skin-art.js); each is loaded once and kept
       const src = skin.art && root.DuskSkinArt && root.DuskSkinArt[skin.art];
-      artOn = !!src; artMat.map = null;
-      if (src) { artMat.map = artTex[skin.art] || (artTex[skin.art] = new T.TextureLoader().load(src)); }
+      artOn = !!src; artMat.map = null; artNow = null;
+      if (src) {
+        let a = artTex[skin.art];
+        if (!a) { // its own canvas (twice the picture, so the drawn face stays crisp), filled once the picture has loaded
+          const canvas = document.createElement('canvas'); canvas.width = canvas.height = 384;
+          a = artTex[skin.art] = { canvas, tex: new T.CanvasTexture(canvas), img: new Image(), face: (root.DuskSkinFace || {})[skin.art], ready: false, step: -1 };
+          a.img.onload = () => { a.ready = true; artDraw(a, 0, false, 0); };
+          a.img.src = src;
+        }
+        artNow = a; artMat.map = a.tex;
+      }
       artMat.needsUpdate = true;
     }
     // Summoning circle: a CIRCLES entry, or null for none.
@@ -1824,7 +1869,7 @@
       for (const m of [circleMesh, circleRunes, circleMotes, ...circleTrail]) m.material.color.setHex(c.color);
     }
 
-    return { build, resize, draw, setSkin, setCircle, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh, circleTrail, artSprite, body } };
+    return { build, resize, draw, setSkin, setCircle, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh, circleTrail, artSprite, body, artDraw, get art() { return artNow; } } };
   }
 
   root.DuskRender = { create, drawCircle, PARTS, GEO: unit }; // PARTS and the unit shapes also feed tools/icons (collection-book pictures)
