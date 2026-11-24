@@ -760,6 +760,15 @@
         player.y + Math.sin(a) * c * r * (1 + out));
     };
     scene.add(blob, litRing);
+    // A painted skin (setSkin, skin.art): the character is its picture, a card that always faces the camera, standing
+    // where the 3D body stands; the body and its face step aside. It hops along while moving, breathes at rest,
+    // swells with each gulp and wobbles green while poisoned, as the body does. Looks only.
+    const artMat = new T.SpriteMaterial({ transparent: true, depthWrite: false, alphaTest: 0.02 });
+    const artSprite = new T.Sprite(artMat); artSprite.center.set(0.5, 0.2); // pinned near its feet, so it stands on the ground
+    artSprite.visible = false; artSprite.renderOrder = 7; scene.add(artSprite);
+    const artTex = {}; let artOn = false, artLean = 0, artHid = false;
+    const artAlways = [body, mouth, throat, ...arms, bellyGlow, bellyStar, ...swirlRings]; // parts nothing else shows again each frame
+    const artStandIns = [body, mouth, throat, tongue, ...arms, ...cheeks, tuft, wear, moon, bellyGlow, bellyStar, ...swirlRings, ...eyes.flatMap(o => [o.e, o.p, o.p2].filter(Boolean))];
     // Car skin (shop `car`): the bean sits on a little felt car that drives where it goes, wheels turning with the speed.
     // Looks only: the body's footprint (r) and every rule stay the same. Unlit like the body, so day and night match.
     const carMat = felt(new T.MeshBasicMaterial({ color: 0x8fd3e8 })), tyreMat = felt(new T.MeshBasicMaterial({ color: 0x2a2d3a }));
@@ -1707,6 +1716,20 @@
         m.visible = k < 0.6;
       });
 
+      artSprite.visible = artOn && !!artMat.map && k < 0.6;
+      if (artSprite.visible) {
+        for (const o of artStandIns) o.visible = false;
+        artHid = true;
+        const sp = Math.hypot(player.vx || 0, player.vy || 0), go = Math.min(1, sp / 40);
+        const hop = go * Math.abs(Math.sin(t * 9)) * 0.14 + (1 - go) * Math.sin(t * 3) * 0.02;
+        const squash = go * Math.sin(t * 18) * 0.04, swell = bulge * 0.14 + gulp * 0.08;
+        artLean += ((Math.abs(player.vx || 0) > 2 ? -Math.sign(player.vx) * 0.12 * go : 0) - artLean) * 0.15; // leans into its run, eased
+        artSprite.position.set(player.x, R * (0.05 + hop + bodyLift), player.y);
+        artSprite.scale.set(R * 3.3 * (1 + swell - squash), R * 3.3 * (breathe + swell * 0.6 + squash), 1);
+        artMat.rotation = artLean + Math.sin(t * 1.7) * 0.03 + (player.slow ? Math.sin(t * 14) * 0.08 : 0);
+        artMat.color.setHex(0xffffff); if (player.slow) artMat.color.lerp(tmpCol.set(0x9bd38a), 0.45);
+      } else if (artHid) { artHid = false; for (const o of artAlways) o.visible = true; } // back to the 3D body (the car, first person)
+
       const clouds = f.clouds || [], golden = f.golden || [];
       cloudShade.count = Math.min(MAX_CLOUDS, clouds.length);
       for (let i = 0; i < cloudShade.count; i++) {
@@ -1777,6 +1800,11 @@
       for (const name in WEAR) WEAR[name].visible = name === kind;
       wearBare = kind === 'hat' || kind === 'beret';
       if (kind) { wearMat.color.setHex(color); pinMat.color.setHex(color); wearMat2.color.setHex(accent); }
+      // its painted picture, if it has one (skin-art.js); each is loaded once and kept
+      const src = skin.art && root.DuskSkinArt && root.DuskSkinArt[skin.art];
+      artOn = !!src; artMat.map = null;
+      if (src) { artMat.map = artTex[skin.art] || (artTex[skin.art] = new T.TextureLoader().load(src)); }
+      artMat.needsUpdate = true;
     }
     // Summoning circle: a CIRCLES entry, or null for none.
     function setCircle(c) {
@@ -1796,7 +1824,7 @@
       for (const m of [circleMesh, circleRunes, circleMotes, ...circleTrail]) m.material.color.setHex(c.color);
     }
 
-    return { build, resize, draw, setSkin, setCircle, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh, circleTrail } };
+    return { build, resize, draw, setSkin, setCircle, setQuality, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh, circleTrail, artSprite, body } };
   }
 
   root.DuskRender = { create, drawCircle, PARTS, GEO: unit }; // PARTS and the unit shapes also feed tools/icons (collection-book pictures)

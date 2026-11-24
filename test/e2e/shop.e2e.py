@@ -68,7 +68,7 @@ with sync_playwright() as p:
     bought = w['equipped'] == 'mint' and 'mint' in w['owned']
     pg.evaluate(f"{A}.Store.update(Object.assign({{}}, {A}.Store.wallet, {{ owned: {A}.Shop.SKINS.filter(s => s.product || s.reward).map(s => s.id) }}))")
     pg.evaluate(f'{A}.start(0)'); frames_wait(pg); pg.evaluate(f'{A}.freeze()')
-    rims = {}
+    rims = {}; looks = {}
     for sid in pg.evaluate(f'{A}.Shop.SKINS.map(s => s.id)'):
         pg.evaluate(f"{A}.Store.update({A}.Shop.equip({A}.Store.wallet, '{sid}'))")
         out = []
@@ -76,9 +76,12 @@ with sync_playwright() as p:
             pg.evaluate(f'{A}.s.player.lit = {str(lit).lower()}'); frames_wait(pg, 2)
             out.append(pg.evaluate(f'{A}.R.debug.rimMat.color.getHex()'))
         rims[sid] = out
+        # in play the character is the skin's painted picture (a card facing the camera), the 3D body only where there is none (the car)
+        looks[sid] = pg.evaluate(f"(() => {{ const d = {A}.R.debug; return [d.artSprite.visible, d.body.visible, !!(d.artSprite.material.map && d.artSprite.material.map.image && d.artSprite.material.map.image.src === window.DuskSkinArt[{A}.Shop.SKINS.find(k => k.id === '{sid}').art])]; }})()")
     expect = {s['id']: s['rim'] for s in pg.evaluate(f'{A}.Shop.SKINS')}
     ok = all(rims[k][0] == expect[k] and rims[k][1] == 0xff6b6b for k in rims)
-    rec('H4', 'skin purchase equips; every skin keeps the red lit rim', bought and ok, json.dumps({k: [hex(a), hex(c)] for k, (a, c) in rims.items()}))
+    art_ok = all(v == ([False, True, False] if k == 'car' else [True, False, True]) for k, v in looks.items())
+    rec('H4', 'skin purchase equips; every skin keeps the red lit rim and shows as its own painted picture in play (the car keeps the 3D body)', bought and ok and art_ok, f'looks_bad={[k for k, v in looks.items() if v != ([False, True, False] if k == "car" else [True, False, True])]} ' + json.dumps({k: [hex(a), hex(c)] for k, (a, c) in rims.items()}))
 
     # H5 a purchase the app died during (unfinished) is credited exactly once on the next launches
     pg.evaluate("localStorage.setItem('dusk-demo-unfinished', JSON.stringify([{productIdentifier: 'com.aspynlim.duskeater.gems.550', transactionId: 'killed-1'}]))")
@@ -164,7 +167,7 @@ with sync_playwright() as p:
     santa_act = pg6.inner_text('#skin-box-act'); santa_off = pg6.evaluate("document.querySelector('#skin-box-act').classList.contains('off')")
     pg6.mouse.click(5, 5); frames_wait(pg6)  # outside the box
     rec('H12', 'skin box shows description and price, buys nothing until its button; event skin cannot be bought',
-        box[0] and box[1] == '우주비행사 결이' and len(box[2]) > 10 and '구매하기' in box[3] and closed
+        box[0] and box[1] == '우주비행사' and len(box[2]) > 10 and '구매하기' in box[3] and closed
         and '이벤트' in santa_act and santa_off and not pg6.is_visible('#skin-box') and not errs6, f'box={box} santa={santa_act!r}')
 
     # H13 a paid skin is also sold for gems: the box offers it (greyed while short), 300 gems buy and equip it

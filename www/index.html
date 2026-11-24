@@ -772,6 +772,7 @@
 <script src="vendor/three.min.js"></script>
 <script src="core.js"></script>
 <script src="stages.js"></script>
+<script src="skin-art.js"></script>
 <script src="render3d.js"></script>
 <script src="shop.js"></script>
 <script src="store.js"></script>
@@ -2571,7 +2572,7 @@
     if (secret) return `<svg viewBox="0 0 64 64"><ellipse cx="32" cy="58.5" rx="20" ry="3.2" fill="#000" opacity=".25"/>
       <ellipse cx="9.5" cy="45" rx="5" ry="4.4" fill="#241c3a"/><ellipse cx="54.5" cy="45" rx="5" ry="4.4" fill="#241c3a"/><path d="${BODY_D}" fill="#241c3a"/>
       <text x="32" y="45" text-anchor="middle" font-size="20" font-family="Jua, sans-serif" fill="#6b5f8f">?</text></svg>`;
-    if (s.art) return `<img src="img/skins/${s.art}.webp" alt="">`; // the painted picture; the drawing below is for skins without one
+    if (s.art) return `<img src="${window.DuskSkinArt[s.art]}" alt="">`; // the painted picture; the drawing below is for skins without one
     const pupil = s.pupil !== undefined ? hex(s.pupil) : '#ffffff';
     const wear = s.wear ? WEAR_ART[s.wear[0]](hex(s.wear[1]), hex(s.wear[2] === undefined ? 0xffffff : s.wear[2])) : '';
     // car skin: the character, a little smaller, sits in the car seen from the front (same colors as render3d's car)
