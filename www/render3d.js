@@ -766,7 +766,7 @@
     const artMat = new T.SpriteMaterial({ transparent: true, depthWrite: false, alphaTest: 0.02 });
     const artSprite = new T.Sprite(artMat); artSprite.center.set(0.5, 0.2); // pinned near its feet, so it stands on the ground
     artSprite.visible = false; artSprite.renderOrder = 7; scene.add(artSprite);
-    const artTex = {}; let artOn = false, artLean = 0, artHid = false, artNow = null;
+    const artTex = {}; let artOn = false, artLean = 0, artHid = false, artNow = null, artFlip = false;
     // The picture's face moves: over the painted smile the mouth opens into a tall dark O with its tongue while it
     // sucks something in, the eyes squeeze shut happily (^^) after a gulp and during a combo, and the blush deepens
     // with the combo. Drawn on the card's own canvas at the spots tools/skins/pack.py found (DuskSkinFace), and only
@@ -1763,7 +1763,15 @@
         artSprite.scale.set(R * 3.3 * (1 + swell - squash), R * 3.3 * (breathe + swell * 0.6 + squash), 1);
         artMat.rotation = artLean + Math.sin(t * 1.7) * 0.03 + (player.slow ? Math.sin(t * 14) * 0.08 : 0);
         artMat.color.setHex(0xffffff); if (player.slow) artMat.color.lerp(tmpCol.set(0x9bd38a), 0.45);
-        if (artNow) artDraw(artNow, Math.min(1, gulp), happy > 0.5, cheer);
+        // Which way it looks follows where it is going: the picture looks to the right, so it is mirrored when heading
+        // left. A dead band, and standing still keeps the last way, so it does not flicker. There is one picture per
+        // skin (a front view): a side or back view needs art of its own.
+        const vx = player.vx || 0;
+        if (sp > 6 && Math.abs(vx) > sp * 0.25) artFlip = vx < 0;
+        if (artNow) {
+          artDraw(artNow, Math.min(1, gulp), happy > 0.5, cheer);
+          artNow.tex.repeat.x = artFlip ? -1 : 1; artNow.tex.offset.x = artFlip ? 1 : 0;
+        }
       } else if (artHid) { artHid = false; for (const o of artAlways) o.visible = true; } // back to the 3D body (the car, first person)
 
       const clouds = f.clouds || [], golden = f.golden || [];
@@ -1869,7 +1877,7 @@
       for (const m of [circleMesh, circleRunes, circleMotes, ...circleTrail]) m.material.color.setHex(c.color);
     }
 
-    return { build, resize, draw, setSkin, setCircle, setQuality, artDraw, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh, circleTrail, artSprite, body, artDraw, get art() { return artNow; } } };
+    return { build, resize, draw, setSkin, setCircle, setQuality, artDraw, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh, circleTrail, artSprite, body, artDraw, get art() { return artNow; }, get artFlip() { return artFlip; } } };
   }
 
   root.DuskRender = { create, drawCircle, PARTS, GEO: unit }; // PARTS and the unit shapes also feed tools/icons (collection-book pictures)
