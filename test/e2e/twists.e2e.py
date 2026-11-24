@@ -17,6 +17,7 @@ def frames_wait(pg, n=3):
 with sync_playwright() as p:
     b = p.chromium.launch(args=GL)
     pg = b.new_page(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True)
+    pg.set_default_navigation_timeout(120000)  # software GL: a reload onto a late map can pass 30 s on a busy machine
     errs = []
     pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.add_init_script('window.__DUSK_TEST__ = { fixedQuality: true, noEvents: true };')
@@ -378,6 +379,20 @@ with sync_playwright() as p:
           return [n, new Set({A}.s.objects.slice(0, 20).map(o => o.zf)).size]; }})()''')
     rec('W25', 'no stacked props on the park and market maps; objects carry distinct height hairs',
         all(v[0] == 0 and v[1] >= 5 for v in stacked.values()), f'{stacked}')
+
+    # W28 turning the map to another region moves the sheet (and its Go) there too: the furthest open level of that region, the first one on a closed region
+    pg.evaluate("localStorage.setItem('dusk-stars', JSON.stringify(Object.fromEntries(Array.from({ length: 25 }, (_, i) => ['L' + (i + 1), 2]))))")
+    pg.reload(); pg.evaluate(f'{A}.ready'); frames_wait(pg)
+    pg.tap('#btn-title'); frames_wait(pg)
+    look = "[document.querySelector('#sheet .name').innerText.split('.')[0], (document.querySelector('.node.sel') || { dataset: {} }).dataset.i || null, !!document.querySelector('#btn-go')]"
+    seen = [pg.evaluate(look)]
+    for d in (1, -1, -1, -1):
+        pg.tap(f'.pager .chip[data-p="{d}"]'); frames_wait(pg); seen.append(pg.evaluate(look))
+    pg.tap('#btn-go'); frames_wait(pg)
+    boss = pg.inner_text('#twist-name') if pg.is_visible('#twist') else None
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    rec('W28', 'paging the map: the sheet follows to that region (26 here, 31 locked with no Go, back to 26, then 20 and 10), and Go on region 1 opens its boss card',
+        seen == [['26', '25', True], ['31', '30', False], ['26', '25', True], ['20', '19', True], ['10', '9', True]] and boss is not None and '등불지기' in boss, f'seen={seen} go={boss!r}')
 
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune

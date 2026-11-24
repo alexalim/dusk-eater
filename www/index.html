@@ -2334,7 +2334,10 @@
       useList(el.dataset.l); chosen.clear(); openSelectAt(lastUnlocked());
     }));
     $('map').querySelectorAll('.pager .chip').forEach(el => el.addEventListener('pointerup', () => {
-      page = Math.max(0, Math.min(pages - 1, page + +el.dataset.p)); openSelect();
+      const to = Math.max(0, Math.min(pages - 1, page + +el.dataset.p));
+      if (to === page) return;
+      // the sheet and its Go follow the page: the furthest open level there (the first one, with its lock note, on a closed region)
+      page = to; selected = Math.max(to * size, Math.min(here, to * size + size - 1)); openSelect(true);
     }));
     renderSheet();
     show('select');
