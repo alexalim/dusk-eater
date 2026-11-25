@@ -1511,9 +1511,11 @@
         const look = world.stage.look, e = 1 + (look.eave || 0.1), along = b.w >= b.d;
         // houses get the shaped roof; a tall block (over gableMax) keeps its flat top, like an apartment building
         const tall = look.roof === 'gable' && b.h > (look.gableMax || 80);
-        const rise = tall ? 0 : Math.min((look.rise || 0.35) * b.h, 0.6 * Math.min(b.w, b.d));
+        // A tall block draws no roof instance at all: a roof squashed flat lay exactly on the box's top and the two
+        // fought over every pixel, the flat roof and its parapet blinking with the shingles (tester: the map blinks)
+        const rise = tall ? 0 : Math.min((look.rise || 0.35) * b.h, 0.6 * Math.min(b.w, b.d)), k = tall ? 0 : s;
         dummy.position.set(cx, b.h * s + lift, cy); dummy.rotation.set(0, along ? 0 : Math.PI / 2, 0);
-        dummy.scale.set((along ? b.w : b.d) * s * e || 1e-6, rise * s || 1e-6, (along ? b.d : b.w) * s * e || 1e-6);
+        dummy.scale.set((along ? b.w : b.d) * k * e || 1e-6, rise * k || 1e-6, (along ? b.d : b.w) * k * e || 1e-6);
         dummy.updateMatrix(); b.roofIM.setMatrixAt(b.roofIdx, dummy.matrix); b.roofIM.instanceMatrix.needsUpdate = true;
         if (b.baseIM) {
           dummy.position.set(cx, 1.5 * s + lift, cy); dummy.rotation.set(0, 0, 0);
