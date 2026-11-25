@@ -778,7 +778,7 @@
     const artMat = new T.SpriteMaterial({ transparent: true, depthWrite: false, alphaTest: 0.02 });
     const artSprite = new T.Sprite(artMat); artSprite.center.set(0.5, 0.2); // pinned near its feet, so it stands on the ground
     artSprite.visible = false; artSprite.renderOrder = 7; scene.add(artSprite);
-    const artTex = {}; let artOn = false, artLean = 0, artHid = false, artNow = null, artFlip = false, artView = 'front';
+    const artTex = {}; let artOn = false, artLean = 0, artHid = false, artNow = null, artFlip = false, artView = 'front', artWarm = false;
     // The picture's face moves: over the painted smile the mouth opens into a tall dark O with its tongue while it
     // sucks something in, the eyes squeeze shut happily (^^) after a gulp and during a combo, and the blush deepens
     // with the combo. Drawn on the card's own canvas at the spots tools/skins/pack.py found (DuskSkinFace), and only
@@ -996,6 +996,7 @@
     function lambert(color, extra, mode = 'clay') { return felt(new T.MeshLambertMaterial(Object.assign({ color: col(color) }, extra)), mode); }
 
     function build(w) {
+      artWarm = false; // a new world: its lights may differ, so the hidden body is compiled again (draw)
       disposeGroup();
       world = w;
       group = new T.Group();
@@ -1837,6 +1838,14 @@
       });
 
       artSprite.visible = artOn && !!artMat.map && k < 0.6;
+      // The 3D body stays hidden behind a picture, so its shaders would only compile the first time first person shows
+      // it (a hitch mid-swoop): once per world, compile them while the stand-ins are briefly visible.
+      if (artSprite.visible && !artWarm) {
+        artWarm = true; const was = artStandIns.map(o => o.visible);
+        for (const o of artStandIns) o.visible = true;
+        renderer.compile(scene, camera);
+        artStandIns.forEach((o, i) => { o.visible = was[i]; });
+      }
       if (artSprite.visible) {
         for (const o of artStandIns) o.visible = false;
         artHid = true;

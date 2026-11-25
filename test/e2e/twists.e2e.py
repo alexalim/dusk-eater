@@ -26,7 +26,7 @@ with sync_playwright() as p:
     pg.evaluate("localStorage.setItem('dusk-stars', JSON.stringify(Object.fromEntries(Array.from({ length: 9 }, (_, i) => ['L' + (i + 1), 1]))))")
     pg.reload(); pg.evaluate(f'{A}.ready'); frames_wait(pg)
 
-    # W1 level select: a region's ten levels sit in two rows of five; 2, 5, 8 and 10 carry their twist marker
+    # W1 level select: a region's ten levels sit in two rows of five; 2, 5, 8 and 10 carry their twist marker, 3, 6 and 9 their special's
     pg.tap('#btn-title'); frames_wait(pg)
     if pg.is_visible('.pager .chip[data-p="-1"]:not(.off)'): pg.tap('.pager .chip[data-p="-1"]'); frames_wait(pg)
     # the ten levels run down a winding path: every node on its own row, swinging left and right of the middle
@@ -36,7 +36,7 @@ with sync_playwright() as p:
     marked = pg.evaluate("[...document.querySelectorAll('.levels .node')].map((n, i) => n.querySelector('.tw') ? i + 1 : 0).filter(Boolean)")
     road = pg.evaluate("[!!document.querySelector('.levels svg.path polyline'), !!document.querySelector('.levels .me'), !!document.querySelector('.node.sel .say'), !!document.querySelector('.pager .region')]")
     rec('W1', '10 levels down a winding path (10 rows, swinging left/right) with a road, the character by the current level, a bubble on the chosen one, a region card; twist markers on 2, 5, 8, 10',
-        tops == 10 and swing >= 120 and marked == [2, 5, 8, 10] and all(road), f'rows={tops} swing={swing} marked={marked} road={road}')
+        tops == 10 and swing >= 120 and marked == [2, 3, 5, 6, 8, 9, 10] and all(road), f'rows={tops} swing={swing} marked={marked} road={road}')
     # W26 scrolled down the map, the top bar sits at the very top and the region card pins right under it, not behind it
     pins = pg.evaluate("""(() => { const sc = document.querySelector('#select'); sc.scrollTop = sc.scrollHeight;
       const t = document.querySelector('#select .topbar').getBoundingClientRect(), r = document.querySelector('.pager').getBoundingClientRect();
@@ -146,8 +146,8 @@ with sync_playwright() as p:
         why and '별 2개' in why and after == ['play', dur0 + 20, 70] and again[:2] == [False, True] and '아쉬워요' in again[2] and stars == had,
         f'why={why!r} after={after} again={again} stars={stars}')
 
-    # W10 size tiers: growing past a new kind (the car) announces it once, with a camera pull-back
-    pg.evaluate(f'{A}.start(2)'); frames_wait(pg, 3)
+    # W10 size tiers: growing past a new kind (the car) announces it once, with a camera pull-back (level 4: no twist, no special)
+    pg.evaluate(f'{A}.start(3)'); frames_wait(pg, 3)
     before = pg.evaluate(f'{A}.tiers')
     pg.evaluate(f'(() => {{ const s = {A}.s; s.player.r = 16 / 0.85 + 1; const o = s.objects.find(o => o.state === 0 && o.type === "cat"); o.state = 1; o.ft = 0.99; }})()')
     frames_wait(pg, 5)
@@ -157,8 +157,8 @@ with sync_playwright() as p:
         'car' not in before and '자동차' in text and '꿀꺽' in text and pulse > 0 and 'car' in after and 'tree' in after,
         f'text={text!r} pulse={pulse:.2f} new={sorted(set(after) - set(before))}')
 
-    # W11 every kind sucked in gets its own voice (cat, person, car, tree, building) without errors
-    pg.evaluate(f'{A}.start(2)'); pg.evaluate(f'{A}.skipTo({A}.s.runDuration * 0.9)'); frames_wait(pg, 3)  # night: all shade
+    # W11 every kind sucked in gets its own voice (cat, person, car, tree, building) without errors (level 4: not the picky stage)
+    pg.evaluate(f'{A}.start(3)'); pg.evaluate(f'{A}.skipTo({A}.s.runDuration * 0.9)'); frames_wait(pg, 3)  # night: all shade
     voiced = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player; p.r = 80; const kinds = ['cat', 'person', 'car', 'tree'];
       for (const k of kinds) {{ const o = s.objects.find(o => o.state === 0 && o.type === k); if (o) {{ o.x = p.x + 3; o.y = p.y; }} }}
       const b = s.buildings.find(b => b.state === 0 && b.r < p.r * 0.8); if (b) {{ b.x = p.x - b.w / 2; b.y = p.y - b.d / 2; }}

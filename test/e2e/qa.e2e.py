@@ -135,7 +135,10 @@ with sync_playwright() as p:
     drag(0, -60); face2, p2 = pg.evaluate(f'[{A}.s.player.face, [{A}.s.player.x, {A}.s.player.y]]')
     import math
     step = (p2[0] - p1[0], p2[1] - p1[1]); along = step[0] * math.cos(face2) + step[1] * math.sin(face2)
-    pinch(300, 100); pg.wait_for_timeout(1200); back = V()
+    pinch(300, 100)
+    try: pg.wait_for_function(f'{A}.view.t === 0', timeout=8000)  # the swoop back (~0.9 s; slower on a loaded machine)
+    except Exception: pass
+    back = V()
     # the swoop itself, frame by frame: eases in over ~0.9 s instead of jumping
     swoop = pg.evaluate(f"""new Promise(r => {{ const v = {A}.view, out = [], t0 = performance.now(); v.target = 1;
         const f = () => {{ out.push([v.t, performance.now() - t0]); v.t >= 1 ? r(out) : requestAnimationFrame(f); }}; requestAnimationFrame(f); }})""")
@@ -323,6 +326,9 @@ with sync_playwright() as p:
             if ((A.shards || []).some(h => h.state === 0 && Math.hypot(h.x - x, h.y - y) < 40)) continue; // a light shard's ring and pillar
             if (s.buildings.some(b => { if (b.state !== 0 || b.r >= s.player.r * 0.85) return false; const R = Math.hypot(b.w, b.d) / 2, d = Math.hypot(b.x + b.w / 2 - x, b.y + b.d / 2 - y); return Math.abs(d - R) < 9; })) continue;
             if (Math.hypot(s.player.x - x, s.player.y - y) < s.player.r * 1.6) continue;
+            // the character's picture card stands up from its feet: seen from the tilted camera it covers the ground behind it
+            // (smaller y) up to about its height and its half width to each side
+            if (Math.abs(s.player.x - x) < s.player.r * 1.9 && y < s.player.y + s.player.r * 1.6 && y > s.player.y - s.player.r * 3.6) continue;
             const v = C.inAnyShadow(sh, x, y);
             const edge = [[5,0],[-5,0],[0,5],[0,-5]].some(([dx,dy]) => C.inAnyShadow(sh, x+dx, y+dy) !== v);
             if (edge) continue;
