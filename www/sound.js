@@ -155,6 +155,12 @@
   const OFF = [2, 6, 10, 14]; // the off-beats: where a strummed or plucked chord answers the bass
   const TUNES = {
     town: { key: 60, bpm: 100, prog: ['vi', 'IV', 'I', 'V'], seed: 1, lead: 'marimba', keys: 'guitar', strum: true, fill: ['glock', [4, 12], 12], bass: ['sub', 'tresillo'], drums: 'brush' },
+    space: { key: 59, bpm: 92, prog: ['i', 'VI', 'VII', 'i'], seed: 21, minor: true, lead: 'box', keys: 'epiano', fill: ['glock', [4, 12], 12], bass: ['sub', 'tresillo'], drums: 'soft' },
+    aquarium: { key: 60, bpm: 96, prog: ['I', 'iii', 'IV', 'V'], seed: 22, waltz: true, lead: 'glock', keys: 'epiano', bass: ['upright', 'waltz'], drums: 'waltz' },
+    onsen: { key: 57, bpm: 84, prog: ['i', 'VI', 'VII', 'i'], seed: 23, minor: true, lead: 'flute', keys: 'guitar', strum: true, bass: ['sub', 'tresillo'], drums: 'soft' },
+    nightmarket: { key: 62, bpm: 112, prog: ['i', 'VII', 'VI', 'VII'], seed: 24, minor: true, lead: 'accordion', keys: 'guitar', strum: true, bass: ['upright', 'tresillo'], drums: 'snap' },
+    airport: { key: 64, bpm: 108, prog: ['I', 'vi', 'IV', 'V'], seed: 25, lead: 'marimba', keys: 'epiano', bass: ['upright', 'tresillo'], drums: 'snap' },
+    playground: { key: 60, bpm: 118, prog: ['I', 'vi', 'IV', 'V'], seed: 26, waltz: true, lead: 'glock', keys: 'organ', bass: ['upright', 'waltz'], drums: 'carousel' },
     city: { key: 62, bpm: 115, prog: ['i', 'VII', 'VI', 'VII'], seed: 2, minor: true, lead: 'marimba', keys: 'epiano', bass: ['upright', 'tresillo'], drums: 'snap' },
     oasis: { key: 64, bpm: 95, prog: ['i', 'VI', 'VII', 'i'], seed: 3, minor: true, lead: 'flute', keys: 'guitar', strum: true, fill: ['kalimba', OFF, 12], bass: ['sub', 'tresillo'], drums: 'soft' },
     hanok: { key: 55, bpm: 50, prog: ['I', 'I', 'I', 'I'], seed: 4, korean: true }, // 아리랑 over 세마치 장단 (scheduleKorean); a pulse (S16) is 0.3 s

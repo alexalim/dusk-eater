@@ -257,6 +257,65 @@
     },
   };
 
+  // Six more maps after the first fifteen (regions 16-21): each with things of its own to swallow and a rule of its own.
+  const more = o => Object.assign({ waterFrom: null, cranes: 0, giantChance: 0.22 }, o);
+  Object.assign(THEMES, {
+    space: more({
+      look: { wall: 'glass', roof: 'flat' }, theme: 'space', name: '우주 정거장',
+      desc: '은빛 모듈이 늘어선 정거장이에요. 낮게 뜬 해가 그림자를 아주 길게 늘여요.',
+      ground: ['#c9d2e8', '#dfe5f2', '#9aa8d0'], groundNight: '#161a38', roofs: ['#e8ecf5', '#9fb0d8', '#6f7fb8', '#c8d0e8'],
+      parkChance: 0.12, splitChance: 0.5, height: [30, 120], sunMax: 35 * Math.PI / 180,
+      small: [['astronaut', 240], ['rocket', 40], ['vending', 60], ['crate', 90]],
+      parkItems: [['rocket', 0.6, 'center'], ['crate', 4]], carsPerRoad: 1, giants: [['bigbox', 1]],
+      eat: [['astronaut', 10, 70], ['crate', 4, 30], ['rocket', 2, 12]],
+    }),
+    aquarium: more({
+      look: { wall: 'pastel', roof: 'flat' }, theme: 'aquarium', name: '수족관',
+      desc: '커다란 수조와 펭귄 마당이 있는 수족관이에요. 물빛이 바닥까지 어른거려요.',
+      ground: ['#bfe6f0', '#d8f1f6', '#7fc4d8'], groundNight: '#16304a', roofs: ['#4fb0c6', '#7fd6e8', '#e6f8ff', '#3a8fb0'],
+      parkChance: 0.3, splitChance: 0.5, height: [25, 80],
+      small: [['visitor', 240], ['penguin', 70], ['tank', 60], ['bench', 50]],
+      parkItems: [['tank', 0.6, 'center'], ['penguin', 5], ['bench', 2]], carsPerRoad: 1, giants: [['bigtree', 1]], giantChance: 0.1,
+      eat: [['visitor', 10, 70], ['penguin', 4, 26], ['tank', 2, 14]],
+    }),
+    onsen: more({
+      look: { wall: 'planks', roof: 'gable', rise: 0.45 }, theme: 'onsen', streetTree: 'pine', name: '온천 마을',
+      desc: '나무집 사이로 김이 모락모락 올라와요. 노천탕마다 느긋한 손님이 앉아 있어요.',
+      ground: ['#e6d8c8', '#f0e8dc', '#c8a888'], groundNight: '#2a2438', roofs: ['#6a4a3a', '#8a6a52', '#4a3a34', '#a88a6a'],
+      parkChance: 0.3, splitChance: 0.55, height: [24, 70],
+      small: [['bather', 200], ['bucket', 110], ['jangdok', 60], ['pine', 90]],
+      parkItems: [['pine', 6], ['bucket', 3], ['bather', 2]], carsPerRoad: 1, giants: [['bigpine', 1]],
+      eat: [['bather', 10, 60], ['bucket', 5, 36], ['jangdok', 3, 20]],
+    }),
+    nightmarket: more({
+      look: { wall: 'brick', roof: 'flat' }, theme: 'nightmarket', name: '야시장',
+      desc: '해 질 무렵 문을 여는 시장이에요. 연등이 줄줄이 걸리고 먹거리 냄새가 가득해요.',
+      ground: ['#d8b890', '#e8d0b0', '#e07a4a'], groundNight: '#2a1a30', roofs: ['#c0392b', '#e8a03a', '#3a2a4a', '#f0d890'],
+      parkChance: 0.2, splitChance: 0.7, height: [22, 60], sunMax: 28 * Math.PI / 180,
+      small: [['commuter', 260], ['lantern', 120], ['stall', 90], ['fruit', 70]],
+      parkItems: [['stall', 5], ['lantern', 6], ['foodtruck', 0.5, 'center']], carsPerRoad: 2, giants: [['bigstall', 1]],
+      eat: [['commuter', 12, 80], ['lantern', 5, 34], ['stall', 3, 20]],
+    }),
+    airport: more({
+      look: { wall: 'concrete', roof: 'flat' }, theme: 'airport', name: '공항',
+      desc: '넓은 터미널과 활주로가 펼쳐진 공항이에요. 건물이 낮고 드물어 그늘이 귀해요.',
+      ground: ['#d0d4dc', '#e2e5ea', '#a8b0c0'], groundNight: '#1c2238', roofs: ['#e8ecf2', '#8fa0c0', '#5a6a90', '#c8d0dc'],
+      parkChance: 0.06, splitChance: 0.4, height: [20, 70],
+      small: [['pilot', 120], ['officer', 160], ['suitcase', 160], ['trash', 40]],
+      parkItems: [['suitcase', 6], ['bench', 2]], carsPerRoad: 5, giants: [['bigbox', 1]],
+      eat: [['suitcase', 6, 44], ['officer', 8, 56], ['pilot', 3, 20]],
+    }),
+    playground: more({
+      look: { wall: 'pastel', roof: 'gable', rise: 0.4 }, theme: 'playground', name: '놀이터',
+      desc: '미끄럼틀과 공이 가득한 동네 놀이터예요. 아이들이 사방으로 뛰어다녀요.',
+      ground: ['#f6e2a8', '#fbf0cc', '#f0a868'], groundNight: '#2a2848', roofs: ['#ff9ec4', '#9bd3f0', '#ffd25c', '#b6d98a'],
+      parkChance: 0.45, splitChance: 0.45, height: [22, 70],
+      small: [['kid', 260], ['ball', 90], ['slide', 50], ['balloon', 70], ['tree', 60]],
+      parkItems: [['slide', 0.7, 'center'], ['tree', 5], ['bench', 2], ['ball', 3]], carsPerRoad: 2, giants: [['bigtree', 1]],
+      eat: [['kid', 12, 80], ['ball', 5, 34], ['slide', 2, 12]],
+    }),
+  });
+
   // Season maps: a ladder map dressed for the season (its name, ground and roofs), played only through its event.
   // `theme` stays the map it is made of (`base`), so it is built, drawn, pictured and ruled exactly as that map is, and
   // what is swallowed there counts for that map's page of the book.
@@ -296,7 +355,8 @@
   }
   const activeEvents = date => EVENTS.filter(ev => eventActive(ev, date));
 
-  const COUNT = 150;
+  const COUNT = 210; // 21 regions of ten
+  const CURVE = 150; // the difficulty curve tops out at level 150 (the first fifteen maps): later levels hold that
   // The ladder is six regions of 25 levels, easiest map first. `score` is the first-star target at
   // the region's first and last level (tuned with the novice/full bots).
   const REGION_SIZE = 10;
@@ -316,6 +376,12 @@
     { theme: 'beach', score: [1200, 3000] },
     { theme: 'desert', score: [1100, 1800] },
     { theme: 'farm', score: [800, 1300] },
+    { theme: 'playground', score: [900, 1800] },
+    { theme: 'aquarium', score: [1000, 2000] },
+    { theme: 'onsen', score: [900, 1700] },
+    { theme: 'nightmarket', score: [900, 1800] },
+    { theme: 'airport', score: [800, 1500] },
+    { theme: 'space', score: [1000, 2200] },
   ];
   const EVENT_SCORE = { xmas: [700, 16000] }; // events borrow a ladder level's difficulty instead
   // A map's own rule: something about its shade that only this map does, on every level of it (index.html ruleStart).
@@ -342,6 +408,12 @@
     crossing: { kind: 'traffic', icon: 'bus', name: '버스 행렬', text: '버스가 가로로, 세로로 줄지어 지나가요. 버스 그림자를 갈아타며 건너요!' },
     oasis: { kind: 'mist', name: '분수 물안개', text: '분수 물안개가 커졌다 작아졌다 해요. 안개가 퍼질 때 멀리 나가요!' },
     hanok: { kind: 'kite', icon: 'kite', sky: true, name: '연 그림자', text: '하늘의 연이 8자를 그리며 날아요. 연 그림자를 따라 춤추듯 움직여요!' },
+    playground: { kind: 'arm', arms: 2, name: '그네 그림자', text: '커다란 그네 두 개가 그림자를 크게 휘저어요. 그네 그림자에 맞춰 뛰어요!' },
+    aquarium: { kind: 'caravan', icon: 'whale', sky: true, name: '고래 그림자', text: '머리 위 수조로 고래 떼가 헤엄쳐 지나가요. 고래 그림자를 타고 건너요!' },
+    onsen: { kind: 'mist', name: '온천 김', text: '온천 김이 뭉게뭉게 피어올랐다 잦아들어요. 김이 짙을 때 멀리 나가요!' },
+    nightmarket: { kind: 'awning', icon: 'lantern', name: '천막과 연등', text: '가게 천막이 펼쳐졌다 접혔다 해요. 연등 아래 천막 그늘로 옮겨 다녀요!' },
+    airport: { kind: 'caravan', icon: 'plane', sky: true, v: 70, name: '비행기 그림자', text: '비행기가 줄지어 낮게 날아가요. 빠르게 지나가는 그림자를 놓치지 말아요!' },
+    space: { kind: 'kite', icon: 'ufo', sky: true, name: '떠도는 위성', text: '위성이 8자를 그리며 정거장 위를 돌아요. 위성 그림자를 따라 움직여요!' },
     harbor: { kind: 'beam', name: '등대와 크레인', text: '크레인의 긴 그림자가 다리가 되고, 등대 불빛은 밤에도 돌아요. 불빛을 피해 그림자를 건너요!' },
   };
   // Twist per position inside a region (0-based): clouds 2, golden 5, eclipse 8, boss 10.
@@ -374,6 +446,13 @@
     park: { id: 'clown', name: '풍선 광대', color: '#fff6f0', text: '풍선을 든 거대 광대가 손전등을 흔들며 돌아다녀요. 웃는 얼굴에 속지 마요!', tip: '광대의 불빛은 앞만 비춰요. 놀이기구 그늘로 돌아가요.' },
     beach: { id: 'crab', name: '거대 게', color: '#ff6a3d', text: '모래 속에서 나온 거대 게가 눈에서 빛을 뿜어요. 옆걸음이지만 빛은 넓어요.', tip: '게의 눈빛은 앞쪽이에요. 파라솔 그늘로 돌아서 뒤로 가요.' },
     desert: { id: 'mummy', name: '사막 미라', color: '#e8dcc0', text: '횃불을 든 미라가 사막을 어슬렁거려요. 횃불 빛이 닿는 곳은 그늘이 아니에요.', tip: '미라는 느려요. 횃불이 비추지 않는 뒤쪽으로 다가가요.' },
+    // the six later maps: each its own figure by name and color; they are drawn as the keeper (render3d has no model of their own yet)
+    playground: { id: 'captain', name: '골목대장', color: '#5a8ad8', text: '놀이터를 주름잡는 골목대장이 손전등을 들고 돌아다녀요. 충분히 커진 뒤 그늘에서 삼켜요!', tip: '골목대장은 미끄럼틀 근처를 맴돌아요. 나무 그늘에서 뒤를 노려요.' },
+    aquarium: { id: 'squid', name: '대왕 오징어', color: '#d8647a', text: '수조에서 나온 대왕 오징어가 빛을 내며 떠다녀요. 커지면 오징어도 꿀꺽!', tip: '오징어의 빛은 앞쪽으로 뻗어요. 고래 그림자에 숨어 다가가요.' },
+    onsen: { id: 'tanuki', name: '온천 너구리', color: '#8a6a4a', text: '등불을 든 너구리가 온천 골목을 순찰해요. 충분히 커진 뒤 그늘에서 삼켜요!', tip: '김이 짙게 피어오를 때가 다가갈 기회예요.' },
+    nightmarket: { id: 'hawker', name: '야시장 대장', color: '#b83a2a', text: '야시장 대장이 커다란 등불을 들고 가게를 돌아요. 커진 뒤 그늘에서 삼켜요!', tip: '펼쳐진 천막 아래로 옮겨 다니며 뒤를 잡아요.' },
+    airport: { id: 'marshal', name: '유도 요원', color: '#e8a03a', text: '유도등을 흔드는 요원이 활주로를 지켜요. 불빛이 닿는 곳은 그늘이 아니에요!', tip: '비행기 그림자가 지나갈 때 함께 움직여요.' },
+    space: { id: 'rover', name: '탐사 로봇', color: '#8fa0c8', text: '탐사 로봇이 탐조등을 켜고 정거장을 돌아다녀요. 충분히 커진 뒤 그늘에서 삼켜요!', tip: '긴 그림자가 많아요. 위성 그림자와 건물 그림자를 이어 다가가요.' },
     farm: { id: 'scarecrow', name: '허수아비', color: '#d9b24c', text: '밭의 허수아비가 등불을 들고 걸어 다녀요. 커진 뒤 그늘에서 삼켜요!', tip: '허수아비의 등불은 앞을 비춰요. 헛간 그늘에서 뒤를 노려요.' },
   };
   const TIME_SCALE = 0.85;
@@ -384,7 +463,7 @@
   // `pick` rotates the eat target; event levels pass their own order so targets vary.
   function level(n, theme = themeOf(n), pick = n) {
     const t = THEMES[theme];
-    const d = Math.pow((n - 1) / (COUNT - 1), 1.3); // 0 at level 1, 1 at level 150; flat early, steeper late
+    const d = Math.min(1, Math.pow((n - 1) / (CURVE - 1), 1.3)); // 0 at level 1, 1 from level 150 on; flat early, steeper late
     const ramp = Math.min(1, (n - 1) / 60); // light damage reaches full strength by level 61
     const guards = n < 4 ? 0 : Math.min(5, 1 + Math.floor((n - 4) / 25));
     const local = (n - 1) % REGION_SIZE; // 0..24 inside the region
@@ -429,6 +508,8 @@
   // How each goal reads on screen; counters follow Korean usage.
   const NAMES = {
     person: ['사람', '명'], cat: ['고양이', '마리'], tree: ['나무', '그루'], car: ['자동차', '대'],
+    astronaut: ['우주인', '명'], rocket: ['로켓', '대'], tank: ['수조', '개'], penguin: ['펭귄', '마리'], bather: ['온천 손님', '명'], bucket: ['나무통', '개'],
+    lantern: ['연등', '개'], suitcase: ['여행 가방', '개'], pilot: ['조종사', '명'], kid: ['아이', '명'], slide: ['미끄럼틀', '개'],
     worker: ['일꾼', '명'], crate: ['상자', '개'], container: ['컨테이너', '개'], gull: ['갈매기', '마리'],
     officer: ['직장인', '명'], vending: ['자판기', '대'], taxi: ['택시', '대'],
     visitor: ['관람객', '명'], balloon: ['풍선', '개'], candy: ['솜사탕 가판', '개'],

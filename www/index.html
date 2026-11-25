@@ -391,6 +391,7 @@
   .node { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
     border: 0; padding: 0; font: inherit; cursor: pointer; color: #2a1a05; background: var(--node); }
   .node.harbor { background: #8fc3e0; }
+  .node.space { background: #9fb0d8; } .node.aquarium { background: #7fd6e8; } .node.onsen { background: #c8a888; } .node.nightmarket { background: #e8a03a; } .node.airport { background: #c8d0dc; } .node.playground { background: #ffd25c; }
   .node.city { background: #a9b8d6; } .node.park { background: #ff9ec4; } .node.snow { background: #e3eef9; } .node.farm { background: #b6d98a; }
   .node .num { font-size: 18px; font-weight: 900; line-height: 1; }
   .node .stars { font-size: 10px; letter-spacing: 0; color: #2a1a05; }
@@ -853,6 +854,18 @@
     car:       { r: 16, color: '#e2574c' },
     boat:      { r: 14, color: '#f4f1ea' },
     kiosk:     { r: 22, color: '#c46fd8' },
+    // the six later maps (stages.js): space station, aquarium, hot-spring village, night market, airport, playground
+    astronaut: { r: 5,  color: '#f4f6fa' },
+    rocket:    { r: 14, color: '#e8ecf5' },
+    tank:      { r: 14, color: '#7fd6e8' },
+    penguin:   { r: 4,  color: '#2a3040' },
+    bather:    { r: 6,  color: '#c8a888' },
+    bucket:    { r: 3,  color: '#b58a55' },
+    lantern:   { r: 4,  color: '#e8523a', colors: ['#e8523a', '#f2a03a', '#ffd25c'] },
+    suitcase:  { r: 4,  color: '#5bc0eb', colors: ['#5bc0eb', '#ff5d73', '#ffd25c', '#9bc53d', '#3a3a44'] },
+    pilot:     { r: 5,  color: '#2a3a6a' },
+    kid:       { r: 4,  color: '#ffd25c', colors: ['#ffd25c', '#ff8fb1', '#5bc0eb', '#9bc53d'] },
+    slide:     { r: 14, color: '#ff7f9e' },
     // city
     officer:   { r: 5,  color: '#3b3f52', colors: ['#3b3f52', '#5a5f73', '#2f3e66', '#6b5b4b'] },
     vending:   { r: 6,  color: '#d9534f', colors: ['#d9534f', '#4fb0c6', '#f4f1ea'] },
@@ -1181,7 +1194,7 @@
     if (r.kind === 'wheel') for (const [fx, fy, dir] of [[0.3, 0.34, 1], [0.7, 0.66, -1]]) // two wheels turning opposite ways, six cars of shade each
       for (let k = 0; k < 6; k++) add({ cx: WORLD * fx, cy: waterY * fy, R: 170, a: k * Math.PI / 3, w: 0.22 * dir, r: 58 });
     if (r.kind === 'caravan') for (const [fy, dir] of [[0.28, 1], [0.55, -1], [0.8, 1]]) // three rows crossing, the middle one the other way
-      for (let k = 0; k < 5; k++) add({ row: waterY * fy, at: rnd() * 400 + k * 96, v: 30 * dir, r: 50 });
+      for (let k = 0; k < 5; k++) add({ row: waterY * fy, at: rnd() * 400 + k * 96, v: (r.v || 30) * dir, r: 50 }); // r.v: a faster row (the airport's planes)
     if (r.kind === 'arm') for (let n = 0; n < r.arms; n++) { // each arm: five patches in a line from its foot, turning together
       const cx = WORLD * (r.arms === 1 ? 0.5 : [0.3, 0.7][n]), cy = waterY * (r.arms === 1 ? 0.5 : [0.4, 0.6][n]), reach = r.arms === 1 ? 105 : 80;
       for (let k = 0; k < 5; k++) add({ kind2: 'arm', cx, cy, R: 70 + k * reach, a: n * 2.1, w: (r.arms === 1 ? 0.1 : 0.16) * (n ? -1 : 1), r: 46 + k * 4 });

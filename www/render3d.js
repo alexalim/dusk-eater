@@ -104,6 +104,18 @@
     car:       [P('box', [1.6, 0.32, 1.16], 0.18, '#26262e'), P('box', [2.0, 0.5, 1.1], 0.5, 'inst'), P('box', [1.1, 0.42, 0.96], 0.96, '#9fc3e6', [-0.1, 0]),
                 P('box', [0.95, 0.08, 0.9], 1.2, 'inst', [-0.1, 0]), P('box', [0.06, 0.16, 0.8], 0.55, '#fff3c4', [1.0, 0], true)],
     boat:      [P('box', [2.0, 0.5, 0.9], 0.25, 'inst'), P('box', [0.7, 0.6, 0.6], 0.8, '#3d5a80'), P('cyl', [0.06, 1.8, 0.06], 1.3, '#dddddd', [0.5, 0])],
+    // the six later maps
+    astronaut: [P('capsule', [0.62, 0.55, 0.62], 1.0, 'inst'), P('sphere', [0.68, 0.68, 0.68], 2.5, '#f4f6fa'), P('sphere', [0.5, 0.42, 0.3], 2.5, '#3a4a7a', [0.3, 0])],
+    rocket:    [P('cyl', [0.9, 3.2, 0.9], 1.9, 'inst'), P('sphere', [0.9, 1.2, 0.9], 3.6, '#e2674f'), P('box', [2.6, 0.9, 0.25], 0.6, '#e2674f'), P('box', [0.25, 0.9, 2.6], 0.6, '#e2674f')],
+    tank:      [P('box', [2.4, 1.6, 1.6], 0.9, 'inst'), P('box', [2.5, 0.25, 1.7], 1.8, '#f4f1ea'), P('box', [2.5, 0.25, 1.7], 0.12, '#f4f1ea')],
+    penguin:   [P('capsule', [0.5, 0.5, 0.5], 0.8, 'inst'), P('sphere', [0.36, 0.6, 0.2], 0.85, '#f4f6fa', [0.3, 0]), P('sphere', [0.16, 0.1, 0.16], 1.5, '#f2a03a', [0.42, 0])],
+    bather:    [P('cyl', [1.3, 0.7, 1.3], 0.35, 'inst'), P('cyl', [1.15, 0.06, 1.15], 0.72, '#9fd8e8'), P('sphere', [0.5, 0.5, 0.5], 1.05, SKIN), P('box', [0.6, 0.12, 0.5], 1.4, '#f4f6fa')],
+    bucket:    [P('cyl', [0.7, 0.8, 0.7], 0.4, 'inst'), P('cyl', [0.6, 0.05, 0.6], 0.82, '#9fd8e8')],
+    lantern:   [P('cyl', [0.05, 2.2, 0.05], 1.1, '#5a4030'), P('sphere', [0.7, 0.85, 0.7], 2.4, 'inst', undefined, true), P('cyl', [0.4, 0.12, 0.4], 3.2, '#3a2a2a')],
+    suitcase:  [P('box', [1.0, 1.3, 0.5], 0.75, 'inst'), P('box', [0.5, 0.5, 0.08], 1.65, '#3a3a44')],
+    pilot:     human(HAIR, [P('cyl', [0.62, 0.2, 0.62], 2.95, '#1f2a50')]),
+    kid:       [P('capsule', [0.45, 0.4, 0.45], 0.75, 'inst'), P('sphere', [0.5, 0.5, 0.5], 1.85, SKIN), P('sphere', [0.52, 0.3, 0.52], 2.05, HAIR)],
+    slide:     [P('box', [0.9, 2.4, 0.9], 1.2, '#8fd3e8'), P('box', [3.2, 0.25, 0.9], 1.3, 'inst', [1.6, 0]), P('box', [0.9, 0.2, 0.9], 2.5, '#ffd25c')],
     kiosk:     [P('box', [2.0, 1.4, 2.0], 0.7, 'inst'), P('box', [2.3, 0.2, 2.3], 1.5, '#f4f1ea'), P('box', [2.32, 0.3, 0.3], 1.3, '#d9534f', [0, 1.0])],
     // city
     officer:   [P('capsule', [0.55, 0.5, 0.55], 1.0, 'inst'), P('sphere', [0.55, 0.55, 0.55], 2.45, SKIN), P('sphere', [0.58, 0.3, 0.58], 2.72, '#2a2420'),
@@ -856,6 +868,15 @@
         g.fillStyle = '#9a6a3a'; g.fillRect(14, 64, 6, 54); g.fillRect(108, 64, 6, 54); },
       parasol(g) { g.fillStyle = '#7fd6ff'; g.beginPath(); g.ellipse(64, 54, 54, 40, 0, Math.PI, 0); g.fill(); g.fillStyle = '#f4f1ea'; for (const x of [28, 64, 100]) { g.beginPath(); g.ellipse(x, 54, 9, 38, 0, Math.PI, 0); g.fill(); }
         g.fillStyle = '#9a6a3a'; g.fillRect(61, 52, 6, 66); },
+      ufo(g) { g.fillStyle = '#b8c8f0'; g.beginPath(); g.ellipse(64, 70, 56, 18, 0, 0, 7); g.fill(); g.fillStyle = '#7fd6ff'; g.beginPath(); g.ellipse(64, 60, 26, 24, 0, Math.PI, 0); g.fill();
+        g.fillStyle = '#ffd45e'; for (const x of [24, 44, 64, 84, 104]) { g.beginPath(); g.arc(x, 72, 5, 0, 7); g.fill(); } },
+      whale(g) { g.fillStyle = '#5f8fd8'; g.beginPath(); g.ellipse(58, 62, 48, 28, 0, 0, 7); g.fill(); g.beginPath(); g.moveTo(98, 62); g.lineTo(124, 36); g.lineTo(124, 88); g.fill();
+        g.fillStyle = '#e6f8ff'; g.beginPath(); g.ellipse(52, 76, 34, 12, 0, 0, Math.PI); g.fill(); g.fillStyle = '#1f2a50'; g.beginPath(); g.arc(30, 56, 5, 0, 7); g.fill(); },
+      plane(g) { g.fillStyle = '#f4f6fa'; g.beginPath(); g.ellipse(64, 64, 56, 13, 0, 0, 7); g.fill(); g.beginPath(); g.moveTo(54, 64); g.lineTo(82, 18); g.lineTo(96, 18); g.lineTo(80, 64); g.fill();
+        g.beginPath(); g.moveTo(54, 64); g.lineTo(82, 110); g.lineTo(96, 110); g.lineTo(80, 64); g.fill(); g.fillStyle = '#e2674f'; g.beginPath(); g.moveTo(104, 64); g.lineTo(122, 40); g.lineTo(122, 64); g.fill();
+        g.fillStyle = '#7fd6ff'; g.fillRect(16, 58, 14, 8); },
+      lantern(g) { g.fillStyle = '#3a2a2a'; g.fillRect(58, 4, 12, 16); g.fillStyle = '#e8523a'; g.beginPath(); g.ellipse(64, 62, 40, 46, 0, 0, 7); g.fill(); g.fillStyle = '#ffd45e'; g.beginPath(); g.ellipse(64, 62, 14, 46, 0, 0, 7); g.fill();
+        g.fillStyle = '#3a2a2a'; g.fillRect(48, 104, 32, 10); },
       car(g) { g.fillStyle = '#ffa6ec'; g.beginPath(); g.roundRect(26, 46, 76, 60, 18); g.fill(); g.fillStyle = '#e6f8ff'; g.fillRect(38, 58, 52, 22); g.fillStyle = '#5b4290'; g.fillRect(60, 14, 8, 34); g.beginPath(); g.arc(64, 14, 9, 0, 7); g.fill(); },
     };
     const casterTex = {}, casterOf = icon => casterTex[icon] || (casterTex[icon] = (() => {

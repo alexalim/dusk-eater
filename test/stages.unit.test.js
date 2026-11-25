@@ -1,4 +1,4 @@
-// Layer: Unit — the 150-level table from www/stages.js (ids, goal labels, reachable goals, difficulty curve), no DOM.
+// Layer: Unit — the 210-level table from www/stages.js (ids, goal labels, reachable goals, difficulty curve), no DOM.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const St = require('../www/stages.js');
@@ -7,8 +7,8 @@ const { STAGES, THEMES, goalLabel, EVENT_LEVELS, activeEvents, REGIONS, REGION_S
 const spawned = (s, what) => (s.small.find(([t]) => t === what) || [0, 0])[1];
 const scoreGoal = s => s.goals[0].n;
 
-test('150 levels with stable ids L1..L150 and numbered names', () => {
-  assert.equal(STAGES.length, 150);
+test('210 levels with stable ids L1..L210 and numbered names', () => {
+  assert.equal(STAGES.length, 210);
   STAGES.forEach((s, i) => { assert.equal(s.id, 'L' + (i + 1)); assert.ok(s.name.startsWith(`${i + 1}. `)); });
 });
 
@@ -43,14 +43,14 @@ test('difficulty never drops from one level to the next within a theme', () => {
   }
 });
 
-test('the ladder is 15 regions of 10 levels, one map each, in REGIONS order; snow and hanok lower the sun, beach and desert raise it', () => {
+test('the ladder is 21 regions of 10 levels, one map each, in REGIONS order; snow and hanok lower the sun, beach and desert raise it', () => {
   const ladder = Object.keys(THEMES).filter(k => !THEMES[k].event);
   assert.deepEqual(REGIONS.map(r => r.theme).sort(), ladder.sort());
   REGIONS.forEach((r, k) => STAGES.slice(k * REGION_SIZE, (k + 1) * REGION_SIZE).forEach(s => assert.equal(s.theme, r.theme, s.id)));
   const DEFAULT = 65 * Math.PI / 180;
   assert.equal(REGIONS.length * REGION_SIZE, STAGES.length);
   for (const s of STAGES) {
-    if (s.theme === 'snow' || s.theme === 'hanok') assert.ok(s.sunMax < DEFAULT, s.id); // hanok: low houses need a low sun to shade anything
+    if (['snow', 'hanok', 'space', 'nightmarket'].includes(s.theme)) assert.ok(s.sunMax < DEFAULT, s.id); // hanok: low houses need a low sun to shade anything; the station's far sun and the market's dusk are low too
     else if (s.theme === 'beach' || s.theme === 'desert') assert.ok(s.sunMax > DEFAULT, s.id);
     else assert.equal(s.sunMax, undefined, s.id);
   }
@@ -117,8 +117,8 @@ test('every theme declares a building look the renderer knows (wall texture and 
 
 test('every region has its own boss, in the style of its map, and the boss goal carries that name', () => {
   const bosses = St.STAGES.filter(s => s.twist === 'boss').map(s => s.boss);
-  assert.equal(bosses.length, 15);
-  assert.equal(new Set(bosses.map(b => b.id)).size, 15, 'fifteen different figures');
+  assert.equal(bosses.length, 21);
+  assert.equal(new Set(bosses.map(b => b.id)).size, 21, 'twenty-one different figures');
   for (const b of bosses) assert.ok(b.name && b.text && b.tip && /^#[0-9a-f]{6}$/.test(b.color) && b.r >= 30, b.id);
   const by = Object.fromEntries(St.STAGES.filter(s => s.twist === 'boss').map(s => [s.theme, s]));
   assert.equal(by.hanok.boss.name, '도깨비');
@@ -157,5 +157,19 @@ test('season events: seven more, each ten levels on a ladder map dressed for the
   for (let day = 0; day < 366; day++) { // a year of days: at most one season event, and Christmas only alongside none
     const d = new Date(2027, 0, 1 + day, 12), on = activeEvents(d).map(e => e.id);
     assert.ok(on.length <= 1, `${d.toDateString()}: ${on}`);
+  }
+});
+
+test('the six later maps follow the first fifteen and leave them as they were: same targets up to level 150, the curve held from there', () => {
+  assert.deepEqual(REGIONS.slice(15).map(r => r.theme), ['playground', 'aquarium', 'onsen', 'nightmarket', 'airport', 'space']);
+  assert.deepEqual(REGIONS.slice(0, 15).map(r => r.theme), ['town', 'city', 'oasis', 'hanok', 'campus', 'snow', 'market', 'crossing', 'stadium', 'harbor', 'construction', 'park', 'beach', 'desert', 'farm']);
+  assert.equal(STAGES[149].sunDrain, STAGES[209].sunDrain, 'light hurts no more after level 150');
+  assert.ok(STAGES[0].sunDrain < STAGES[149].sunDrain);
+  for (const r of REGIONS.slice(15)) {
+    const t = THEMES[r.theme], L = STAGES.filter(s => s.theme === r.theme);
+    assert.equal(L.length, 10, r.theme);
+    assert.ok(L.every(s => s.rule === St.RULES[r.theme] && s.rule), r.theme + ': a rule of its own');
+    assert.ok(t.small.length >= 4 && t.eat.length >= 3 && t.ground.length === 3 && t.roofs.length >= 3, r.theme);
+    assert.ok(L[9].boss && L[9].boss.name && L[9].twist === 'boss', r.theme + ': a boss on its tenth level');
   }
 });

@@ -16,6 +16,7 @@ SIGNATURE = {  # the thing each map is remembered by
     'town': 'building', 'city': 'taxi', 'oasis': 'fountain', 'hanok': 'pagoda', 'campus': 'student', 'snow': 'snowman',
     'market': 'stall', 'crossing': 'umbrella', 'stadium': 'ball', 'harbor': 'boat', 'construction': 'excavator',
     'park': 'carousel', 'beach': 'parasol', 'desert': 'camel', 'farm': 'cow', 'xmas': 'xtree',
+    'space': 'rocket', 'aquarium': 'penguin', 'onsen': 'bather', 'nightmarket': 'lantern', 'airport': 'suitcase', 'playground': 'slide',
 }
 # The instance color each kind gets in the world (index.html TYPES): its first listed color.
 colors = dict(re.findall(r"^\s+(\w+):\s*\{ r: \d+,\s*color: '(#[0-9a-f]{6})'", (WWW / 'index.html').read_text(), re.M))
