@@ -836,6 +836,36 @@
       new T.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.25, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide }), MAX_GOLD);
     goldBeam.renderOrder = 8; goldBeam.count = 0; goldBeam.frustumCulled = false;
     scene.add(cloudShade, goldRings, goldBeam);
+    // What casts a map rule's shade (index.html ruleStart gives each patch an `icon`): a little picture standing on
+    // the patch, or flying high above it (`sky`), facing the camera like the character's card. Drawn once per kind on a
+    // canvas, in flat cheerful shapes. Looks only: the shade is the patch itself.
+    const CASTER_ART = {
+      blimp(g) { g.fillStyle = '#f4f1ea'; g.beginPath(); g.ellipse(64, 54, 54, 26, 0, 0, 7); g.fill(); g.fillStyle = '#e2674f'; g.beginPath(); g.ellipse(64, 54, 54, 26, 0, -0.5, 0.5); g.lineTo(64, 54); g.fill();
+        g.beginPath(); g.moveTo(14, 54); g.lineTo(2, 34); g.lineTo(2, 74); g.fill(); g.fillStyle = '#5b4290'; g.fillRect(48, 80, 32, 12); },
+      copter(g) { g.fillStyle = '#7fc8ff'; g.beginPath(); g.ellipse(58, 68, 30, 22, 0, 0, 7); g.fill(); g.fillRect(80, 62, 40, 8); g.fillStyle = '#e6f8ff'; g.beginPath(); g.ellipse(48, 64, 13, 11, 0, 0, 7); g.fill();
+        g.fillStyle = '#3a2860'; g.fillRect(8, 38, 100, 6); g.fillRect(55, 40, 6, 12); g.fillRect(112, 52, 6, 26); g.fillRect(36, 94, 46, 5); },
+      kite(g) { g.fillStyle = '#ff8fc8'; g.beginPath(); g.moveTo(64, 8); g.lineTo(104, 54); g.lineTo(64, 96); g.lineTo(24, 54); g.fill(); g.fillStyle = '#ffd45e'; g.beginPath(); g.moveTo(64, 8); g.lineTo(64, 96); g.lineTo(24, 54); g.fill();
+        g.strokeStyle = '#f4f1ea'; g.lineWidth = 4; g.beginPath(); g.moveTo(64, 96); g.quadraticCurveTo(84, 108, 66, 122); g.stroke(); },
+      camel(g) { g.fillStyle = '#d9a760'; g.beginPath(); g.ellipse(60, 70, 38, 18, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(46, 54, 13, 15, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(74, 54, 13, 15, 0, 0, 7); g.fill();
+        g.fillRect(96, 38, 9, 36); g.beginPath(); g.ellipse(106, 36, 13, 8, 0, 0, 7); g.fill(); for (const x of [32, 48, 72, 88]) g.fillRect(x, 82, 7, 32); g.fillStyle = '#e2674f'; g.fillRect(50, 60, 22, 14); },
+      cart(g) { g.fillStyle = '#f0cf6a'; g.beginPath(); g.ellipse(64, 60, 44, 30, 0, Math.PI, 0); g.fill(); g.fillStyle = '#9a6a3a'; g.fillRect(16, 60, 96, 26);
+        g.fillStyle = '#3a2860'; for (const x of [36, 92]) { g.beginPath(); g.arc(x, 96, 16, 0, 7); g.fill(); } g.fillStyle = '#d9c6a0'; for (const x of [36, 92]) { g.beginPath(); g.arc(x, 96, 6, 0, 7); g.fill(); } },
+      bus(g) { g.fillStyle = '#5fc98a'; g.beginPath(); g.roundRect(8, 34, 112, 56, 12); g.fill(); g.fillStyle = '#e6f8ff'; for (const x of [18, 44, 70, 96]) g.fillRect(x, 44, 18, 20); g.fillStyle = '#f4f1ea'; g.fillRect(8, 72, 112, 6);
+        g.fillStyle = '#3a2860'; for (const x of [34, 94]) { g.beginPath(); g.arc(x, 94, 12, 0, 7); g.fill(); } },
+      awning(g) { for (let k = 0; k < 6; k++) { g.fillStyle = k % 2 ? '#f4f1ea' : '#e2674f'; g.beginPath(); g.moveTo(10 + k * 18, 30); g.lineTo(28 + k * 18, 30); g.lineTo(24 + k * 18 + (k - 2.5) * 3, 66); g.lineTo(6 + k * 18 + (k - 2.5) * 3, 66); g.fill(); }
+        g.fillStyle = '#9a6a3a'; g.fillRect(14, 64, 6, 54); g.fillRect(108, 64, 6, 54); },
+      parasol(g) { g.fillStyle = '#7fd6ff'; g.beginPath(); g.ellipse(64, 54, 54, 40, 0, Math.PI, 0); g.fill(); g.fillStyle = '#f4f1ea'; for (const x of [28, 64, 100]) { g.beginPath(); g.ellipse(x, 54, 9, 38, 0, Math.PI, 0); g.fill(); }
+        g.fillStyle = '#9a6a3a'; g.fillRect(61, 52, 6, 66); },
+      car(g) { g.fillStyle = '#ffa6ec'; g.beginPath(); g.roundRect(26, 46, 76, 60, 18); g.fill(); g.fillStyle = '#e6f8ff'; g.fillRect(38, 58, 52, 22); g.fillStyle = '#5b4290'; g.fillRect(60, 14, 8, 34); g.beginPath(); g.arc(64, 14, 9, 0, 7); g.fill(); },
+    };
+    const casterTex = {}, casterOf = icon => casterTex[icon] || (casterTex[icon] = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.shadowColor = 'rgba(30,12,60,.35)'; g.shadowBlur = 4; g.shadowOffsetY = 3;
+      CASTER_ART[icon](g); return new T.CanvasTexture(c);
+    })());
+    const casters = Array.from({ length: MAX_CLOUDS }, () => {
+      const sp = new T.Sprite(new T.SpriteMaterial({ transparent: true, depthWrite: false, alphaTest: 0.02 }));
+      sp.visible = false; sp.renderOrder = 6; sp.userData.icon = null; scene.add(sp); return sp;
+    });
 
     // Edible hint rings, instanced; count is set per frame.
     const MAX_HINTS = 400;
@@ -1781,6 +1811,15 @@
         cloudShade.setMatrixAt(i, dummy.matrix);
       }
       cloudShade.instanceMatrix.needsUpdate = true;
+      casters.forEach((sp, i) => { // one picture per rule patch that has one: standing on it, or bobbing in the sky above it
+        const c = i < cloudShade.count ? clouds[i] : null;
+        sp.visible = !!(c && c.icon && CASTER_ART[c.icon]);
+        if (!sp.visible) return;
+        if (sp.userData.icon !== c.icon) { sp.userData.icon = c.icon; sp.material.map = casterOf(c.icon); sp.material.needsUpdate = true; }
+        const size = c.r * (!c.sky ? 1.25 : c.r > 120 ? 0.85 : 1.4); // the blimp's patch is huge: the blimp itself stays a sane size
+        sp.center.set(0.5, c.sky ? 0.5 : 0.08);
+        sp.position.set(c.x, c.sky ? 75 + Math.sin(t * 1.3 + i) * 6 : 1.5, c.y); sp.scale.set(size, size, 1);
+      });
       goldRings.count = Math.min(MAX_GOLD, golden.length);
       for (let i = 0; i < goldRings.count; i++) {
         dummy.position.set(golden[i].x, 1.3, golden[i].y); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(Math.max(golden[i].r * 1.6, 16) * (1 + Math.sin(t * 8) * 0.12)); // never smaller than a person-sized ring dummy.updateMatrix();
@@ -1877,7 +1916,7 @@
       for (const m of [circleMesh, circleRunes, circleMotes, ...circleTrail]) m.material.color.setHex(c.color);
     }
 
-    return { build, resize, draw, setSkin, setCircle, setQuality, artDraw, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh, circleTrail, artSprite, body, artDraw, get art() { return artNow; }, get artFlip() { return artFlip; } } };
+    return { build, resize, draw, setSkin, setCircle, setQuality, artDraw, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh, circleTrail, artSprite, body, artDraw, casters, get art() { return artNow; }, get artFlip() { return artFlip; } } };
   }
 
   root.DuskRender = { create, drawCircle, PARTS, GEO: unit }; // PARTS and the unit shapes also feed tools/icons (collection-book pictures)

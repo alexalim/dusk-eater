@@ -25,7 +25,7 @@
   }
 
   // Ladder maps in play order, then event maps. Each entry belongs to the first map it appears on.
-  const THEME_ORDER = St.REGIONS.map(r => r.theme).concat(St.EVENTS.map(e => e.theme));
+  const THEME_ORDER = St.REGIONS.map(r => r.theme).concat(St.EVENTS.map(e => e.theme).filter(t => !St.THEMES[t].base)); // a season map is its base map dressed up: nothing new to find
   const ENTRIES = [];
   for (const theme of THEME_ORDER) {
     for (const id of spawnable(St.THEMES[theme])) {

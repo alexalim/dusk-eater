@@ -80,23 +80,22 @@
       desc: '빨간 모자와 망토에 종을 단 산타예요. 선물 주머니에는 포근한 밤이 들어 있어요.' },
 
     // ---- season ----
-    // Earned, not bought: `reward` names the event whose stars unlock it. `reward: 'season'` has no event yet, so the
-    // shop shows it as coming soon and nothing can grant it.
+    // Earned, not bought: `reward` names the event (stages.js EVENTS) whose stars unlock it.
     { id: 'santa', cat: 'season', art: 'christmas', name: '크리스마스', body: 0xf3e8ff, rim: 0x7fe08a, eye: 0x2a1640, pupil: 0xffffff, reward: 'xmas', wear: ['hat', 0xc8323c],
       desc: '크리스마스 이벤트 선물이에요. 호랑가시 장식 모자를 쓰고 선물 상자를 들었어요.' },
-    { id: 'cherry', cat: 'season', art: 'cherry_blossom', name: '벚꽃', body: 0xf3e8ff, rim: 0xffb7d5, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['flower', 0xffb7d5, 0xfff3b0],
+    { id: 'cherry', cat: 'season', art: 'cherry_blossom', name: '벚꽃', body: 0xf3e8ff, rim: 0xffb7d5, eye: 0x2a1640, pupil: 0xffffff, reward: 'cherry', wear: ['flower', 0xffb7d5, 0xfff3b0],
       desc: '봄에만 만나는 친구예요. 벚꽃 가지를 머리에 꽂고 꽃잎을 흩날려요.' },
-    { id: 'halloween', cat: 'season', art: 'halloween', name: '할로윈', body: 0xf3e8ff, rim: 0xb58cff, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['hat', 0x4a2a7a, 0xff9a2a],
+    { id: 'halloween', cat: 'season', art: 'halloween', name: '할로윈', body: 0xf3e8ff, rim: 0xb58cff, eye: 0x2a1640, pupil: 0xffffff, reward: 'halloween', wear: ['hat', 0x4a2a7a, 0xff9a2a],
       desc: '할로윈 밤에 찾아와요. 호박 장식 마녀 모자를 쓰고 사탕을 모으러 다녀요.' },
-    { id: 'picnic', cat: 'season', art: 'picnic', name: '봄소풍', body: 0xf3e8ff, rim: 0xc8e89a, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['beret', 0xe8cf8a],
+    { id: 'picnic', cat: 'season', art: 'picnic', name: '봄소풍', body: 0xf3e8ff, rim: 0xc8e89a, eye: 0x2a1640, pupil: 0xffffff, reward: 'picnic', wear: ['beret', 0xe8cf8a],
       desc: '봄 소풍 철의 친구예요. 꽃 달린 밀짚모자에 도시락 바구니를 챙겼어요.' },
-    { id: 'summer', cat: 'season', art: 'summer', name: '여름휴가', body: 0xf3e8ff, rim: 0x6fd0ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['glasses', 0x4fc3ff],
+    { id: 'summer', cat: 'season', art: 'summer', name: '여름휴가', body: 0xf3e8ff, rim: 0x6fd0ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'summer', wear: ['glasses', 0x4fc3ff],
       desc: '여름휴가를 떠난 친구예요. 물안경을 쓰고 튜브를 타고 둥실둥실 떠다녀요.' },
-    { id: 'autumn', cat: 'season', art: 'autumn', name: '단풍', body: 0xf3e8ff, rim: 0xd8e07a, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['beret', 0xb5562a],
+    { id: 'autumn', cat: 'season', art: 'autumn', name: '단풍', body: 0xf3e8ff, rim: 0xd8e07a, eye: 0x2a1640, pupil: 0xffffff, reward: 'autumn', wear: ['beret', 0xb5562a],
       desc: '가을에만 만나요. 체크 목도리를 두르고 단풍잎 사이를 사박사박 걸어요.' },
-    { id: 'newyear', cat: 'season', art: 'new_year', name: '신년', body: 0xf3e8ff, rim: 0xc8b8ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['pin', 0xffd45e],
+    { id: 'newyear', cat: 'season', art: 'new_year', name: '신년', body: 0xf3e8ff, rim: 0xc8b8ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'newyear', wear: ['pin', 0xffd45e],
       desc: '새해 첫날의 친구예요. 고운 옷을 차려입고 불꽃놀이 아래에서 소원을 빌어요.' },
-    { id: 'valentine', cat: 'season', art: 'valentine', name: '밸런타인', body: 0xf3e8ff, rim: 0xffb0e8, eye: 0x2a1640, pupil: 0xffffff, reward: 'season', wear: ['bow', 0xff8fc0],
+    { id: 'valentine', cat: 'season', art: 'valentine', name: '밸런타인', body: 0xf3e8ff, rim: 0xffb0e8, eye: 0x2a1640, pupil: 0xffffff, reward: 'valentine', wear: ['bow', 0xff8fc0],
       desc: '밸런타인데이의 친구예요. 분홍 리본을 매고 초콜릿 상자를 꼭 안았어요.' },
   ];
 

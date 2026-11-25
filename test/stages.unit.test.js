@@ -130,11 +130,32 @@ test('every region has its own boss, in the style of its map, and the boss goal 
 
 test('a map rule belongs to its map: every level of that map carries it, the others carry none, and each says what it does', () => {
   const { RULES } = St;
-  assert.deepEqual(Object.keys(RULES).sort(), ['beach', 'desert', 'farm', 'market', 'park', 'snow']);
+  assert.deepEqual(Object.keys(RULES).sort(), REGIONS.map(r => r.theme).filter(t => t !== 'town').sort(), 'every map but the first has a rule');
   for (const s of STAGES) assert.equal(s.rule, RULES[s.theme] || null, s.id);
   for (const s of EVENT_LEVELS.xmas || []) assert.equal(s.rule, null, s.id);
   for (const [theme, r] of Object.entries(RULES)) {
-    assert.ok(['wheel', 'caravan', 'awning', 'blizzard'].includes(r.kind), theme);
+    assert.ok(['wheel', 'caravan', 'awning', 'blizzard', 'arm', 'blimp', 'copter', 'traffic', 'mist', 'kite', 'beam'].includes(r.kind), theme);
     assert.ok(r.name.length >= 2 && r.text.length > 15, theme);
+  }
+});
+
+test('season events: seven more, each ten levels on a ladder map dressed for the season, giving its own skin; never two of them at once', () => {
+  const Sh = require('../www/shop.js'), seasons = St.EVENTS.filter(e => e.id !== 'xmas');
+  assert.deepEqual(seasons.map(e => e.id).sort(), ['autumn', 'cherry', 'halloween', 'newyear', 'picnic', 'summer', 'valentine']);
+  for (const ev of seasons) {
+    const t = THEMES[ev.theme], L = EVENT_LEVELS[ev.id], skin = Sh.SKINS.find(k => k.id === ev.reward.skin);
+    assert.ok(t.event && t.base && THEMES[t.base] && t.theme === t.base, ev.id + ': a ladder map underneath');
+    assert.equal(L.length, 10);
+    assert.deepEqual(L.map(s => s.id), Array.from({ length: 10 }, (_, i) => `${ev.id}-${i + 1}`));
+    assert.ok(L.every(s => !s.twist && !s.hard && !s.boss), ev.id + ': no twist, not hard');
+    assert.ok(L.every(s => s.rule === (St.RULES[t.base] || null)), ev.id + ': the base map keeps its rule');
+    for (let i = 1; i < L.length; i++) assert.ok(L[i].goals[0].n >= L[i - 1].goals[0].n, ev.id + ': targets never fall');
+    const home = REGIONS.find(r => r.theme === t.base).score;
+    assert.ok(L[0].goals[0].n <= home[1] && L[9].goals[0].n <= home[1] * 1.1, ev.id + ': targets stay within its base map\'s');
+    assert.ok(skin && skin.cat === 'season' && skin.reward === ev.id && !skin.product && !skin.gems, ev.id + ': its skin is earned here only');
+  }
+  for (let day = 0; day < 366; day++) { // a year of days: at most one season event, and Christmas only alongside none
+    const d = new Date(2027, 0, 1 + day, 12), on = activeEvents(d).map(e => e.id);
+    assert.ok(on.length <= 1, `${d.toDateString()}: ${on}`);
   }
 });

@@ -8,7 +8,7 @@ const { TUNES, INST, BASS, LINES, DRUMS } = DuskSound.band;
 const bands = Object.entries(TUNES).filter(([, t]) => !t.korean); // the hanok tune has its own scheduler
 
 test('every map theme has its own tune', () => {
-  for (const theme of Object.keys(St.THEMES)) assert.ok(TUNES[theme], theme);
+  for (const [theme, t] of Object.entries(St.THEMES)) assert.ok(TUNES[t.base || theme], theme); // a season map plays the tune of the map it is made of
 });
 
 test('every tune names players, a bass line and a kit that exist (a typo would stop the music on that map)', () => {

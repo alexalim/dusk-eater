@@ -397,22 +397,56 @@ with sync_playwright() as p:
 
     # W6 music: each region picks its own tune (no errors switching), the boss gets the boss arrangement
     for i in (0, 10, 20, 30, 90, 140): pg.evaluate(f'{A}.start({i})'); frames_wait(pg, 2)  # 30 = hanok, the Korean-style tune
-    # W29 a map's own rule: the wheel's shade turns on the park, rows of shade cross the desert, awnings open and fold on the market,
-    # a blizzard hides the sun on the snow map; a patch is shade like any other; the first map has no rule
+    # W29 a map's own rule: every map but the first has shade of its own that moves its own way (turning, crossing, opening and
+    # folding, swelling, flying figures of eight), with what casts it drawn on each patch; a patch is shade like any other;
+    # the harbor's rule names what it already has; the snow map's blizzard hides the sun
     themes = pg.evaluate("window.DuskStages.STAGES.map(s => s.theme)"); seen = {}
-    for th in ('park', 'desert', 'market', 'town'):
+    want = {'park': [12, 'wheel', 12], 'desert': [15, 'caravan', 15], 'farm': [15, 'caravan', 15], 'market': [16, 'awning', 16], 'beach': [16, 'awning', 16],
+            'construction': [10, 'arm', 0], 'campus': [5, 'arm', 0], 'stadium': [1, 'blimp', 1], 'city': [2, 'copter', 2], 'crossing': [20, 'traffic', 20],
+            'oasis': [8, 'mist', 0], 'hanok': [6, 'kite', 6], 'harbor': [0, None, 0], 'town': [0, None, 0]}   # patches, kind, pictures
+    still = []
+    for th in want:
         pg.evaluate(f"{A}.start({themes.index(th) + 2})"); frames_wait(pg, 4)
-        p0 = pg.evaluate(f"{A}.s.clouds.filter(c => c.rule).map(c => [c.rule, Math.round(c.x), Math.round(c.y)])")
-        pg.wait_for_timeout(1500)
-        p1 = pg.evaluate(f"(() => {{ const a = {A}, on = a.s.clouds.filter(c => c.rule && c.x > 0); return [a.s.clouds.filter(c => c.rule).map(c => [c.rule, Math.round(c.x), Math.round(c.y)]), on.length ? on.every(c => a.isShaded({{ x: c.x, y: c.y }}) || a.inBeam(c.x, c.y)) : null]; }})()")
-        seen[th] = [len(p0), p0[0][0] if p0 else None, sum(1 for a0, a1 in zip(p0, p1[0]) if a0 != a1) if th != 'market' else len([c for c in p1[0] if c[1] < 0]) < len(p1[0]), p1[1]]
+        look = f"{A}.s.clouds.filter(c => c.rule).map(c => [c.rule, Math.round(c.x), Math.round(c.y), Math.round(c.r)])"
+        p0 = pg.evaluate(look); pg.wait_for_timeout(1300); p1 = pg.evaluate(look)
+        shade = pg.evaluate(f"(() => {{ const a = {A}, on = a.s.clouds.filter(c => c.rule && c.x > 0 && c.r > 20); return on.every(c => a.isShaded({{ x: c.x, y: c.y }}) || a.inBeam(c.x, c.y)); }})()")
+        seen[th] = [len(p0), p0[0][0] if p0 else None, pg.evaluate(f"{A}.R.debug.casters.filter(s => s.visible).length")]
+        if p0 and (p0 == p1 or not shade) and th not in ('market', 'beach'): still.append(th)   # awnings stay put: they open and fold instead
     pg.evaluate(f"{A}.start({themes.index('snow') + 2})"); frames_wait(pg, 4)
     calm = pg.evaluate(f"{A}.isShaded({{ x: -500, y: -500 }})"); pg.evaluate(f"{A}.skipTo(11)") ; frames_wait(pg, 6)
     storm = [pg.evaluate(f"{A}.isShaded({{ x: -500, y: -500 }})"), pg.evaluate("document.querySelector('canvas').classList.contains('eclipse')"), pg.inner_text('#banner')]
     pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
-    rec('W29', "map rules: park 12 turning patches, desert 15 crossing, market 16 awnings (some open, some folded), none on the first map; the snow map's blizzard makes everywhere shade",
-        seen == {'park': [12, 'wheel', 12, True], 'desert': [15, 'caravan', 15, True], 'market': [16, 'awning', True, True], 'town': [0, None, 0, None]}
-        and not calm and storm[0] and storm[1] and '눈보라' in storm[2], f'seen={seen} calm={calm} storm={storm}')
+    rec('W29', "map rules: each map's patches (count, kind, pictures) move or change and are shade; none on the first map; the snow map's blizzard makes everywhere shade",
+        seen == want and not still and not calm and storm[0] and storm[1] and '눈보라' in storm[2], f'seen={seen} still={still} calm={calm} storm={storm}')
+
+    # W30 the level map shows where you are: each region's page has its scenery (a panel and two pictures of that map),
+    # a star bar, and the map's own rule on a chip; the first region has no rule, so no chip
+    pg.reload(); pg.evaluate(f'{A}.ready'); frames_wait(pg)
+    pg.tap('#btn-title'); frames_wait(pg)
+    page = "(() => { const q = e => [...document.querySelectorAll(e)]; return [q('.levels .scene').length, q('.levels .landmark').map(i => i.getAttribute('src')), q('.region .rule').map(e => e.innerText.trim()), q('.region .rbar i').length]; })()"
+    pages = {}
+    for _ in range(4):
+        name = pg.inner_text('.region b').strip(); pages[name.split('. ')[1]] = pg.evaluate(page)
+        pg.tap('.pager .chip[data-p="-1"]'); frames_wait(pg)
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    town, city = pages.get('조용한 마을'), pages.get('도심 빌딩숲')
+    rec('W30', 'level map: every region page has its scenery and star bar; the city page shows its rule on a chip, the first region none',
+        len(pages) >= 2 and all(v[0] == 1 and len(v[1]) == 2 and v[3] == 1 for v in pages.values()) and town == [1, ['img/map/town.png'] * 2, [], 1]
+        and city == [1, ['img/map/city.png'] * 2, ['방송 헬리콥터'], 1], f'pages={pages}')
+
+    # W31 a season event: on April 1 the cherry blossom event has a tab under its own name; its levels are a ladder map
+    # dressed for the season (the oasis: its picture, its rule, no twist), and the shop says its skin is won there
+    pg.evaluate("window.__DUSK_TEST__.today = '2027-04-01'")
+    pg.reload(); pg.evaluate(f'{A}.ready'); frames_wait(pg)
+    pg.evaluate("window.__DUSK_TEST__.today = '2027-04-01'"); pg.tap('#btn-title'); frames_wait(pg)
+    tabs = pg.evaluate("[...document.querySelectorAll('#map .tabs .chip')].map(e => [e.dataset.l, e.innerText.trim()])")
+    pg.tap('#map .tabs .chip[data-l=cherry]'); frames_wait(pg)
+    ev = [pg.inner_text('#sheet .name'), pg.evaluate("document.querySelector('.levels .landmark').getAttribute('src')"), len(pg.query_selector_all('#map .node')), '벚꽃' in pg.inner_text('.event-note')]
+    pg.tap('#btn-go'); frames_wait(pg, 6)
+    run = pg.evaluate(f"[{A}.listKey, {A}.s.clouds.filter(c => c.rule === 'mist').length]")
+    pg.evaluate("window.__DUSK_TEST__.today = null"); pg.evaluate(f'{A}.useList("main"); {A}.start(0)'); frames_wait(pg)
+    rec('W31', 'season event: a tab named for it on its dates, ten levels on the dressed oasis with the oasis rule running',
+        tabs == [['main', '레벨'], ['cherry', '벚꽃']] and ev == ['1. 벚꽃 정원', 'img/map/oasis.png', 10, True] and run == ['cherry', 8], f'tabs={tabs} ev={ev} run={run}')
 
     rec('W0', 'no page errors', not errs, '; '.join(errs[:3]))
     b.close()

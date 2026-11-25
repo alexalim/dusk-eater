@@ -257,10 +257,38 @@
     },
   };
 
+  // Season maps: a ladder map dressed for the season (its name, ground and roofs), played only through its event.
+  // `theme` stays the map it is made of (`base`), so it is built, drawn, pictured and ruled exactly as that map is, and
+  // what is swallowed there counts for that map's page of the book.
+  const season = (base, o) => Object.assign({}, THEMES[base], o, { event: true, base });
+  Object.assign(THEMES, {
+    valentine: season('market', { name: '밸런타인 시장', desc: '분홍 리본과 초콜릿 가게가 늘어선 시장이에요. 달콤한 냄새가 골목마다 가득해요.',
+      ground: ['#ffd6e4', '#ffe8f0', '#ff9ab8'], roofs: ['#ff8fb0', '#fff4f8', '#ffc2d4', '#d04f7a'] }),
+    cherry: season('oasis', { name: '벚꽃 정원', desc: '벚꽃이 활짝 핀 도심 정원이에요. 꽃그늘이 연분홍으로 물들었어요.',
+      ground: ['#ffe1ec', '#fff0f5', '#f5b5cc'], roofs: ['#f7b8d0', '#fff4f8', '#e8a0c0', '#d9c6e8'] }),
+    picnic: season('farm', { name: '봄소풍 들판', desc: '돗자리와 도시락이 펼쳐진 봄 들판이에요. 바람이 살랑살랑 불어요.',
+      ground: ['#d8ecb0', '#eef6d8', '#f0d890'], roofs: ['#f0cf6a', '#fff8e0', '#b8e08a', '#e8a066'] }),
+    summer: season('beach', { name: '여름휴가 해변', desc: '튜브와 파라솔이 가득한 한여름 바닷가예요. 해가 뜨거우니 그늘을 잘 골라요.',
+      roofs: ['#7fd6ff', '#ffffff', '#ffd45e', '#ff9aa8'] }),
+    autumn: season('campus', { name: '단풍 캠퍼스', desc: '은행잎과 단풍이 내려앉은 가을 캠퍼스예요. 낙엽 밟는 소리가 사박사박 나요.',
+      ground: ['#f0c890', '#f6e2c0', '#e08a4a'], roofs: ['#b5562a', '#d98a3a', '#8a4a2a', '#e8c06a'] }),
+    halloween: season('town', { name: '할로윈 마을', desc: '호박등이 켜진 보랏빛 마을이에요. 사탕을 든 아이들이 골목을 돌아다녀요.',
+      ground: ['#b9a0d0', '#cdb8e0', '#e08a3a'], roofs: ['#4a2a7a', '#e8762a', '#2a2433', '#7a4fd0'] }),
+    newyear: season('city', { name: '새해 도심', desc: '새해 장식이 반짝이는 빌딩숲이에요. 밤이 오면 불꽃놀이가 시작될 것 같아요.',
+      ground: ['#d8d0f0', '#e6e0f8', '#ffd45e'], roofs: ['#2a2a5a', '#ffd45e', '#5b4290', '#f4f1ea'] }),
+  });
+
   // Limited-time events, judged by the device date. [month, day] bounds are inclusive and may wrap the new year.
+  // Each gives its season's skin (shop.js, `reward` = the event's id) for 15 of its 30 stars.
   const EVENTS = [
-    { id: 'xmas', theme: 'xmas', title: '크리스마스 이벤트', from: [12, 1], to: [1, 6], count: 10,
-      reward: { skin: 'santa', stars: 15 } },
+    { id: 'xmas', theme: 'xmas', title: '크리스마스 이벤트', from: [12, 1], to: [1, 6], count: 10, reward: { skin: 'santa', stars: 15 } },
+    { id: 'newyear', theme: 'newyear', title: '신년 이벤트', from: [1, 10], to: [1, 31], count: 10, reward: { skin: 'newyear', stars: 15 } },
+    { id: 'valentine', theme: 'valentine', title: '밸런타인 이벤트', from: [2, 1], to: [2, 20], count: 10, reward: { skin: 'valentine', stars: 15 } },
+    { id: 'cherry', theme: 'cherry', title: '벚꽃 이벤트', from: [3, 20], to: [4, 20], count: 10, reward: { skin: 'cherry', stars: 15 } },
+    { id: 'picnic', theme: 'picnic', title: '봄소풍 이벤트', from: [4, 21], to: [5, 31], count: 10, reward: { skin: 'picnic', stars: 15 } },
+    { id: 'summer', theme: 'summer', title: '여름휴가 이벤트', from: [7, 1], to: [8, 31], count: 10, reward: { skin: 'summer', stars: 15 } },
+    { id: 'autumn', theme: 'autumn', title: '단풍 이벤트', from: [9, 20], to: [10, 14], count: 10, reward: { skin: 'autumn', stars: 15 } },
+    { id: 'halloween', theme: 'halloween', title: '할로윈 이벤트', from: [10, 15], to: [11, 5], count: 10, reward: { skin: 'halloween', stars: 15 } },
   ];
   function eventActive(ev, date) {
     const md = (date.getMonth() + 1) * 100 + date.getDate(), a = ev.from[0] * 100 + ev.from[1], b = ev.to[0] * 100 + ev.to[1];
@@ -294,13 +322,27 @@
   // The twists below are the same on every map; this is what tells the maps apart in play, not only in looks.
   //   wheel    shade that turns in circles (the big wheel's shadow)        caravan  a row of shade crossing the map
   //   awning   patches of shade that open and fold away again              blizzard now and then the sun is hidden
+  //   arm      a long arm of shade sweeping round a point (a crane, a clock tower's hand)
+  //   blimp    one huge patch drifting slowly round the map                copter   two patches circling fast and wide
+  //   traffic  rows going across and columns going down, like buses        mist     patches that swell and shrink
+  //   kite     patches flying figures of eight                             beam     nothing new: it names what the map already has
+  // `icon` (and `sky`: it flies) is what casts the shade, drawn on each patch by render3d (CASTER_ART).
+  // The first map has none: it is where the plain rules are learned.
   const RULES = {
-    park: { kind: 'wheel', name: '대관람차 그림자', text: '커다란 대관람차 그림자가 빙글빙글 돌아요. 그림자를 따라 같이 돌아요!' },
-    desert: { kind: 'caravan', name: '낙타 행렬', text: '낙타 행렬이 긴 그림자를 끌고 지나가요. 그림자를 타고 사막을 건너요!' },
-    farm: { kind: 'caravan', name: '건초 수레', text: '건초 수레가 줄지어 밭을 가로질러요. 수레 그림자에 숨어 따라가요!' },
-    market: { kind: 'awning', name: '여닫는 차양', text: '가게 차양이 펼쳐졌다 접혔다 해요. 펼쳐진 차양 아래가 그늘이에요!' },
-    beach: { kind: 'awning', name: '파라솔', text: '파라솔이 펴졌다 접혔다 해요. 펴진 파라솔 밑으로 옮겨 다녀요!' },
+    park: { kind: 'wheel', icon: 'car', name: '대관람차 그림자', text: '커다란 대관람차 그림자가 빙글빙글 돌아요. 그림자를 따라 같이 돌아요!' },
+    desert: { kind: 'caravan', icon: 'camel', name: '낙타 행렬', text: '낙타 행렬이 긴 그림자를 끌고 지나가요. 그림자를 타고 사막을 건너요!' },
+    farm: { kind: 'caravan', icon: 'cart', name: '건초 수레', text: '건초 수레가 줄지어 밭을 가로질러요. 수레 그림자에 숨어 따라가요!' },
+    market: { kind: 'awning', icon: 'awning', name: '여닫는 차양', text: '가게 차양이 펼쳐졌다 접혔다 해요. 펼쳐진 차양 아래가 그늘이에요!' },
+    beach: { kind: 'awning', icon: 'parasol', name: '파라솔', text: '파라솔이 펴졌다 접혔다 해요. 펴진 파라솔 밑으로 옮겨 다녀요!' },
     snow: { kind: 'blizzard', name: '눈보라', text: '가끔 눈보라가 몰아쳐 해를 가려요. 그동안은 어디든 갈 수 있어요!' },
+    construction: { kind: 'arm', arms: 2, name: '크레인 팔', text: '크레인 두 대가 팔을 천천히 휘둘러요. 긴 팔 그림자를 따라 돌아요!' },
+    campus: { kind: 'arm', arms: 1, name: '시계탑 그림자', text: '시계탑 그림자가 시곗바늘처럼 한 바퀴 돌아요. 바늘 그림자를 놓치지 말아요!' },
+    stadium: { kind: 'blimp', icon: 'blimp', sky: true, name: '중계 비행선', text: '커다란 비행선이 광장 위를 천천히 돌아요. 비행선 그림자는 넓고 느긋해요!' },
+    city: { kind: 'copter', icon: 'copter', sky: true, name: '방송 헬리콥터', text: '헬리콥터 두 대가 빌딩 위를 빠르게 돌아요. 재빨리 그림자에 올라타요!' },
+    crossing: { kind: 'traffic', icon: 'bus', name: '버스 행렬', text: '버스가 가로로, 세로로 줄지어 지나가요. 버스 그림자를 갈아타며 건너요!' },
+    oasis: { kind: 'mist', name: '분수 물안개', text: '분수 물안개가 커졌다 작아졌다 해요. 안개가 퍼질 때 멀리 나가요!' },
+    hanok: { kind: 'kite', icon: 'kite', sky: true, name: '연 그림자', text: '하늘의 연이 8자를 그리며 날아요. 연 그림자를 따라 춤추듯 움직여요!' },
+    harbor: { kind: 'beam', name: '등대와 크레인', text: '크레인의 긴 그림자가 다리가 되고, 등대 불빛은 밤에도 돌아요. 불빛을 피해 그림자를 건너요!' },
   };
   // Twist per position inside a region (0-based): clouds 2, golden 5, eclipse 8, boss 10.
   const TWISTS = { 1: 'clouds', 4: 'golden', 7: 'eclipse', 9: 'boss' };
@@ -346,8 +388,9 @@
     const ramp = Math.min(1, (n - 1) / 60); // light damage reaches full strength by level 61
     const guards = n < 4 ? 0 : Math.min(5, 1 + Math.floor((n - 4) / 25));
     const local = (n - 1) % REGION_SIZE; // 0..24 inside the region
-    const region = REGIONS.find(r => r.theme === t.theme);
-    const [s0, s1] = region ? region.score : EVENT_SCORE[t.theme];
+    const home = REGIONS.find(r => r.theme === t.theme), region = t.event ? null : home; // an event level is never a region's: no twist, not hard
+    // a season map borrows its base map's targets, stretched so the event's last level (d about 0.41) lands on the region's last
+    const [s0, s1] = region ? region.score : EVENT_SCORE[theme] || [home.score[0], home.score[0] + (home.score[1] - home.score[0]) / 0.41];
     // Targets were tuned for 120-second runs; runs are 90 s now, so they shrink by less than the time (15%) to get harder.
     const score = Math.round(lerp(s0, s1, region ? local / (REGION_SIZE - 1) : d) * TIME_SCALE / 100) * 100;
     const [what, lo, hi] = t.eat[(pick - 1) % t.eat.length];

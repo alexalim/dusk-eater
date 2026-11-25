@@ -356,6 +356,17 @@
   #select { gap: 12px; padding-bottom: 46vh; justify-content: flex-start; } /* the docked sheet covers the bottom */
   #map { width: min(100%, 380px); display: flex; flex-direction: column; gap: 14px; flex: none; }
   .levels { position: relative; height: calc(var(--rows) * 66px + 12px); margin-top: 26px; }
+  /* the region's scenery: a panel in the map's ground colors, and two big pictures of the place beside the road */
+  .levels .scene { position: absolute; inset: -18px -4px -10px; border-radius: 28px; pointer-events: none;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 30%, transparent), color-mix(in srgb, var(--tint2) 20%, transparent));
+    border: 2px solid color-mix(in srgb, var(--tint) 34%, transparent); box-shadow: inset 0 2px 0 rgba(255,255,255,.08); }
+  .levels .landmark { position: absolute; width: 132px; height: 132px; top: calc(var(--k) * 66px + 29px); left: calc(50% + var(--side) * 27%); translate: -50% -50%; /* not transform: the float animation owns that */
+    opacity: .62; pointer-events: none; filter: drop-shadow(0 6px 0 rgba(20,12,40,.3)); animation: float 4.2s ease-in-out infinite; }
+  .levels .landmark.far { width: 104px; height: 104px; opacity: .5; animation-delay: -2s; }
+  .region .rbar { display: block; width: 120px; height: 6px; margin: 4px auto 0; border-radius: 999px; background: rgba(255,255,255,.22); overflow: hidden; }
+  .region .rbar i { display: block; height: 100%; background: linear-gradient(90deg, #ffd25c, #fff0b0); }
+  .region small.rule { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; padding: 2px 9px; border-radius: 999px; background: rgba(255,255,255,.16); color: #fff; }
+  .region small.rule .ico { width: 13px; height: 13px; margin: 0; }
   .levels .path { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .levels .path polyline { fill: none; stroke: rgba(214,194,255,.38); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 17; vector-effect: non-scaling-stroke; }
   .levels .path polyline.done { stroke: #ffd166; }
@@ -387,7 +398,7 @@
   .node.sel { box-shadow: 0 0 0 3px var(--star), 0 0 16px rgba(255,210,92,.55); }
   .levels .node.locked { background: #4a4560; color: rgba(244,239,230,.55); }
   .node.locked svg { width: 18px; height: 18px; }
-  .tabs { display: flex; gap: 8px; }
+  .tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; } .tabs .chip { flex: none; } /* a test build lists every event: the row scrolls */
   .panel { width: min(100%, 380px); box-sizing: border-box; padding: 16px; border-radius: 16px; background: var(--card);
     display: flex; flex-direction: column; gap: 10px; text-align: left; }
   .panel small { color: var(--muted); font-size: 13px; line-height: 1.45; word-break: keep-all; }
@@ -1166,18 +1177,32 @@
   function ruleStart() {
     blizzard = false;
     const r = stage.rule; if (!r || tut) return;
-    const add = o => clouds.push(Object.assign({ rule: r.kind, x: -9999, y: -9999 }, o));
+    const add = o => clouds.push(Object.assign({ rule: r.kind, x: -9999, y: -9999, icon: r.icon || null, sky: !!r.sky }, o)); // icon, sky: what casts it (render3d casters)
     if (r.kind === 'wheel') for (const [fx, fy, dir] of [[0.3, 0.34, 1], [0.7, 0.66, -1]]) // two wheels turning opposite ways, six cars of shade each
       for (let k = 0; k < 6; k++) add({ cx: WORLD * fx, cy: waterY * fy, R: 170, a: k * Math.PI / 3, w: 0.22 * dir, r: 58 });
     if (r.kind === 'caravan') for (const [fy, dir] of [[0.28, 1], [0.55, -1], [0.8, 1]]) // three rows crossing, the middle one the other way
       for (let k = 0; k < 5; k++) add({ row: waterY * fy, at: rnd() * 400 + k * 96, v: 30 * dir, r: 50 });
+    if (r.kind === 'arm') for (let n = 0; n < r.arms; n++) { // each arm: five patches in a line from its foot, turning together
+      const cx = WORLD * (r.arms === 1 ? 0.5 : [0.3, 0.7][n]), cy = waterY * (r.arms === 1 ? 0.5 : [0.4, 0.6][n]), reach = r.arms === 1 ? 105 : 80;
+      for (let k = 0; k < 5; k++) add({ kind2: 'arm', cx, cy, R: 70 + k * reach, a: n * 2.1, w: (r.arms === 1 ? 0.1 : 0.16) * (n ? -1 : 1), r: 46 + k * 4 });
+    }
+    if (r.kind === 'blimp') add({ cx: WORLD / 2, cy: waterY / 2, R: Math.min(WORLD, waterY) * 0.28, a: rnd() * 6.28, w: 0.06, r: 175 });
+    if (r.kind === 'copter') for (let k = 0; k < 2; k++) add({ cx: WORLD / 2, cy: waterY / 2, R: Math.min(WORLD, waterY) * 0.33, a: k * Math.PI, w: 0.34, r: 78 });
+    if (r.kind === 'traffic') for (const [f, dir, down] of [[0.3, 1, 0], [0.7, -1, 0], [0.3, 1, 1], [0.7, -1, 1]]) // two rows across, two columns down
+      for (let k = 0; k < 5; k++) add({ lane: (down ? WORLD : waterY) * f, at: rnd() * 300 + k * 130, v: 46 * dir, down, r: 52 });
+    if (r.kind === 'mist') for (let k = 0; k < 8; k++) add({ hx: 120 + rnd() * (WORLD - 240), hy: 120 + rnd() * (waterY - 240), t0: rnd() * 6.28, r: 40 });
+    if (r.kind === 'kite') for (let k = 0; k < 6; k++) add({ cx: WORLD * (0.2 + 0.3 * (k % 3)), cy: waterY * (k < 3 ? 0.3 : 0.7), t0: rnd() * 6.28, w: 0.35 + rnd() * 0.15, r: 56 });
     if (r.kind === 'awning') for (let k = 0; k < 16; k++) add({ hx: 80 + rnd() * (WORLD - 160), hy: 80 + rnd() * (waterY - 160), t0: rnd() * AWNING.cycle, r: 62 });
     ruleStep(0);
   }
   function ruleStep(dt) {
     const r = stage.rule; if (!r) return;
     for (const c of clouds) {
-      if (c.rule === 'wheel') { c.a += c.w * dt; c.x = c.cx + Math.cos(c.a) * c.R; c.y = c.cy + Math.sin(c.a) * c.R; }
+      if (c.rule === 'arm' || c.rule === 'blimp' || c.rule === 'copter') { c.a += c.w * dt; c.x = c.cx + Math.cos(c.a) * c.R; c.y = c.cy + Math.sin(c.a) * c.R; }
+      else if (c.rule === 'traffic') { const span = (c.down ? waterY : WORLD) + 200; c.at += c.v * dt; const u = ((c.at % span) + span) % span - 100; c.x = c.down ? c.lane : u; c.y = c.down ? u : c.lane; }
+      else if (c.rule === 'mist') { c.x = c.hx; c.y = c.hy; c.r = 62 + 46 * Math.sin(elapsed * 0.7 + c.t0); } // swells to 108, shrinks to 16
+      else if (c.rule === 'kite') { const u = elapsed * c.w + c.t0; c.x = c.cx + Math.sin(u) * 190; c.y = c.cy + Math.sin(u * 2) * 95; }
+      else if (c.rule === 'wheel') { c.a += c.w * dt; c.x = c.cx + Math.cos(c.a) * c.R; c.y = c.cy + Math.sin(c.a) * c.R; }
       else if (c.rule === 'caravan') { c.at += c.v * dt; c.x = ((c.at % (WORLD + 200)) + WORLD + 200) % (WORLD + 200) - 100; c.y = c.row; }
       else if (c.rule === 'awning') { const on = (elapsed + c.t0) % AWNING.cycle < AWNING.open; c.x = on ? c.hx : -9999; c.y = on ? c.hy : -9999; } // folded away: nowhere on the map
     }
@@ -2341,7 +2366,7 @@
   }
   const face = name => `<img class="ico face" src="${faceSrc(name)}" alt="">`;
   const dexIco = e => `<img class="ico dex" src="${e.img}" alt="">`;
-  const mapIco = theme => `<img class="ico map" src="img/map/${theme}.png" alt="">`;
+  const mapIco = theme => `<img class="ico map" src="img/map/${(THEMES[theme] || {}).theme || theme}.png" alt="">`; // a season map shows the picture of the map it is made of
   function starText(n) {
     return ico('star').repeat(n) + ico('star-off').repeat(3 - n);
   }
@@ -2364,7 +2389,7 @@
     if (listKey !== 'main' && !live.some(ev => ev.id === listKey)) { useList('main'); selected = lastUnlocked(); page = Math.floor(selected / pageSize()); }
     const ev = EVENTS.find(e => e.id === listKey);
     const tabs = live.length ? `<div class="tabs"><span class="chip${ev ? '' : ' on'}" data-l="main">레벨</span>` +
-      live.map(e => `<span class="chip${ev === e ? ' on' : ''}" data-l="${e.id}">${mapIco(e.theme)} 이벤트</span>`).join('') + '</div>' : '';
+      live.map(e => `<span class="chip${ev === e ? ' on' : ''}" data-l="${e.id}">${mapIco(e.theme)} ${e.title.replace(' 이벤트', '')}</span>`).join('') + '</div>' : '';
     const reward = ev && Shop.SKINS.find(k => k.id === ev.reward.skin);
     const progress = ev ? `<div class="event-note">${ev.title}${testBuild && !activeEvents(today()).includes(ev) ? ' (테스트 미리보기)' : ''} · 별 ${eventStars(ev)}/${list.length * 3} — ` +
       (Store.wallet.owned.includes(reward.id) ? `${reward.name} 획득!` : `별 ${ev.reward.stars}개를 모으면 ${reward.name}`) + '</div>' : '';
@@ -2384,14 +2409,21 @@
     const road = `<svg class="path" viewBox="0 0 100 ${size * 66 + 12}" preserveAspectRatio="none"><polyline points="${Array.from({ length: size }, (_, k) => pt(k)).join(' ')}"/>` +
       (doneTo > 0 ? `<polyline class="done" points="${Array.from({ length: doneTo + 1 }, (_, k) => pt(k)).join(' ')}"/>` : '') + '</svg>';
     const me = onPage ? `<img class="me" data-mood="happy" src="${faceSrc('happy')}" alt="" style="--k:${here - from};--x:${PATH_X[(here - from) % PATH_X.length]};--side:${PATH_X[(here - from) % PATH_X.length] > 0 ? -1 : 1}">` : '';
-    // Ladder pages are regions: name, icon, stars collected there; a locked region says how it opens.
-    const region = ev ? null : REGIONS[page];
+    // The region's own scenery behind the road: a panel in the map's ground colors and two big pictures of the place
+    // standing on the side the road leaves free, so every region's page looks like where it is.
+    const th = THEMES[list[from].theme], side = k => (PATH_X[k % PATH_X.length] > 0 ? -1 : 1);
+    const scene = `<div class="scene" style="--tint:${th.ground[0]};--tint2:${th.ground[2] || th.ground[0]}"></div>` +
+      [1, Math.min(size - 2, 6)].map((k, n) => `<img class="landmark${n ? ' far' : ''}" src="img/map/${th.theme}.png" alt="" style="--k:${k};--side:${side(k)}">`).join('');
+    // Ladder pages are regions: name, icon, stars collected there, its own rule; a locked region says how it opens.
+    const region = ev ? null : REGIONS[page], rule = list[from].rule;
     const got = list.slice(from, from + size).reduce((a, s) => a + (bestStars[s.id] || 0), 0);
     const title = region ? `<span class="region"><b>${mapIco(region.theme)} ${page + 1}. ${list[from].name.replace(/^\d+\. /, '')}</b>` +
-      `<small>${C.isUnlocked(listIds, from, bestStars) ? `${ico('star')} ${got}/${size * 3}` : `${from}레벨을 깨면 열려요`}</small></span>` : `<span>${mapIco(ev.theme)} ${ev.title}</span>`;
+      `<small>${C.isUnlocked(listIds, from, bestStars) ? `${ico('star')} ${got}/${size * 3}` : `${from}레벨을 깨면 열려요`}</small>` +
+      `<i class="rbar"><i style="width:${Math.round(got / (size * 3) * 100)}%"></i></i>` +
+      (rule ? `<small class="rule">${ico('sparkle')} ${rule.name}</small>` : '') + '</span>' : `<span>${mapIco(ev.theme)} ${ev.title}</span>`;
     const pager = pages > 1 ? `<div class="pager"><span class="chip${page ? '' : ' off'}" data-p="-1">‹</span>${title}` +
       `<span class="chip${page < pages - 1 ? '' : ' off'}" data-p="1">›</span></div>` : '';
-    $('map').innerHTML = `${tabs}${progress}${pager}<div class="levels" style="--rows:${size}">${road}${cells}${me}</div>`;
+    $('map').innerHTML = `${tabs}${progress}${pager}<div class="levels" style="--rows:${size}">${scene}${road}${cells}${me}</div>`;
     $('map').querySelectorAll('.node').forEach(n =>
       n.addEventListener('pointerup', () => { selected = +n.dataset.i; openSelect(); }));
     $('map').querySelectorAll('.tabs .chip').forEach(el => el.addEventListener('pointerup', () => {
