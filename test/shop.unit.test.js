@@ -182,3 +182,14 @@ test('the car skin sells for gems only and stays owned when App Store entitlemen
   w = S.applyEntitlements(S.equip(w, 'car'), []);
   assert.ok(w.owned.includes('car')); assert.equal(w.equipped, 'car');
 });
+
+test('a skin with a three-view sheet has its side and back packed beside its picture and its face spots', () => {
+  const sandbox = {}; require('node:vm').runInNewContext(require('node:fs').readFileSync(require('node:path').join(__dirname, '../www/skin-art.js'), 'utf8'), sandbox);
+  const { DuskSkinArt: art, DuskSkinFace: face, DuskSkinTurn: turn } = sandbox;
+  assert.ok(Object.keys(turn).includes('sports'));
+  for (const [id, t] of Object.entries(turn)) {
+    assert.ok(art[id] && face[id] && face[id].length === 7, id);
+    for (const v of ['side', 'back']) assert.match(t[v], /^data:image\/webp;base64,[A-Za-z0-9+/=]{2000,}$/, `${id}.${v}`);
+    assert.ok(S.SKINS.some(s => s.art === id), id + ': a skin wears it');
+  }
+});

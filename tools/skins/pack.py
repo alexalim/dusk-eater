@@ -6,6 +6,11 @@
 #                     render3d draws the wide-open mouth, the happy shut eyes and the blush over the picture there.
 # The face is found by color: the open smile is the saturated red blob nearest the usual spot (NEAR overrides the
 # spot where a red hat or scarf sits closer), each eye the dark blob nearest its usual offset from the mouth.
+#   DuskSkinTurn[art] its side and back views, where it has them: { side, back } as data URIs, the side looking right.
+#                     They come from design/art/turn/<art>.png, one sheet of three equal columns: front, side, back.
+#                     The sheet's front then replaces the picture in design/art/skins, so all three match.
+#                     Each view is cleaned (faint specks left by background removal go: only the biggest solid shape
+#                     and what touches it stay), scaled by one factor for the three, and stood on the same line.
 # Usage: python3 tools/skins/pack.py [marked-sheet.png]   (from the repository root; needs Pillow)
 import base64, io, pathlib, sys
 from collections import deque
@@ -35,7 +40,7 @@ def face(im, name):
     reds = [b for b in reds if not tight or ((b[0] - nx) ** 2 + (b[1] - ny) ** 2) ** 0.5 < 14]
     m = max(reds, key=lambda b: -((b[0] - nx) ** 2 + (b[1] - ny) ** 2) ** 0.5 + min(b[4], 200) * 0.05) if reds else (nx, ny)
     mx, my = m[0], m[1] - 2  # the red is the tongue and lower lip: the mouth's middle sits a little higher
-    darks = [b for b in blobs(px, lambda r, g, b, a: a > 200 and r < 95 and g < 70 and b < 120) if 30 <= b[4] <= 420 and b[2] <= 30 and b[3] <= 30]
+    darks = [b for b in blobs(px, lambda r, g, b, a: a > 200 and r < 95 and g < 70 and b < 120) if 30 <= b[4] <= 700 and b[2] <= 34 and b[3] <= 34]
     eyes = []
     for dx, dy in EYES:
         ex, ey = mx + dx, my + dy
@@ -43,17 +48,57 @@ def face(im, name):
         e = min(near, key=lambda b: (b[0] - ex) ** 2 + (b[1] - ey) ** 2) if near else (ex, ey)
         eyes += [e[0], e[1]]
     if name in FACE_AT: mx, my, *eyes = FACE_AT[name]
-    # the face's own color: between the eyes and the mouth, where nothing is drawn
-    sx, sy = round((eyes[0] + eyes[2]) / 2), round((eyes[1] + eyes[3]) / 2 + (my - (eyes[1] + eyes[3]) / 2) * 0.45)
+    # the face's own color: between the eyes, where nothing is drawn
+    sx, sy = round((eyes[0] + eyes[2]) / 2), round((eyes[1] + eyes[3]) / 2 - 1)  # between the eyes: a wide open mouth reaches up to where the old spot (toward the mouth) was
     near = [px[x, y] for x in range(max(0, sx - 3), min(192, sx + 4)) for y in range(max(0, sy - 3), min(192, sy + 4))]
     r, g, b, _ = sorted(near, key=lambda c: c[0] + c[1] + c[2])[len(near) // 2]  # the middle one by lightness: never a lip, a lash or a glint
     for k in ONE_EYE.get(name, ()): eyes[k * 2] = eyes[k * 2 + 1] = -1  # an eye that is not there to shut
     return [round(mx, 1), round(my, 1)] + [round(v, 1) for v in eyes] + [(r << 16) | (g << 8) | b]
 
+def clean(im):  # keep the biggest connected shape of real (alpha > 40) pixels; everything else becomes clear
+    w, h = im.size; px = im.load(); solid = bytearray(w * h)
+    for y in range(h):
+        for x in range(w):
+            if px[x, y][3] > 40: solid[y * w + x] = 1
+    seen = bytearray(w * h); best = []
+    for i in range(w * h):
+        if not solid[i] or seen[i]: continue
+        q = deque([i]); seen[i] = 1; pts = []
+        while q:
+            j = q.popleft(); pts.append(j); x = j % w
+            for n in (j - w, j + w, j - 1 if x else -1, j + 1 if x < w - 1 else -1):
+                if 0 <= n < w * h and solid[n] and not seen[n]: seen[n] = 1; q.append(n)
+        if len(pts) > len(best): best = pts
+    keep = bytearray(w * h)
+    for j in best: keep[j] = 1
+    out = Image.new('RGBA', (w, h), (0, 0, 0, 0)); op = out.load()
+    for j in best: op[j % w, j // w] = px[j % w, j // w]
+    return out
+
+def turn(sheet):  # front, side, back: each 192 px, one scale for the three, feet on the line the other pictures stand on (y 171)
+    im = Image.open(sheet).convert('RGBA'); w = im.width // 3
+    parts = [clean(im.crop((k * w, 0, (k + 1) * w, im.height))) for k in range(3)]
+    boxes = [p.getbbox() for p in parts]
+    k = 150 / max(max(b[2] - b[0], b[3] - b[1]) for b in boxes)
+    views = []
+    for p, b in zip(parts, boxes):
+        c = p.crop(b); c = c.resize((max(1, round(c.width * k)), max(1, round(c.height * k))), Image.LANCZOS)
+        v = Image.new('RGBA', (192, 192), (0, 0, 0, 0)); v.alpha_composite(c, ((192 - c.width) // 2, 171 - c.height)); views.append(v)
+    return views
+
+def uri(im):
+    buf = io.BytesIO(); im.save(buf, 'WEBP', quality=90, method=6)
+    return 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode()
+
+turns = []
+for sheet in sorted((root / 'design/art/turn').glob('*.png')):
+    front, side, back = turn(sheet)
+    front.save(root / 'design/art/skins' / sheet.name)  # the sheet's front is the skin's picture from now on
+    turns.append(f"    {sheet.stem}: {{ side: '{uri(side)}', back: '{uri(back)}' }},")
 arts, faces, marked = [], [], []
 for f in sorted((root / 'design/art/skins').glob('*.png')):
     im = Image.open(f).convert('RGBA'); buf = io.BytesIO(); im.save(buf, 'WEBP', quality=90, method=6)
-    arts.append(f"    {f.stem}: 'data:image/webp;base64,{base64.b64encode(buf.getvalue()).decode()}',")
+    arts.append(f"    {f.stem}: '{uri(im)}',")
     fc = face(im, f.stem); faces.append(f"    {f.stem}: [{', '.join(str(v) if i < 6 else hex(v) for i, v in enumerate(fc))}],")
     if len(sys.argv) > 1:
         bg = Image.new('RGBA', (384, 384), (60, 40, 100, 255)); bg.alpha_composite(im.resize((384, 384))); d = ImageDraw.Draw(bg)
@@ -63,7 +108,7 @@ for f in sorted((root / 'design/art/skins').glob('*.png')):
         d.rectangle([330, 4, 380, 30], fill=(fc[6] >> 16, (fc[6] >> 8) & 255, fc[6] & 255)); d.text((6, 6), f.stem, fill=(255, 255, 0)); marked.append(bg.convert('RGB'))
 out = root / 'www/skin-art.js'
 out.write_text("// Generated by tools/skins/pack.py from design/art/skins: do not edit by hand.\n(function (root) {\n  'use strict';\n  root.DuskSkinArt = {\n"
-               + '\n'.join(arts) + "\n  };\n  root.DuskSkinFace = {\n" + '\n'.join(faces) + "\n  };\n})(this);\n", encoding='utf-8')
+               + '\n'.join(arts) + "\n  };\n  root.DuskSkinFace = {\n" + '\n'.join(faces) + "\n  };\n  root.DuskSkinTurn = {\n" + '\n'.join(turns) + "\n  };\n})(this);\n", encoding='utf-8')
 print(len(arts), 'pictures,', out.stat().st_size // 1024, 'KB')
 if marked:
     for part in (0, 1):

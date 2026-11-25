@@ -101,7 +101,18 @@ with sync_playwright() as p:
         pg.evaluate(f'{A}.s.player.vx = {vx}; {A}.s.player.vy = 0'); frames_wait(pg, 3)
         turn.append(pg.evaluate(f'[{A}.R.debug.artFlip, {A}.R.debug.art.tex.repeat.x]'))
     pg.evaluate(f'{A}.s.player.vx = 0')
-    face_ok = ui_ok and turn == [[True, -1], [True, -1], [False, 1]] and face['open'] < 150 and face['rest'][0] > face['open'] + 150 and face['shut'] > face['rest'][1] + 150 and face['spots'] == 0
+    # a skin with a three-view sheet turns as well: its side heading across, its back heading up the screen, its front coming down;
+    # one without (the pirate) keeps its front
+    hold = lambda vx, vy: pg.evaluate(f"new Promise(r => {{ let n = 12; const f = () => {{ {A}.s.player.vx = {vx}; {A}.s.player.vy = {vy}; --n ? requestAnimationFrame(f) : r(); }}; f(); }})")
+    pg.evaluate(f"{A}.Store.update({A}.Shop.equip({A}.Store.wallet, 'sports'))"); frames_wait(pg, 6)
+    views = []
+    for vx, vy in ((90, 0), (0, -90), (0, 90)):
+        hold(vx, vy); views.append(pg.evaluate(f"[{A}.R.debug.artView, {A}.R.debug.art.step]"))
+    pg.evaluate(f"{A}.Store.update({A}.Shop.equip({A}.Store.wallet, 'pirate'))"); frames_wait(pg, 6); hold(0, -90)
+    views.append(pg.evaluate(f"[!!{A}.R.debug.art.views, {A}.R.debug.art.step < 1000]"))
+    pg.evaluate(f'{A}.s.player.vx = 0; {A}.s.player.vy = 0')
+    turn.append(views)
+    face_ok = ui_ok and turn == [[True, -1], [True, -1], [False, 1], [['side', 1000], ['back', 2000], ['front', 0], [False, True]]] and face['open'] < 150 and face['rest'][0] > face['open'] + 150 and face['shut'] > face['rest'][1] + 150 and face['spots'] == 0
     art_ok = face_ok and all(v == ([False, True, False] if k == 'car' else [True, False, True]) for k, v in looks.items())
     rec('H4', 'skin purchase equips; every skin keeps the red lit rim and shows as its own painted picture in play, whose mouth opens and eyes shut (the car keeps the 3D body)', bought and ok and art_ok, f'turn={turn} ui={ui} face={face} looks_bad={[k for k, v in looks.items() if v != ([False, True, False] if k == "car" else [True, False, True])]} ' + json.dumps({k: [hex(a), hex(c)] for k, (a, c) in rims.items()}))
 

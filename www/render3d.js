@@ -778,18 +778,21 @@
     const artMat = new T.SpriteMaterial({ transparent: true, depthWrite: false, alphaTest: 0.02 });
     const artSprite = new T.Sprite(artMat); artSprite.center.set(0.5, 0.2); // pinned near its feet, so it stands on the ground
     artSprite.visible = false; artSprite.renderOrder = 7; scene.add(artSprite);
-    const artTex = {}; let artOn = false, artLean = 0, artHid = false, artNow = null, artFlip = false;
+    const artTex = {}; let artOn = false, artLean = 0, artHid = false, artNow = null, artFlip = false, artView = 'front';
     // The picture's face moves: over the painted smile the mouth opens into a tall dark O with its tongue while it
     // sucks something in, the eyes squeeze shut happily (^^) after a gulp and during a combo, and the blush deepens
     // with the combo. Drawn on the card's own canvas at the spots tools/skins/pack.py found (DuskSkinFace), and only
     // when one of the three steps changes (`step` remembers the last one drawn).
-    function artDraw(a, gulp, happy, cheer) {
-      const step = Math.round(gulp * 6) + (happy ? 10 : 0) + Math.round(cheer * 3) * 100;
+    // `view`: 'side' or 'back' draws that picture instead (a skin with a three-view sheet, DuskSkinTurn); the face is
+    // only drawn on the front.
+    function artDraw(a, gulp, happy, cheer, view) {
+      const turned = view && a.views && a.views[view] && a.views[view].complete && a.views[view].naturalWidth ? a.views[view] : null;
+      const step = turned ? (view === 'side' ? 1000 : 2000) : Math.round(gulp * 6) + (happy ? 10 : 0) + Math.round(cheer * 3) * 100;
       if (!a.ready || step === a.step) return;
       a.step = step;
       const g = a.canvas.getContext('2d'), n = a.canvas.width, u = n / 192, f = a.face;
-      g.clearRect(0, 0, n, n); g.drawImage(a.img, 0, 0, n, n);
-      if (!f) { a.tex.needsUpdate = true; return; }
+      g.clearRect(0, 0, n, n); g.drawImage(turned || a.img, 0, 0, n, n);
+      if (!f || turned) { a.tex.needsUpdate = true; return; }
       const [mx, my, lx, ly, rx, ry, skin] = f, hexOf = c => '#' + c.toString(16).padStart(6, '0');
       const soft = (x, y, r, color, alpha) => { // a round patch that fades out at its edge
         const grd = g.createRadialGradient(x * u, y * u, 0, x * u, y * u, r * u);
@@ -1846,12 +1849,17 @@
         artMat.rotation = artLean + Math.sin(t * 1.7) * 0.03 + (player.slow ? Math.sin(t * 14) * 0.08 : 0);
         artMat.color.setHex(0xffffff); if (player.slow) artMat.color.lerp(tmpCol.set(0x9bd38a), 0.45);
         // Which way it looks follows where it is going: the picture looks to the right, so it is mirrored when heading
-        // left. A dead band, and standing still keeps the last way, so it does not flicker. There is one picture per
-        // skin (a front view): a side or back view needs art of its own.
-        const vx = player.vx || 0;
+        // left. A dead band, and standing still keeps the last way, so it does not flicker. A skin with a three-view
+        // sheet also turns: its back when heading up the screen (away from the camera), its side when heading across,
+        // its front when coming down, standing still or eating. The others have the front only.
+        const vx = player.vx || 0, vy = player.vy || 0;
         if (sp > 6 && Math.abs(vx) > sp * 0.25) artFlip = vx < 0;
+        if (sp <= 6 || gulp > 0.05) artView = 'front';
+        else if (vy < -sp * (artView === 'back' ? 0.55 : 0.8)) artView = 'back';
+        else if (Math.abs(vx) > sp * (artView === 'side' ? 0.45 : 0.7)) artView = 'side';
+        else if (vy > sp * 0.6) artView = 'front';
         if (artNow) {
-          artDraw(artNow, Math.min(1, gulp), happy > 0.5, cheer);
+          artDraw(artNow, Math.min(1, gulp), happy > 0.5, cheer, artView);
           artNow.tex.repeat.x = artFlip ? -1 : 1; artNow.tex.offset.x = artFlip ? 1 : 0;
         }
       } else if (artHid) { artHid = false; for (const o of artAlways) o.visible = true; } // back to the 3D body (the car, first person)
@@ -1943,6 +1951,8 @@
         if (!a) { // its own canvas (twice the picture, so the drawn face stays crisp), filled once the picture has loaded
           const canvas = document.createElement('canvas'); canvas.width = canvas.height = 384;
           a = artTex[skin.art] = { canvas, tex: new T.CanvasTexture(canvas), img: new Image(), face: (root.DuskSkinFace || {})[skin.art], ready: false, step: -1 };
+          const turn = (root.DuskSkinTurn || {})[skin.art]; // its side and back, if it has them
+          if (turn) { a.views = {}; for (const v of ['side', 'back']) { a.views[v] = new Image(); a.views[v].src = turn[v]; } }
           a.img.onload = () => { a.ready = true; artDraw(a, 0, false, 0); };
           a.img.src = src;
         }
@@ -1968,7 +1978,7 @@
       for (const m of [circleMesh, circleRunes, circleMotes, ...circleTrail]) m.material.color.setHex(c.color);
     }
 
-    return { build, resize, draw, setSkin, setCircle, setQuality, artDraw, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh, circleTrail, artSprite, body, artDraw, casters, get art() { return artNow; }, get artFlip() { return artFlip; } } };
+    return { build, resize, draw, setSkin, setCircle, setQuality, artDraw, get quality() { return quality; }, debug: { renderer, camera, scene, rimMat, fpCamera, circleMesh, circleTrail, artSprite, body, artDraw, casters, get art() { return artNow; }, get artFlip() { return artFlip; }, get artView() { return artView; } } };
   }
 
   root.DuskRender = { create, drawCircle, PARTS, GEO: unit }; // PARTS and the unit shapes also feed tools/icons (collection-book pictures)
