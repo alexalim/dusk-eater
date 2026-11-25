@@ -38,8 +38,10 @@ test('difficulty never drops from one level to the next within a theme', () => {
     const ls = STAGES.filter(s => s.theme === theme);
     for (let i = 1; i < ls.length; i++) {
       const a = ls[i - 1], b = ls[i];
-      assert.ok(scoreGoal(b) >= scoreGoal(a) && b.sunDrain >= a.sunDrain && b.beamDrain >= a.beamDrain && b.guards >= a.guards, `${a.id} -> ${b.id}`);
+      assert.ok(b.sunDrain >= a.sunDrain && b.beamDrain >= a.beamDrain && b.guards >= a.guards, `${a.id} -> ${b.id}`);
     }
+    const scored = ls.filter(s => s.goals[0].kind === 'score'); // a picky-eater stage counts its kind instead
+    for (let i = 1; i < scored.length; i++) assert.ok(scoreGoal(scored[i]) >= scoreGoal(scored[i - 1]), `${scored[i - 1].id} -> ${scored[i].id}`);
   }
 });
 
@@ -172,4 +174,31 @@ test('the six later maps follow the first fifteen and leave them as they were: s
     assert.ok(t.small.length >= 4 && t.eat.length >= 3 && t.ground.length === 3 && t.roofs.length >= 3, r.theme);
     assert.ok(L[9].boss && L[9].boss.name && L[9].twist === 'boss', r.theme + ': a boss on its tenth level');
   }
+});
+
+test('stage specials: the 3rd, 6th and 9th level of every region, all three kinds in each region in a turning order; never with a twist or on an event', () => {
+  REGIONS.forEach((r, k) => {
+    const L = STAGES.slice(k * REGION_SIZE, (k + 1) * REGION_SIZE);
+    const kinds = L.map(s => s.special && s.special.kind);
+    assert.deepEqual(kinds.map((x, i) => x ? i : -1).filter(i => i >= 0), [2, 5, 8], r.theme);
+    assert.deepEqual([...kinds.filter(Boolean)].sort(), ['only', 'rush', 'size'], r.theme);
+    for (const s of L.filter(s => s.special)) {
+      assert.ok(!s.twist && !s.hard, s.id);
+      assert.ok(s.special.name && s.special.text.length > 10, s.id);
+      if (s.special.kind === 'only') { // three stars, all counting the map's first kind, rising
+        const what = St.THEMES[r.theme].eat[0][0];
+        assert.equal(s.special.what, what, s.id);
+        assert.ok(s.goals.every(g => g.kind === 'eat' && g.what === what), s.id);
+        assert.ok(s.goals[0].n >= 3 && s.goals[1].n > s.goals[0].n && s.goals[2].n > s.goals[1].n, s.id);
+      } else { // only the third star changes: the clear goal stays the usual score
+        assert.equal(s.goals[0].kind, 'score', s.id);
+        const g = s.goals[2];
+        if (s.special.kind === 'rush') assert.ok(g.kind === 'rush' && g.t === 60 && g.n < s.goals[0].n && g.n >= 100, s.id);
+        else assert.ok(g.kind === 'size' && g.n >= 5 && g.n > 3.5, s.id);
+      }
+      assert.ok(s.goals.every(g => St.goalLabel(g) !== g.kind), s.id + ': every goal reads in words');
+    }
+  });
+  assert.notDeepEqual(STAGES.slice(0, 10).map(s => s.special && s.special.kind), STAGES.slice(10, 20).map(s => s.special && s.special.kind), 'the order turns region to region');
+  assert.ok(Object.values(EVENT_LEVELS).flat().every(s => !s.special));
 });

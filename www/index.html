@@ -1291,6 +1291,7 @@
   const BONUS_AT = 0.4, BONUS_S = 15, BONUS_GEMS = 5;
   let bonus = null, bonusTick = 0; // { type, n, got, until, done }
   const twistIco = { clouds: 'cloud', golden: 'sparkle', eclipse: 'eclipse', boss: 'crown' };
+  const specialIco = { only: 'mouth', rush: 'clock', size: 'grow' }; // stage specials (stages.js SPECIALS)
 
   // Level 1 teaches by doing: each step waits for its condition (or a few seconds) before the next.
   // The clock stays frozen until the first swallow, so nobody learns under time pressure.
@@ -1646,10 +1647,11 @@
     clouds = stage.twist === 'clouds' ? Array.from({ length: 7 }, (_, k) => ({ x: rnd() * WORLD, y: rnd() * waterY, r: 70 + rnd() * 50 })) : [];
     tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
     ruleStart();
-    if (stage.rule && !tut) banner(`${ico('sparkle')} ${stage.rule.name} — ${stage.rule.text}`, 4);
+    if (stage.special && !tut) banner(`${ico(specialIco[stage.special.kind])} ${stage.special.name} — ${stage.special.text}`, 4);
+    else if (stage.rule && !tut) banner(`${ico('sparkle')} ${stage.rule.name} — ${stage.rule.text}`, 4);
     const used = Shop.BOOSTS.filter(b => boosts.includes(b.id));
     runDuration = C.DURATION + used.reduce((a, b) => a + (b.extraTime || 0), 0);
-    stats = { score: 0, eaten: {}, beamHit: false, total: 0, lit: false, night: 0, maxR: 0, playT: 0, shadeT: 0 };
+    stats = { score: 0, eaten: {}, beamHit: false, total: 0, lit: false, night: 0, maxR: 0, playT: 0, shadeT: 0, rushDone: false };
     Sound.music.tune(stage.theme); Sound.music.mode(stage.boss ? 'boss' : 'play'); // every region has its own tune
     phase = C.dayPhase(0); sun = C.sunState(phase.dayT, stage.sunMax);
     setShadows(shadeCasts()); shadeAt = phase.dayT; shadeDark = false; shadeStale = false;
@@ -1889,7 +1891,9 @@
     stats.wasLit = player.lit;
     stats.playT += dt; if (!player.lit) stats.shadeT += dt; // the end screen's "time in shade" tile
 
+    const picky = stage.special && stage.special.kind === 'only' ? stage.special.what : null; // a picky-eater stage: that kind only
     const tryEat = (o, ox, oy, exclude) => {
+      if (picky && o.type !== picky) return;
       const dist = Math.hypot(ox - player.x, oy - player.y);
       if (dist > player.r + o.r) return;
       const golden = o.goldUntil > elapsed; // golden friends may be taken in full sun; so may a low wall, by a big enough body
@@ -1950,6 +1954,7 @@
       if (!o.boss && ammo < AMMO_MAX) { ammo++; renderAmmo(); } // another shot to spit
       if (phase.night) stats.night++;
       stats.maxR = Math.max(stats.maxR, player.r);
+      for (const g of stage.goals) if (g.kind === 'rush' && !stats.rushDone && score >= g.n && elapsed <= g.t) stats.rushDone = true;
       if (!Store.wallet.dex.includes(o.type)) discoverDex(o.type); // saved now, so a killed app keeps the find
     }
     if (gulped) checkTiers();
@@ -1995,6 +2000,7 @@
       if (o.state !== 0 || o.r >= player.r * C.EAT_RATIO) continue;
       if (Math.hypot(o.x - player.x, o.y - player.y) > 260 + player.r) continue;
       if (TYPES[o.type].bad) { hints.push({ x: o.x, y: o.y, r: o.r + 3, bad: true }); continue; } // violet ring under every zombie, shade or sun: the tell
+      if (stage.special && stage.special.kind === 'only' && o.type !== stage.special.what) continue; // a picky stage rings only its kind
       if (looms(o) || isShaded(o, o) || o.goldUntil > elapsed) hints.push({ x: o.x, y: o.y, r: o.r + 2, steady: !!TYPES[o.type].giant }); // a big thing's ring is still, like a building's
     }
     for (const g of guards) {
@@ -2366,7 +2372,8 @@
   // Every icon is a picture (img/): UI marks are SVG, maps and collection-book kinds are 3D renders.
   const ico = name => `<img class="ico" src="img/ui/${name}.svg" alt="">`;
   // HUD chips stay short ("900점", "고양이 0/3", "불빛 피하기"); the full wording lives on the level card and the end screen.
-  const hudGoal = g => g.kind === 'score' ? `${g.n.toLocaleString()}점` : g.kind === 'eat' ? (g.name || NAMES[g.what][0]) : g.kind === 'noBeam' ? '불빛 피하기' : goalLabel(g);
+  const hudGoal = g => g.kind === 'score' ? `${g.n.toLocaleString()}점` : g.kind === 'eat' ? (g.name || NAMES[g.what][0]) : g.kind === 'noBeam' ? '불빛 피하기'
+    : g.kind === 'size' ? `${g.n}m` : g.kind === 'rush' ? `${g.t}초 ${g.n.toLocaleString()}점` : goalLabel(g);
   // The character's face wherever the screens show it (map marker, title, banners, pause, end of a run): the worn
   // skin's painted picture with the mood drawn on it by the renderer's own face drawing (render3d artDraw: mouth
   // open 0..1, eyes shut, blush 0..1). A skin without a picture (the car) keeps the drawn faces (img/ui/face-*.svg).
@@ -2424,7 +2431,7 @@
     const here = lastUnlocked(), onPage = here >= from && here < from + size;
     const cells = list.slice(from, from + size).map((s, k) => {
       const i = from + k, open = C.isUnlocked(listIds, i, bestStars), stars = bestStars[s.id] || 0;
-      const tw = s.twist ? `<img class="tw" src="img/ui/${twistIco[s.twist]}.svg" alt="">` : '';
+      const tw = s.twist ? `<img class="tw" src="img/ui/${twistIco[s.twist]}.svg" alt="">` : s.special ? `<img class="tw" src="img/ui/${specialIco[s.special.kind]}.svg" alt="">` : '';
       const say = i === selected && open ? `<span class="say">${stars === 3 ? '완벽!' : stars ? '다시 도전?' : '출발!'}</span>` : '';
       return `<button class="node ${s.theme}${open ? '' : ' locked'}${i === selected ? ' sel' : ''}${s.twist === 'boss' ? ' boss' : ''}${s.hard ? ' hard' : ''}" data-i="${i}" aria-label="${s.name}" style="--k:${k};--x:${PATH_X[k % PATH_X.length]}">
         ${open ? `<span class="num">${s.n}</span><span class="stars">${starText(stars)}</span>` : LOCK}${tw}${say}</button>`;
@@ -2489,6 +2496,7 @@
       <div class="desc">${open ? s.desc : '앞 레벨에서 별 1개를 따면 열려요.'}${open && s.rule ? `<br><b class="rule">${ico('sparkle')} ${s.rule.name}</b> ${s.rule.text}` : ''}</div>` +
       (s.hard ? `<div class="hardnote">${s.hard === 'super' ? '아주 어려움 · 보스를 삼켜야 깨져요' : '어려움 · 별 2개를 따야 깨져요'}</div>` : '') +
       (s.twist ? `<div class="twist">${ico(twistIco[s.twist])} <b>${TWIST_INFO[s.twist].name}</b> ${TWIST_INFO[s.twist].text}</div>` : '') +
+      (s.special ? `<div class="twist">${ico(specialIco[s.special.kind])} <b>${s.special.name}</b> ${s.special.text}</div>` : '') +
       (open ? `<ul>${s.goals.map(g => `<li>${goalLabel(g)}</li>`).join('')}</ul>
         <div class="boosts">${boosts}</div><div class="btn" id="btn-go">출발</div>` : '');
     if (!open) return;

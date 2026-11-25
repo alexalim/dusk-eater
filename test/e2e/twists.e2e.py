@@ -70,8 +70,9 @@ with sync_playwright() as p:
     # W3 golden friend: one appears near the player, glows, and is worth 5x when swallowed
     pg.evaluate(f'{A}.start(4)'); pg.evaluate(f'{A}.skipTo(5)'); frames_wait(pg, 3)
     glow = pg.evaluate(f'{A}.s.objects.some(o => o.glow)')  # the renderer paints these gold
-    gold = pg.evaluate(f'(() => {{ const s = {A}.s, o = s.objects.find(o => o.goldUntil > s.elapsed); if (!o) return null; o.state = 1; o.ft = 0.99; return [o.type, Math.round(o.r * o.r / 2) * 5]; }})()')
-    s0 = pg.evaluate(f'{A}.s.score'); frames_wait(pg, 4); s1 = pg.evaluate(f'{A}.s.score')
+    # the score before is read in the same call that starts the swallow: under load a frame can run between two calls and pay it first
+    gold = pg.evaluate(f'(() => {{ const s = {A}.s, o = s.objects.find(o => o.goldUntil > s.elapsed); if (!o) return null; const before = s.score; o.state = 1; o.ft = 0.99; return [o.type, Math.round(o.r * o.r / 2) * 5, before]; }})()')
+    s0 = gold[2] if gold else None; frames_wait(pg, 4); s1 = pg.evaluate(f'{A}.s.score')
     rec('W3', 'a golden friend shows up painted gold and pays 5x', glow and gold is not None and s1 - s0 == gold[1], f'glow={glow} gold={gold} score {s0}->{s1}')
     # W3b in full sun a golden friend can be swallowed where an ordinary one cannot
     spot = pg.evaluate(f'''(() => {{ const s = {A}.s, p = s.player;
@@ -447,6 +448,23 @@ with sync_playwright() as p:
     pg.evaluate("window.__DUSK_TEST__.today = null"); pg.evaluate(f'{A}.useList("main"); {A}.start(0)'); frames_wait(pg)
     rec('W31', 'season event: a tab named for it on its dates, ten levels on the dressed oasis with the oasis rule running',
         tabs == [['main', '레벨'], ['cherry', '벚꽃']] and ev == ['1. 벚꽃 정원', 'img/map/oasis.png', 10, True] and run == ['cherry', 8], f'tabs={tabs} ev={ev} run={run}')
+
+    # W32 stage specials: on the town's picky-eater stage (L3) a cat right in the mouth, in shade, stays out while a person
+    # goes in, and only people get hint rings; the opening banner and the level sheet name the special, and the node has its icon
+    pg.evaluate(f'{A}.start(2)'); frames_wait(pg, 3)
+    banner = pg.inner_text('#banner')
+    pick = pg.evaluate(f"""(() => {{ const s = {A}.s, p = s.player;
+      s.clouds.push({{ x: p.x, y: p.y, r: 400 }}); // shade over the mouth
+      const cat = s.objects.find(o => o.type === 'cat' && o.state === 0), man = s.objects.find(o => o.type === 'person' && o.state === 0);
+      if (!cat || !man) return null;
+      cat.x = p.x + 2; cat.y = p.y; man.x = p.x - 2; man.y = p.y; return [cat.id ?? s.objects.indexOf(cat), s.objects.indexOf(man)]; }})()""")
+    frames_wait(pg, 8)
+    ate = pg.evaluate(f"(() => {{ const o = {A}.s.objects; return [o[{pick[0] if pick else 0}].state, o[{pick[1] if pick else 0}].state]; }})()") if pick else None
+    pg.evaluate(f'{A}.start(0)'); frames_wait(pg)
+    pg.tap('#btn-title') if pg.is_visible('#btn-title') else None
+    pg.evaluate(f"{A}.useList('main')")
+    rec('W32', "picky-eater stage: a cat in the mouth stays out, a person goes in; the banner names the stage",
+        pick is not None and ate is not None and ate[0] == 0 and ate[1] != 0 and '편식' in banner, f'pick={pick} ate={ate} banner={banner!r}')
 
     rec('W0', 'no page errors', not errs, '; '.join(errs[:3]))
     b.close()

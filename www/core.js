@@ -172,7 +172,9 @@
     return Math.sqrt(r * r + GROWTH * objR * objR);
   }
 
-  // Star goals. stats = { score, eaten: { type: count }, beamHit: bool }.
+  // Star goals. stats = { score, eaten: { type: count }, beamHit: bool, maxR, rushDone }.
+  //   size: grow to n metres at some point in the run (a metre is 4 units of radius, as the size pill reads)
+  //   rush: reach n points by second t (the run loop sets stats.rushDone the moment it happens in time)
   function goalProgress(goal, stats) {
     switch (goal.kind) {
       case 'score': return { cur: stats.score, n: goal.n, done: stats.score >= goal.n };
@@ -181,6 +183,8 @@
         return { cur, n: goal.n, done: cur >= goal.n };
       }
       case 'noBeam': return { cur: stats.beamHit ? 0 : 1, n: 1, done: !stats.beamHit };
+      case 'size': { const cur = Math.round((stats.maxR || 0) / 4 * 10) / 10; return { cur, n: goal.n, done: (stats.maxR || 0) / 4 >= goal.n }; }
+      case 'rush': return { cur: stats.rushDone ? goal.n : Math.min(stats.score, goal.n), n: goal.n, done: !!stats.rushDone };
       default: throw new Error('unknown goal kind: ' + goal.kind);
     }
   }

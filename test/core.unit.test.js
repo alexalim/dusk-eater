@@ -104,3 +104,11 @@ test('clearing: one star normally, two on a hard level, the boss goal (third) on
   assert.equal(C.isCleared({ hard: 'super' }, [true, true, false]), false, 'two stars without the boss do not clear');
   assert.equal(C.isCleared({ hard: 'super' }, [false, false, true]), true);
 });
+
+test('size and rush goals: size reads the biggest body in metres; rush only counts when the run marked it in time', () => {
+  const C2 = require('../www/core.js');
+  assert.deepEqual(C2.goalProgress({ kind: 'size', n: 10 }, { maxR: 36 }), { cur: 9, n: 10, done: false });
+  assert.equal(C2.goalProgress({ kind: 'size', n: 10 }, { maxR: 40 }).done, true);
+  assert.deepEqual(C2.goalProgress({ kind: 'rush', n: 500, t: 60 }, { score: 900, rushDone: false }), { cur: 500, n: 500, done: false });
+  assert.equal(C2.goalProgress({ kind: 'rush', n: 500, t: 60 }, { score: 300, rushDone: true }).done, true);
+});

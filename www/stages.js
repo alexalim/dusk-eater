@@ -418,6 +418,21 @@
     space: { kind: 'kite', icon: 'ufo', sky: true, name: '떠도는 위성', text: '위성이 8자를 그리며 정거장 위를 돌아요. 위성 그림자를 따라 움직여요!' },
     harbor: { kind: 'beam', name: '등대와 크레인', text: '크레인의 긴 그림자가 다리가 되고, 등대 불빛은 밤에도 돌아요. 불빛을 피해 그림자를 건너요!' },
   };
+  // Stage specials (Katamari-style): the 3rd, 6th and 9th level of every region, which have no twist, each change
+  // what the stage asks, so the stages of a map differ too. Every region has all three, in an order that turns
+  // with the region. Speed and size only change the third (optional) star, so a mistuned number never blocks.
+  //   only  a picky eater: only the map's first kind to eat can be swallowed, and all three stars count it
+  //   rush  the third star: the clear score's 0.8 within the first 60 s
+  //   size  the third star: a size, worked out from the usual third-star score (see sizeFor)
+  const SPECIAL_AT = [2, 5, 8], SPECIAL_ORDER = ['only', 'rush', 'size'];
+  const SPECIALS = {
+    only: { name: '편식 판', text: '이번 판은 한 가지만 먹을 수 있어요. 다른 건 입에 안 들어가요!' },
+    rush: { name: '속공 판', text: '처음 60초가 승부예요. 빨리 먹을수록 별이 하나 더!' },
+    size: { name: '쑥쑥 판', text: '점수보다 몸집! 정해진 크기까지 커지면 별이 하나 더!' },
+  };
+  // The size a player reaches by scoring `score`: each bite scores about r²/2 times the combo (about 1.3 on average)
+  // and grows the body to √(R² + GROWTH·r²) (core.js grow), from the 14-unit start; in metres, a half step.
+  const sizeFor = score => Math.round(Math.sqrt(14 * 14 + 0.45 * 2 * score / 1.3) / 4 * 2) / 2;
   // Twist per position inside a region (0-based): clouds 2, golden 5, eclipse 8, boss 10.
   const TWISTS = { 1: 'clouds', 4: 'golden', 7: 'eclipse', 9: 'boss' };
   const TWIST_INFO = {
@@ -493,19 +508,27 @@
     }
     // Hard levels: the 8th of a region needs two stars to clear, the boss (10th) needs the boss swallowed.
     const hard = region ? { 7: 'hard', 9: 'super' }[local] || null : null;
+    // the stage's special (SPECIALS), on ladder levels only
+    const at = region ? SPECIAL_AT.indexOf(local) : -1;
+    const kind = at >= 0 ? SPECIAL_ORDER[(at + regionOf(n)) % SPECIAL_ORDER.length] : null;
+    let special = null;
+    if (kind === 'only') {
+      const [what, lo, hi] = t.eat[0], a = Math.max(3, Math.round(lerp(lo, hi, 0.5 * local / (REGION_SIZE - 1)) * TIME_SCALE));
+      special = Object.assign({ kind, what }, SPECIALS.only, { text: `이번 판은 ${NAMES[what][0]}만 먹을 수 있어요. 다른 건 입에 안 들어가요!` });
+      goals.splice(0, 3, { kind: 'eat', what, n: a }, { kind: 'eat', what, n: Math.round(a * 1.5) }, { kind: 'eat', what, n: a * 2 });
+    } else if (kind === 'rush') {
+      special = Object.assign({ kind }, SPECIALS.rush);
+      goals[2] = { kind: 'rush', n: Math.max(100, Math.round(score * 0.8 / 100) * 100), t: 60 };
+    } else if (kind === 'size') {
+      special = Object.assign({ kind }, SPECIALS.size);
+      goals[2] = { kind: 'size', n: Math.max(5, sizeFor(score * 1.8)) };
+    }
     return Object.assign({}, t, {
-      id: 'L' + n, n, name: `${n}. ${t.name}`, goals, guards, twist, boss, hard, rule: RULES[t.theme] || null,
+      id: 'L' + n, n, name: `${n}. ${t.name}`, goals, guards, twist, boss, hard, special, rule: RULES[t.theme] || null,
       sunDrain: lerp(0.4, 1.6, ramp), beamDrain: lerp(3, 7, ramp),
       lighthouse: t.theme === 'harbor' ? { x: 0.5, y: 0.87, range: lerp(380, 560, ramp), half: 0.16, speed: lerp(0.35, 0.55, ramp) } : null,
     });
   }
-
-  const STAGES = Array.from({ length: COUNT }, (_, i) => level(i + 1));
-  // Event level k borrows the ladder's difficulty at level 4 + 8(k - 1): gentle start, mid-ladder finish.
-  const EVENT_LEVELS = Object.fromEntries(EVENTS.map(ev => [ev.id, Array.from({ length: ev.count }, (_, i) => {
-    const k = i + 1, base = level(4 + 8 * i, ev.theme, k);
-    return Object.assign(base, { id: `${ev.id}-${k}`, n: k, name: `${k}. ${base.name.replace(/^\d+\. /, '')}` });
-  })]));
 
   // How each goal reads on screen; counters follow Korean usage.
   const NAMES = {
@@ -532,14 +555,24 @@
     guard: ['경비원', '명'], boss: ['보스', '명'], // a level's boss goal carries its own `name` (BOSSES)
   };
 
+  // the levels are built once the names they use exist (a picky-eater stage names its kind)
+  const STAGES = Array.from({ length: COUNT }, (_, i) => level(i + 1));
+  // Event level k borrows the ladder's difficulty at level 4 + 8(k - 1): gentle start, mid-ladder finish.
+  const EVENT_LEVELS = Object.fromEntries(EVENTS.map(ev => [ev.id, Array.from({ length: ev.count }, (_, i) => {
+    const k = i + 1, base = level(4 + 8 * i, ev.theme, k);
+    return Object.assign(base, { id: `${ev.id}-${k}`, n: k, name: `${k}. ${base.name.replace(/^\d+\. /, '')}` });
+  })]));
+
   function goalLabel(g) {
     if (g.kind === 'score') return `${g.n.toLocaleString()}점 달성`;
     if (g.kind === 'eat') { const [name, unit] = NAMES[g.what]; return `${g.name || name} ${g.n}${unit} 삼키기`; }
     if (g.kind === 'noBeam') return '불빛에 한 번도 안 걸리기';
+    if (g.kind === 'size') return `${g.n}m까지 커지기`;
+    if (g.kind === 'rush') return `${g.t}초 안에 ${g.n.toLocaleString()}점`;
     return g.kind;
   }
 
-  const api = { RULES, THEMES, STAGES, NAMES, TWISTS, TWIST_INFO, BOSSES, TIME_SCALE, goalLabel, themeOf, REGIONS, REGION_SIZE, regionOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
+  const api = { RULES, SPECIALS, THEMES, STAGES, NAMES, TWISTS, TWIST_INFO, BOSSES, TIME_SCALE, goalLabel, themeOf, REGIONS, REGION_SIZE, regionOf, EVENTS, EVENT_LEVELS, eventActive, activeEvents };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DuskStages = api;
 })(this);
