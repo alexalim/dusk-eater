@@ -16,7 +16,7 @@ import base64, io, pathlib, sys
 from collections import deque
 from PIL import Image, ImageDraw
 root = pathlib.Path(__file__).resolve().parents[2]
-NEAR = {'cherry_blossom': (122, 78), 'christmas': (116, 78), 'santa': (113, 78)}
+NEAR = {'cherry_blossom': (122, 78), 'christmas': (116, 78), 'santa': (113, 78), 'bunny': (96, 95), 'pirate': (93, 92)}  # bunny: not the bow; pirate: not the hat
 FACE_AT = {'summer': (120, 80, 106, 73, 129, 66)}  # read off the picture where the colors find nothing (a pale mouth, goggles above the eyes)
 ONE_EYE = {'pirate': (1,)}  # eyes under a patch (0 left, 1 right): written as -1, -1 and left alone
 EYES = ((-16, -15), (14, -17))  # from the mouth to each eye, where no dark blob is found (dark bodies)

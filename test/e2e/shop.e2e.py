@@ -102,13 +102,13 @@ with sync_playwright() as p:
         turn.append(pg.evaluate(f'[{A}.R.debug.artFlip, {A}.R.debug.art.tex.repeat.x]'))
     pg.evaluate(f'{A}.s.player.vx = 0')
     # a skin with a three-view sheet turns as well: its side heading across, its back heading up the screen, its front coming down;
-    # one without (the pirate) keeps its front
+    # one without (the knight) keeps its front
     hold = lambda vx, vy: pg.evaluate(f"new Promise(r => {{ let n = 12; const f = () => {{ {A}.s.player.vx = {vx}; {A}.s.player.vy = {vy}; --n ? requestAnimationFrame(f) : r(); }}; f(); }})")
     pg.evaluate(f"{A}.Store.update({A}.Shop.equip({A}.Store.wallet, 'sports'))"); frames_wait(pg, 6)
     views = []
     for vx, vy in ((90, 0), (0, -90), (0, 90)):
         hold(vx, vy); views.append(pg.evaluate(f"[{A}.R.debug.artView, {A}.R.debug.art.step]"))
-    pg.evaluate(f"{A}.Store.update({A}.Shop.equip({A}.Store.wallet, 'pirate'))"); frames_wait(pg, 6); hold(0, -90)
+    pg.evaluate(f"{A}.Store.update({A}.Shop.equip({A}.Store.wallet, 'knight'))"); frames_wait(pg, 6); hold(0, -90)
     views.append(pg.evaluate(f"[!!{A}.R.debug.art.views, {A}.R.debug.art.step < 1000]"))
     pg.evaluate(f'{A}.s.player.vx = 0; {A}.s.player.vy = 0')
     turn.append(views)
