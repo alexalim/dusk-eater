@@ -316,25 +316,26 @@
     }),
   });
 
-  // Season maps: a ladder map dressed for the season (its name, ground and roofs), played only through its event.
+  // Season maps: a ladder map dressed for the season (its name, ground and roofs, and what drifts down through the
+  // air: `fall`, two colors of petals, leaves or confetti), played only through its event.
   // `theme` stays the map it is made of (`base`), so it is built, drawn, pictured and ruled exactly as that map is, and
   // what is swallowed there counts for that map's page of the book.
   const season = (base, o) => Object.assign({}, THEMES[base], o, { event: true, base });
   Object.assign(THEMES, {
     valentine: season('market', { name: '밸런타인 시장', desc: '분홍 리본과 초콜릿 가게가 늘어선 시장이에요. 달콤한 냄새가 골목마다 가득해요.',
-      ground: ['#ffd6e4', '#ffe8f0', '#ff9ab8'], roofs: ['#ff8fb0', '#fff4f8', '#ffc2d4', '#d04f7a'] }),
+      ground: ['#ffd6e4', '#ffe8f0', '#ff9ab8'], roofs: ['#ff8fb0', '#fff4f8', '#ffc2d4', '#d04f7a'], fall: ['#ff8fb0', '#ffd6e4'] }),
     cherry: season('oasis', { name: '벚꽃 정원', desc: '벚꽃이 활짝 핀 도심 정원이에요. 꽃그늘이 연분홍으로 물들었어요.',
-      ground: ['#ffe1ec', '#fff0f5', '#f5b5cc'], roofs: ['#f7b8d0', '#fff4f8', '#e8a0c0', '#d9c6e8'] }),
+      ground: ['#ffe1ec', '#fff0f5', '#f5b5cc'], roofs: ['#f7b8d0', '#fff4f8', '#e8a0c0', '#d9c6e8'], fall: ['#ffb7d5', '#fff0f5'] }),
     picnic: season('farm', { name: '봄소풍 들판', desc: '돗자리와 도시락이 펼쳐진 봄 들판이에요. 바람이 살랑살랑 불어요.',
       ground: ['#d8ecb0', '#eef6d8', '#f0d890'], roofs: ['#f0cf6a', '#fff8e0', '#b8e08a', '#e8a066'] }),
     summer: season('beach', { name: '여름휴가 해변', desc: '튜브와 파라솔이 가득한 한여름 바닷가예요. 해가 뜨거우니 그늘을 잘 골라요.',
       roofs: ['#7fd6ff', '#ffffff', '#ffd45e', '#ff9aa8'] }),
     autumn: season('campus', { name: '단풍 캠퍼스', desc: '은행잎과 단풍이 내려앉은 가을 캠퍼스예요. 낙엽 밟는 소리가 사박사박 나요.',
-      ground: ['#f0c890', '#f6e2c0', '#e08a4a'], roofs: ['#b5562a', '#d98a3a', '#8a4a2a', '#e8c06a'] }),
+      ground: ['#f0c890', '#f6e2c0', '#e08a4a'], roofs: ['#b5562a', '#d98a3a', '#8a4a2a', '#e8c06a'], fall: ['#e8762a', '#f2c14e'] }),
     halloween: season('town', { name: '할로윈 마을', desc: '호박등이 켜진 보랏빛 마을이에요. 사탕을 든 아이들이 골목을 돌아다녀요.',
-      ground: ['#b9a0d0', '#cdb8e0', '#e08a3a'], roofs: ['#4a2a7a', '#e8762a', '#2a2433', '#7a4fd0'] }),
+      ground: ['#b9a0d0', '#cdb8e0', '#e08a3a'], roofs: ['#4a2a7a', '#e8762a', '#2a2433', '#7a4fd0'], fall: ['#e8762a', '#b58cff'] }),
     newyear: season('city', { name: '새해 도심', desc: '새해 장식이 반짝이는 빌딩숲이에요. 밤이 오면 불꽃놀이가 시작될 것 같아요.',
-      ground: ['#d8d0f0', '#e6e0f8', '#ffd45e'], roofs: ['#2a2a5a', '#ffd45e', '#5b4290', '#f4f1ea'] }),
+      ground: ['#d8d0f0', '#e6e0f8', '#ffd45e'], roofs: ['#2a2a5a', '#ffd45e', '#5b4290', '#f4f1ea'], fall: ['#ffd45e', '#ffffff'] }),
   });
 
   // Limited-time events, judged by the device date. [month, day] bounds are inclusive and may wrap the new year.
@@ -392,7 +393,8 @@
   //   blimp    one huge patch drifting slowly round the map                copter   two patches circling fast and wide
   //   traffic  rows going across and columns going down, like buses        mist     patches that swell and shrink
   //   kite     patches flying figures of eight                             beam     nothing new: it names what the map already has
-  // `icon` (and `sky`: it flies) is what casts the shade, drawn on each patch by render3d (CASTER_ART).
+  // `icon` (and `sky`: it flies) is what casts the shade, drawn on each patch by render3d (CASTER_ART); `tip`: only
+  // the last patch of an arm carries a picture (the crane's hook, the clock, the swing's seat).
   // The first map has none: it is where the plain rules are learned.
   const RULES = {
     park: { kind: 'wheel', icon: 'car', name: '대관람차 그림자', text: '커다란 대관람차 그림자가 빙글빙글 돌아요. 그림자를 따라 같이 돌아요!' },
@@ -401,16 +403,16 @@
     market: { kind: 'awning', icon: 'awning', name: '여닫는 차양', text: '가게 차양이 펼쳐졌다 접혔다 해요. 펼쳐진 차양 아래가 그늘이에요!' },
     beach: { kind: 'awning', icon: 'parasol', name: '파라솔', text: '파라솔이 펴졌다 접혔다 해요. 펴진 파라솔 밑으로 옮겨 다녀요!' },
     snow: { kind: 'blizzard', name: '눈보라', text: '가끔 눈보라가 몰아쳐 해를 가려요. 그동안은 어디든 갈 수 있어요!' },
-    construction: { kind: 'arm', arms: 2, name: '크레인 팔', text: '크레인 두 대가 팔을 천천히 휘둘러요. 긴 팔 그림자를 따라 돌아요!' },
-    campus: { kind: 'arm', arms: 1, name: '시계탑 그림자', text: '시계탑 그림자가 시곗바늘처럼 한 바퀴 돌아요. 바늘 그림자를 놓치지 말아요!' },
+    construction: { kind: 'arm', arms: 2, tip: 'hook', name: '크레인 팔', text: '크레인 두 대가 팔을 천천히 휘둘러요. 긴 팔 그림자를 따라 돌아요!' },
+    campus: { kind: 'arm', arms: 1, tip: 'clock', name: '시계탑 그림자', text: '시계탑 그림자가 시곗바늘처럼 한 바퀴 돌아요. 바늘 그림자를 놓치지 말아요!' },
     stadium: { kind: 'blimp', icon: 'blimp', sky: true, name: '중계 비행선', text: '커다란 비행선이 광장 위를 천천히 돌아요. 비행선 그림자는 넓고 느긋해요!' },
     city: { kind: 'copter', icon: 'copter', sky: true, name: '방송 헬리콥터', text: '헬리콥터 두 대가 빌딩 위를 빠르게 돌아요. 재빨리 그림자에 올라타요!' },
     crossing: { kind: 'traffic', icon: 'bus', name: '버스 행렬', text: '버스가 가로로, 세로로 줄지어 지나가요. 버스 그림자를 갈아타며 건너요!' },
-    oasis: { kind: 'mist', name: '분수 물안개', text: '분수 물안개가 커졌다 작아졌다 해요. 안개가 퍼질 때 멀리 나가요!' },
+    oasis: { kind: 'mist', icon: 'steam', name: '분수 물안개', text: '분수 물안개가 커졌다 작아졌다 해요. 안개가 퍼질 때 멀리 나가요!' },
     hanok: { kind: 'kite', icon: 'kite', sky: true, name: '연 그림자', text: '하늘의 연이 8자를 그리며 날아요. 연 그림자를 따라 춤추듯 움직여요!' },
-    playground: { kind: 'arm', arms: 2, name: '그네 그림자', text: '커다란 그네 두 개가 그림자를 크게 휘저어요. 그네 그림자에 맞춰 뛰어요!' },
+    playground: { kind: 'arm', arms: 2, tip: 'swing', name: '그네 그림자', text: '커다란 그네 두 개가 그림자를 크게 휘저어요. 그네 그림자에 맞춰 뛰어요!' },
     aquarium: { kind: 'caravan', icon: 'whale', sky: true, name: '고래 그림자', text: '머리 위 수조로 고래 떼가 헤엄쳐 지나가요. 고래 그림자를 타고 건너요!' },
-    onsen: { kind: 'mist', name: '온천 김', text: '온천 김이 뭉게뭉게 피어올랐다 잦아들어요. 김이 짙을 때 멀리 나가요!' },
+    onsen: { kind: 'mist', icon: 'steam', name: '온천 김', text: '온천 김이 뭉게뭉게 피어올랐다 잦아들어요. 김이 짙을 때 멀리 나가요!' },
     nightmarket: { kind: 'awning', icon: 'lantern', name: '천막과 연등', text: '가게 천막이 펼쳐졌다 접혔다 해요. 연등 아래 천막 그늘로 옮겨 다녀요!' },
     airport: { kind: 'caravan', icon: 'plane', sky: true, v: 70, name: '비행기 그림자', text: '비행기가 줄지어 낮게 날아가요. 빠르게 지나가는 그림자를 놓치지 말아요!' },
     space: { kind: 'kite', icon: 'ufo', sky: true, name: '떠도는 위성', text: '위성이 8자를 그리며 정거장 위를 돌아요. 위성 그림자를 따라 움직여요!' },

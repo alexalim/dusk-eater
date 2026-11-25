@@ -402,13 +402,13 @@ with sync_playwright() as p:
     # the harbor's rule names what it already has; the snow map's blizzard hides the sun
     themes = pg.evaluate("window.DuskStages.STAGES.map(s => s.theme)"); seen = {}
     want = {'park': [12, 'wheel', 12], 'desert': [15, 'caravan', 15], 'farm': [15, 'caravan', 15], 'market': [16, 'awning', 16], 'beach': [16, 'awning', 16],
-            'construction': [10, 'arm', 0], 'campus': [5, 'arm', 0], 'stadium': [1, 'blimp', 1], 'city': [2, 'copter', 2], 'crossing': [20, 'traffic', 20],
-            'oasis': [8, 'mist', 0], 'hanok': [6, 'kite', 6], 'harbor': [0, None, 0], 'town': [0, None, 0]}   # patches, kind, pictures
+            'construction': [10, 'arm', 2], 'campus': [5, 'arm', 1], 'stadium': [1, 'blimp', 1], 'city': [2, 'copter', 2], 'crossing': [20, 'traffic', 20],
+            'oasis': [8, 'mist', 8], 'hanok': [6, 'kite', 6], 'harbor': [0, None, 0], 'town': [0, None, 0]}   # patches, kind, pictures
     still = []
     for th in want:
         pg.evaluate(f"{A}.start({themes.index(th) + 2})"); frames_wait(pg, 4)
-        look = f"{A}.s.clouds.filter(c => c.rule).map(c => [c.rule, Math.round(c.x), Math.round(c.y), Math.round(c.r)])"
-        p0 = pg.evaluate(look); pg.wait_for_timeout(1300); p1 = pg.evaluate(look)
+        look = f"{A}.s.clouds.filter(c => c.rule).map(c => [c.rule, Math.round(c.x * 100), Math.round(c.y * 100), Math.round(c.r * 100)])"   # hundredths: the slow ones (the clock hand, the blimp) barely move in a moment on a busy machine
+        p0 = pg.evaluate(look); pg.wait_for_timeout(1300); frames_wait(pg, 6); p1 = pg.evaluate(look)
         shade = pg.evaluate(f"(() => {{ const a = {A}, on = a.s.clouds.filter(c => c.rule && c.x > 0 && c.r > 20); return on.every(c => a.isShaded({{ x: c.x, y: c.y }}) || a.inBeam(c.x, c.y)); }})()")
         seen[th] = [len(p0), p0[0][0] if p0 else None, pg.evaluate(f"{A}.R.debug.casters.filter(s => s.visible).length")]
         if p0 and (p0 == p1 or not shade) and th not in ('market', 'beach'): still.append(th)   # awnings stay put: they open and fold instead

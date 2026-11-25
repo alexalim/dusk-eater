@@ -111,7 +111,7 @@
     penguin:   [P('capsule', [0.5, 0.5, 0.5], 0.8, 'inst'), P('sphere', [0.36, 0.6, 0.2], 0.85, '#f4f6fa', [0.3, 0]), P('sphere', [0.16, 0.1, 0.16], 1.5, '#f2a03a', [0.42, 0])],
     bather:    [P('cyl', [1.3, 0.7, 1.3], 0.35, 'inst'), P('cyl', [1.15, 0.06, 1.15], 0.72, '#9fd8e8'), P('sphere', [0.5, 0.5, 0.5], 1.05, SKIN), P('box', [0.6, 0.12, 0.5], 1.4, '#f4f6fa')],
     bucket:    [P('cyl', [0.7, 0.8, 0.7], 0.4, 'inst'), P('cyl', [0.6, 0.05, 0.6], 0.82, '#9fd8e8')],
-    lantern:   [P('cyl', [0.05, 2.2, 0.05], 1.1, '#5a4030'), P('sphere', [0.7, 0.85, 0.7], 2.4, 'inst', undefined, true), P('cyl', [0.4, 0.12, 0.4], 3.2, '#3a2a2a')],
+    lantern:   [P('cyl', [0.05, 2.2, 0.05], 1.1, '#5a4030'), P('sphere', [0.7, 0.85, 0.7], 2.4, 'inst'), P('cyl', [0.4, 0.12, 0.4], 3.2, '#3a2a2a')],
     suitcase:  [P('box', [1.0, 1.3, 0.5], 0.75, 'inst'), P('box', [0.5, 0.5, 0.08], 1.65, '#3a3a44')],
     pilot:     human(HAIR, [P('cyl', [0.62, 0.2, 0.62], 2.95, '#1f2a50')]),
     kid:       [P('capsule', [0.45, 0.4, 0.45], 0.75, 'inst'), P('sphere', [0.5, 0.5, 0.5], 1.85, SKIN), P('sphere', [0.52, 0.3, 0.52], 2.05, HAIR)],
@@ -877,6 +877,13 @@
         g.fillStyle = '#7fd6ff'; g.fillRect(16, 58, 14, 8); },
       lantern(g) { g.fillStyle = '#3a2a2a'; g.fillRect(58, 4, 12, 16); g.fillStyle = '#e8523a'; g.beginPath(); g.ellipse(64, 62, 40, 46, 0, 0, 7); g.fill(); g.fillStyle = '#ffd45e'; g.beginPath(); g.ellipse(64, 62, 14, 46, 0, 0, 7); g.fill();
         g.fillStyle = '#3a2a2a'; g.fillRect(48, 104, 32, 10); },
+      steam(g) { g.fillStyle = 'rgba(255,255,255,.85)'; for (const [x, y, r] of [[44, 82, 26], [78, 78, 30], [60, 52, 26], [86, 44, 18], [38, 40, 14]]) { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); } },
+      hook(g) { g.strokeStyle = '#f2c14e'; g.lineWidth = 12; g.lineCap = 'round'; g.beginPath(); g.moveTo(64, 6); g.lineTo(64, 60); g.stroke();
+        g.beginPath(); g.arc(64, 84, 24, -Math.PI / 2, Math.PI * 0.9); g.stroke(); g.fillStyle = '#3a2860'; g.fillRect(48, 2, 32, 12); },
+      clock(g) { g.fillStyle = '#f4f1ea'; g.beginPath(); g.arc(64, 64, 52, 0, 7); g.fill(); g.strokeStyle = '#5b4290'; g.lineWidth = 8; g.beginPath(); g.arc(64, 64, 52, 0, 7); g.stroke();
+        g.lineCap = 'round'; g.beginPath(); g.moveTo(64, 64); g.lineTo(64, 28); g.moveTo(64, 64); g.lineTo(90, 74); g.stroke(); },
+      swing(g) { g.strokeStyle = '#8fd3e8'; g.lineWidth = 6; g.beginPath(); g.moveTo(40, 4); g.lineTo(34, 88); g.moveTo(88, 4); g.lineTo(94, 88); g.stroke();
+        g.fillStyle = '#e2674f'; g.beginPath(); g.roundRect(24, 86, 80, 16, 8); g.fill(); },
       car(g) { g.fillStyle = '#ffa6ec'; g.beginPath(); g.roundRect(26, 46, 76, 60, 18); g.fill(); g.fillStyle = '#e6f8ff'; g.fillRect(38, 58, 52, 22); g.fillStyle = '#5b4290'; g.fillRect(60, 14, 8, 34); g.beginPath(); g.arc(64, 14, 9, 0, 7); g.fill(); },
     };
     const casterTex = {}, casterOf = icon => casterTex[icon] || (casterTex[icon] = (() => {
@@ -1410,6 +1417,30 @@
           M('sphere', '#c9a86a', [4.2, 4.6, 4.2], [0, 25, 0]); M('box', DARK, [0.8, 0.8, 4], [3.9, 23.2, 0]);
           M('cyl', '#b08d3a', [7, 0.6, 7], [0, 28.8, 0]); M('cone', '#b08d3a', [4, 4, 4], [0, 31, 0]);
           M('box', '#ffd23f', [2, 2.6, 2], [3, 15.5, 11], true); eyes('#ffd23f', 3.8, 26, 1.6, 0.9); break;
+        case 'captain': // the playground's boss kid: a cap with its brim forward, a striped shirt, a flashlight
+          M('cyl', color, [5, 14, 5], [0, 7, 0]); M('cyl', '#f4f1ea', [5.2, 2, 5.2], [0, 9, 0]); M('sphere', SKIN, [5, 5, 5], [0, 19, 0]);
+          M('cyl', '#e2674f', [5.3, 1.8, 5.3], [0, 22.6, 0]); M('box', '#e2674f', [4.5, 0.6, 5], [4.5, 22, 0]);
+          M('box', '#ffd23f', [6, 2.4, 2.4], [7, 12, 0], true); eyes('#ffffff', 4.4, 19.6, 1.7, 0.9); break;
+        case 'squid': // a giant squid: a tall mantle with a pointed top, four arms, big pale eyes, a glowing lure
+          M('sphere', color, [6, 9, 6], [0, 19, 0]); M('cone', color, [5, 7, 5], [0, 29, 0]);
+          for (const [x, z] of [[2.6, 2.6], [2.6, -2.6], [-2.6, 2.6], [-2.6, -2.6]]) M('cyl', color, [1.3, 11, 1.3], [x, 5.5, z]);
+          M('sphere', '#ffd23f', [2.2, 2.2, 2.2], [7.5, 14, 0], true); eyes('#fff3b0', 5.3, 19, 2.5, 1.5); break;
+        case 'tanuki': // a round raccoon dog: pale belly, dark ears, a straw hat, a paper lantern
+          M('sphere', color, [7, 8, 7], [0, 8, 0]); M('sphere', '#e8d8b8', [3, 6, 5], [4.6, 8, 0]); M('sphere', color, [5.5, 5, 5.5], [0, 19, 0]);
+          M('sphere', DARK, [1.7, 1.7, 1.7], [0, 23.4, 3.3]); M('sphere', DARK, [1.7, 1.7, 1.7], [0, 23.4, -3.3]); M('cone', '#d9b24c', [7.5, 3, 7.5], [0, 25, 0]);
+          M('box', '#ffd23f', [2.4, 3.2, 2.4], [7, 12, 6], true); eyes('#ffffff', 5, 19.6, 2, 1); break;
+        case 'hawker': // the night market's big vendor: a white apron and headband, a round paper lantern on a pole
+          M('cyl', color, [6.5, 16, 6.5], [0, 8, 0]); M('box', '#f4f1ea', [1, 10, 8], [6.3, 8, 0]); M('sphere', SKIN, [5, 5, 5], [0, 21, 0]);
+          M('cyl', '#f4f1ea', [5.2, 1.3, 5.2], [0, 23.2, 0]); M('cyl', '#6b4a2b', [0.6, 12, 0.6], [8, 10, 0]);
+          M('sphere', '#ff7a3a', [3.2, 3.8, 3.2], [8, 17.5, 0], true); eyes(DARK, 4.4, 21.4, 1.7, 0.8); break;
+        case 'marshal': // the airport's ground marshal: a vest with a pale band, a white helmet, a glowing wand in each hand
+          M('cyl', color, [5, 16, 5], [0, 8, 0]); M('cyl', '#f4f1ea', [5.2, 1.5, 5.2], [0, 10.5, 0]); M('sphere', SKIN, [4.6, 4.6, 4.6], [0, 21, 0]);
+          M('sphere', '#f4f1ea', [5, 3, 5], [0, 23.6, 0]); M('box', '#ff5d3a', [1.3, 1.3, 7], [2, 16, 8.5], true); M('box', '#ff5d3a', [1.3, 1.3, 7], [2, 16, -8.5], true);
+          eyes(DARK, 4.1, 21.2, 1.6, 0.8); break;
+        case 'rover': // the station's rover: a body on four wheels, a solar panel, a mast with a camera head and a searchlight
+          M('box', color, [10, 5, 8], [0, 5.5, 0]); for (const [x, z] of [[4, 4.8], [4, -4.8], [-4, 4.8], [-4, -4.8]]) M('sphere', DARK, [2.6, 2.6, 1.6], [x, 2.6, z]);
+          M('box', '#3a4a8a', [8, 0.5, 6.5], [-3, 9, 0]); M('cyl', '#c8d0e8', [0.8, 10, 0.8], [1, 13, 0]); M('box', '#e8ecf5', [4, 3, 5.4], [1, 19, 0]);
+          M('box', '#7fe8ff', [1, 2, 3.6], [3.4, 19, 0], true); eyes('#7fe8ff', 3.1, 19.6, 1.7, 0.8); break;
         default: // keeper (the original): tall violet coat, a head, a hand lamp
           M('cyl', color, [5, 18, 5], [0, 9, 0]); M('sphere', SKIN, [4.5, 4.5, 4.5], [0, 22, 0]); M('box', '#ffd23f', [6, 3, 3], [7, 14, 0], true);
       }

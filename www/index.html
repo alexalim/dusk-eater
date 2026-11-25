@@ -123,6 +123,11 @@
   #snow { position: fixed; inset: -60px 0 0 0; pointer-events: none; z-index: 3; opacity: .8;
     background-image: radial-gradient(circle, rgba(255,255,255,.95) 0 1.6px, transparent 2.4px), radial-gradient(circle, rgba(255,255,255,.7) 0 1.1px, transparent 1.8px);
     background-size: 90px 90px, 57px 57px; background-position: 0 0, 30px 20px; animation: snowfall 7s linear infinite; }
+  /* a season map's own weather: petals, leaves or confetti in the season's two colors (stages.js `fall`), drifting down slantwise */
+  #fall { position: fixed; inset: -60px 0 0 0; pointer-events: none; z-index: 3; opacity: .85;
+    background-image: radial-gradient(ellipse 3.4px 2.2px, var(--f1) 0 98%, transparent), radial-gradient(ellipse 2.6px 1.8px, var(--f2) 0 98%, transparent);
+    background-size: 110px 110px, 71px 71px; background-position: 0 0, 30px 20px; animation: petalfall 9s linear infinite; }
+  @keyframes petalfall { to { background-position: 110px 770px, -71px 497px; } }
   @keyframes snowfall { to { background-position: 24px 630px, -18px 399px; } }
   /* state particles at the body (always mid-screen): green smoke while poisoned, cyan glints while fast */
   #burst i.smoke { border-radius: 50%; filter: blur(1px); animation: smoke 1.1s ease-out forwards; }
@@ -588,6 +593,7 @@
 <div id="vignette" class="hidden"></div>
 <div id="rain" class="hidden"></div>
 <div id="snow" class="hidden"></div>
+<div id="fall" class="hidden"></div>
 <div id="streak" class="hidden"></div>
 <div id="hitcount"></div>
 <div id="no3d" class="overlay hidden">
@@ -1186,6 +1192,12 @@
   // The map's own rule (stages.js RULES): shade only this map has. The patches of shade ride in `clouds` (marked
   // `rule`), so they shade, show and count exactly as cloud shade does; the blizzard hides the sun like a dark event.
   let blizzard = false;
+  // a season map's falling petals, leaves or confetti (stages.js `fall`): part of the world like the snow, so only in play
+  function fallShow(on) {
+    const f = on && stage && stage.fall, el = $('fall');
+    el.classList.toggle('hidden', !f);
+    if (f) { el.style.setProperty('--f1', f[0]); el.style.setProperty('--f2', f[1]); }
+  }
   const BLIZZARD = { every: 24, first: 10, secs: 6 }, AWNING = { cycle: 11, open: 6.5 };
   function ruleStart() {
     blizzard = false;
@@ -1197,7 +1209,7 @@
       for (let k = 0; k < 5; k++) add({ row: waterY * fy, at: rnd() * 400 + k * 96, v: (r.v || 30) * dir, r: 50 }); // r.v: a faster row (the airport's planes)
     if (r.kind === 'arm') for (let n = 0; n < r.arms; n++) { // each arm: five patches in a line from its foot, turning together
       const cx = WORLD * (r.arms === 1 ? 0.5 : [0.3, 0.7][n]), cy = waterY * (r.arms === 1 ? 0.5 : [0.4, 0.6][n]), reach = r.arms === 1 ? 105 : 80;
-      for (let k = 0; k < 5; k++) add({ kind2: 'arm', cx, cy, R: 70 + k * reach, a: n * 2.1, w: (r.arms === 1 ? 0.1 : 0.16) * (n ? -1 : 1), r: 46 + k * 4 });
+      for (let k = 0; k < 5; k++) add({ icon: k === 4 ? r.tip || null : null, cx, cy, R: 70 + k * reach, a: n * 2.1, w: (r.arms === 1 ? 0.1 : 0.16) * (n ? -1 : 1), r: 46 + k * 4 });
     }
     if (r.kind === 'blimp') add({ cx: WORLD / 2, cy: waterY / 2, R: Math.min(WORLD, waterY) * 0.28, a: rnd() * 6.28, w: 0.06, r: 175 });
     if (r.kind === 'copter') for (let k = 0; k < 2; k++) add({ cx: WORLD / 2, cy: waterY / 2, R: Math.min(WORLD, waterY) * 0.33, a: k * Math.PI, w: 0.34, r: 78 });
@@ -1629,6 +1641,7 @@
     ammo = 0; spits = []; renderAmmo();
     mapEvent = null; eventDone = false; runners = []; $('rain').classList.add('hidden');
     $('snow').classList.toggle('hidden', !(stage.look && stage.look.snow)); // it snows all run on winter maps
+    fallShow(true);
     shards = []; nextShard = C.SHARD.from; lastShardKind = null; fastUntil = bubbleUntil = magnetUntil = 0; dashTick = 0;
     clouds = stage.twist === 'clouds' ? Array.from({ length: 7 }, (_, k) => ({ x: rnd() * WORLD, y: rnd() * waterY, r: 70 + rnd() * 50 })) : [];
     tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
@@ -2397,7 +2410,7 @@
   }
 
   function openSelect(scrollTo = false) {
-    state = 'menu'; $('snow').classList.add('hidden'); // the snowfall is part of the world, not of the menus
+    state = 'menu'; $('snow').classList.add('hidden'); fallShow(false); // the snowfall is part of the world, not of the menus
     const live = liveEvents();
     if (listKey !== 'main' && !live.some(ev => ev.id === listKey)) { useList('main'); selected = lastUnlocked(); page = Math.floor(selected / pageSize()); }
     const ev = EVENTS.find(e => e.id === listKey);
@@ -2533,7 +2546,7 @@
   }
 
   function offerContinue(got) {
-    state = 'cont'; $('snow').classList.add('hidden');
+    state = 'cont'; $('snow').classList.add('hidden'); fallShow(false);
     const n = got.filter(Boolean).length;
     $('cont-why').textContent = endedBy === 'hunger' ? '너무 오래 굶어서 집에 갔어요. 뭐든 계속 삼켜야 해요!'
       : stage.hard === 'super' ? '거대 등불지기를 삼켜야 깰 수 있어요.'
@@ -2551,7 +2564,7 @@
     continued = true;
     runDuration += CONTINUE_S; rush = false; Sound.music.rush(false);
     lastEat = elapsed; starving = false; starveT = 0; endedBy = null; // a fresh stomach for the extra time
-    state = 'play'; show(null); $('snow').classList.toggle('hidden', !(stage.look && stage.look.snow));
+    state = 'play'; show(null); $('snow').classList.toggle('hidden', !(stage.look && stage.look.snow)); fallShow(true);
   }
 
   let cheerNext = null, cheerTimer = 0; // the celebration step hands over to the details (endRun)
@@ -2564,7 +2577,7 @@
   }
 
   function endRun(got) {
-    $('snow').classList.add('hidden'); $('rain').classList.add('hidden');
+    $('snow').classList.add('hidden'); fallShow(false); $('rain').classList.add('hidden');
     state = 'end';
     const cleared = C.isCleared(stage, got);
     const n = cleared ? got.filter(Boolean).length : 0; // an uncleared hard level keeps no stars
