@@ -363,11 +363,15 @@
   .levels { position: relative; height: calc(var(--rows) * 66px + 12px); margin-top: 26px; }
   /* the region's scenery: a panel in the map's ground colors, and two big pictures of the place beside the road */
   .levels .scene { position: absolute; inset: -18px -4px -10px; border-radius: 28px; pointer-events: none;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 30%, transparent), color-mix(in srgb, var(--tint2) 20%, transparent));
-    border: 2px solid color-mix(in srgb, var(--tint) 34%, transparent); box-shadow: inset 0 2px 0 rgba(255,255,255,.08); }
+    /* solid: the game behind (and the big character standing in it) showed through as a muddy, blurry shape */
+    background: radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--tint) 44%, #2c2244), transparent 70%),
+      linear-gradient(180deg, color-mix(in srgb, var(--tint) 30%, #2c2244), color-mix(in srgb, var(--tint2) 24%, #211a33));
+    border: 2px solid color-mix(in srgb, var(--tint) 45%, transparent); box-shadow: inset 0 2px 0 rgba(255,255,255,.1); }
   .levels .landmark { position: absolute; width: 132px; height: 132px; top: calc(var(--k) * 66px + 29px); left: calc(50% + var(--side) * 27%); translate: -50% -50%; /* not transform: the float animation owns that */
-    opacity: .62; pointer-events: none; filter: drop-shadow(0 6px 0 rgba(20,12,40,.3)); animation: float 4.2s ease-in-out infinite; }
-  .levels .landmark.far { width: 104px; height: 104px; opacity: .5; animation-delay: -2s; }
+    opacity: .8; pointer-events: none; filter: drop-shadow(0 6px 0 rgba(20,12,40,.3)); animation: float 4.2s ease-in-out infinite; }
+  .levels .landmark.far { width: 104px; height: 104px; opacity: .6; animation-delay: -2s; }
+  /* a painted landmark (256 px, tools/map/pack.py; the rendered tiles are 128) is the region's picture: shown nearly whole */
+  .levels .landmark.art { width: 150px; height: 150px; opacity: .95; } .levels .landmark.art.far { width: 116px; height: 116px; opacity: .7; }
   .region .rbar { display: block; width: 120px; height: 6px; margin: 4px auto 0; border-radius: 999px; background: rgba(255,255,255,.22); overflow: hidden; }
   .region .rbar i { display: block; height: 100%; background: linear-gradient(90deg, #ffd25c, #fff0b0); }
   .region small.rule { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; padding: 2px 9px; border-radius: 999px; background: rgba(255,255,255,.16); color: #fff; }
@@ -385,7 +389,8 @@
   .levels .me { position: absolute; width: 62px; height: 62px; top: calc(var(--k) * 66px - 2px); left: calc(50% + var(--x) * 1% + var(--side) * 56px); transform: translateX(-50%); pointer-events: none; }
   #select .sheet { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: min(100%, 420px); max-height: 44vh; overflow-y: auto; z-index: 3;
     border-radius: 26px 26px 0 0; background: var(--plum); border-top: 3px solid var(--plum-mid); box-shadow: 0 -6px 24px rgba(0,0,0,.45); padding-bottom: calc(env(safe-area-inset-bottom) + 14px); }
-  .node .tw { position: absolute; top: -6px; right: -4px; width: 20px; height: 20px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
+  .node .tw { position: absolute; top: -8px; right: -7px; width: 26px; height: 26px; padding: 3px; box-sizing: border-box; border-radius: 50%; /* a white badge: the bare icon got lost on the node */
+    background: #fff; box-shadow: 0 2px 0 rgba(0,0,0,.25); }
   .node.boss:not(.locked) { background: linear-gradient(#e2b8ff, #b78cff); box-shadow: 0 0 0 2px #ffd25c inset; }
   .node.hard:not(.locked) { box-shadow: 0 0 0 2px #ff8a5c inset; }
   .node.hard:not(.locked)::after { content: '어려움'; position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%); font-size: 9px;
@@ -402,7 +407,8 @@
   .node .stars { font-size: 10px; letter-spacing: 0; color: #2a1a05; }
   .node .stars .off { color: rgba(42,26,5,.25); }
   .node.sel { box-shadow: 0 0 0 3px var(--star), 0 0 16px rgba(255,210,92,.55); }
-  .levels .node.locked { background: #4a4560; color: rgba(244,239,230,.55); }
+  .levels .node.locked { background: #635b85; color: rgba(255,255,255,.8); /* lighter, with a ring: on the dark panel the old gray sank */
+    box-shadow: 0 4px 0 rgba(0,0,0,.28), inset 0 0 0 2px rgba(255,255,255,.22); }
   .node.locked svg { width: 18px; height: 18px; }
   .tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; } .tabs .chip { flex: none; } /* a test build lists every event: the row scrolls */
   .panel { width: min(100%, 380px); box-sizing: border-box; padding: 16px; border-radius: 16px; background: var(--card);
@@ -2446,7 +2452,7 @@
     // standing on the side the road leaves free, so every region's page looks like where it is.
     const th = THEMES[list[from].theme], side = k => (PATH_X[k % PATH_X.length] > 0 ? -1 : 1);
     const scene = `<div class="scene" style="--tint:${th.ground[0]};--tint2:${th.ground[2] || th.ground[0]}"></div>` +
-      [1, Math.min(size - 2, 6)].map((k, n) => `<img class="landmark${n ? ' far' : ''}" src="img/map/${th.theme}.png" alt="" style="--k:${k};--side:${side(k)}">`).join('');
+      [1, Math.min(size - 2, 6)].map((k, n) => `<img class="landmark${n ? ' far' : ''}" src="img/map/${th.theme}.png" alt="" onload="this.naturalWidth > 128 && this.classList.add('art')" style="--k:${k};--side:${side(k)}">`).join('');
     // Ladder pages are regions: name, icon, stars collected there, its own rule; a locked region says how it opens.
     const region = ev ? null : REGIONS[page], rule = list[from].rule;
     const got = list.slice(from, from + size).reduce((a, s) => a + (bestStars[s.id] || 0), 0);

@@ -1,6 +1,7 @@
 # Regenerates the game's raster icons (not part of the app or its tests).
 #  - www/img/dex/<kind>.png: every collection-book kind, drawn with the game's own 3D part lists
-#  - www/img/map/<theme>.png: each map's signature thing on a tile of the map's ground color
+#  - www/img/map/<theme>.png: each map's signature thing, clear around it (maps with a painting in
+#    design/art/map are left to tools/map/pack.py)
 # Usage: python3 tools/icons/render.py   (needs Playwright + ImageMagick `convert`)
 import base64, json, pathlib, re, subprocess
 from playwright.sync_api import sync_playwright
@@ -35,13 +36,14 @@ with sync_playwright() as p:
         save_png(pg.evaluate('([id, c]) => renderIcon(id, c)', [kid, colors.get(kid, '#ffffff')]), WWW / 'img/dex' / f'{kid}.png', 128)
     print('dex', len(entries['e']))
 
-    # Map icons: the map's signature thing on a rounded tile of its ground color.
+    # Map icons: the map's signature thing, on a clear background.
     for theme in entries['t']:
+        if (ROOT / 'design/art/map' / f'{theme}.png').exists(): continue  # a painted landmark (tools/map/pack.py) wins
         kid = SIGNATURE[theme]
         raw = WWW / 'img/map' / f'{theme}.icon.png'
         save_png(pg.evaluate('([id, c]) => renderIcon(id, c)', [kid, colors.get(kid, '#ffffff')]), raw, 192)
-        ground = entries['g'][theme]
-        subprocess.run(['convert', '-size', '128x128', 'xc:none', '-fill', ground, '-draw', 'roundrectangle 2,2 125,125 30,30',
+        # no tile behind it any more: on the level map it stands in the region's own colored panel
+        subprocess.run(['convert', '-size', '128x128', 'xc:none',
                         '(', str(raw), '-trim', '+repage', '-resize', '96x96', ')', '-gravity', 'center', '-composite', '-strip', str(WWW / 'img/map' / f'{theme}.png')], check=True)
         raw.unlink()
     print('maps', len(entries['t']))
