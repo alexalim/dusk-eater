@@ -77,7 +77,7 @@ def clean(im):  # keep the biggest connected shape of real (alpha > 40) pixels; 
     for j in best: op[j % w, j // w] = px[j % w, j // w]
     return out
 
-SIDE_LEFT = {'moss', 'cotton_candy', 'luna'}  # sheets whose side view was painted looking left
+SIDE_LEFT = {'moss', 'cotton_candy', 'luna', 'wizard', 'eclipse', 'solaris', 'black_hole', 'midnight', 'opal', 'aurora', 'bloom', 'ember', 'frost'}  # sheets whose side view was painted looking left
 
 def turn(sheet):  # front, side, back: each 192 px, one scale for the three, feet on the line the other pictures stand on (y 171)
     im = Image.open(sheet).convert('RGBA'); w = im.width // 3
