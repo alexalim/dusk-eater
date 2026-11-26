@@ -108,20 +108,65 @@
     tone(R(600, 800), 260, 0.12, { type: 'sine', vol: .3 }); // anything else: a plain pop
   }
 
+  // The character's own voice (tester: "a cute voice for the character"): babble syllables, synthesized like the rest.
+  // A bright saw at a child's pitch goes through two band-pass filters set to a vowel's first two formants, so it
+  // says 아, 에, 이, 오, 우; a nasal (ㄴ/ㅁ) is a short closed-mouth hum before or after the vowel.
+  // WORDS: each syllable is [vowel, seconds, start pitch, end pitch] (pitch as a multiple of the base), a nasal 'n'/'m'
+  // hum takes [n, seconds]. The base pitch wobbles a little per word, so the same word never sounds stamped out.
+  const VOWELS = { a: [850, 1250], e: [520, 1900], i: [320, 2450], o: [520, 920], u: [360, 860] };
+  const WORDS = {
+    nyam: [['n', 0.035], ['a', 0.13, 1.1, 1.35], ['m', 0.06]],                              // 냠
+    wow: [['u', 0.09, 0.95, 1.05], ['a', 0.26, 1.15, 1.55]],                                   // 우와~
+    yay: [['i', 0.04, 1.2, 1.25], ['a', 0.12, 1.3, 1.45], ['o', 0.22, 1.55, 1.7]],              // 야호
+    hehe: [['e', 0.09, 1.2, 1.35], ['e', 0.07, 1.1, 1.25], ['e', 0.13, 1.3, 1.45]],             // 에헤헤
+    hing: [['i', 0.11, 1.4, 1.3], ['i', 0.36, 1.35, 0.95]],                                    // 히잉~
+    ah: [['a', 0.1, 1.2, 1.65]],                                                                // 앗!
+    umm: [['m', 0.05], ['u', 0.12, 1.0, 1.15], ['m', 0.08]],                                    // 음!
+  };
+  const lastSaid = []; // the words said most recently (tests read this)
+  let saidAt = -9;
+  function say(word, { at = 0, vol = 0.2, every = 0 } = {}) {
+    const w = WORDS[word];
+    if (!w) return;
+    if (ctx && ctx.state === 'running' && every && ctx.currentTime - saidAt < every) return; // the frequent ones keep a gap
+    lastSaid.push(word); if (lastSaid.length > 20) lastSaid.shift();
+    if (!ctx || ctx.state !== 'running') return;
+    const base = 560 * R(0.95, 1.06);
+    let t = ctx.currentTime + at; saidAt = ctx.currentTime;
+    for (const [v, dur, p0, p1] of w) {
+      if (v === 'n' || v === 'm') { tone(base * 1.15, base * 1.1, dur, { type: 'sine', vol: vol * 0.45, at: t - ctx.currentTime, attack: 0.01 }); t += dur; continue; }
+      const o = ctx.createOscillator(), g = ctx.createGain(), sum = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(base * p0, t); o.frequency.exponentialRampToValueAtTime(base * p1, t + dur);
+      lfo.frequency.value = 7; lg.gain.value = base * 0.025; lfo.connect(lg).connect(o.frequency);
+      for (const [k, f] of VOWELS[v].entries()) {
+        const bp = ctx.createBiquadFilter(), bg = ctx.createGain();
+        bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 5; bg.gain.value = k ? 0.55 : 1;
+        o.connect(bp).connect(bg).connect(sum);
+      }
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.setValueAtTime(vol, t + dur * 0.6);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      sum.connect(g).connect(sfxBus);
+      o.start(t); lfo.start(t); o.stop(t + dur + 0.02); lfo.stop(t + dur + 0.02);
+      t += dur + 0.015;
+    }
+  }
+
   const sfx = {
-    voice: voiceOf, get lastVoices() { return lastVoices.slice(); },
+    voice: voiceOf, get lastVoices() { return lastVoices.slice(); }, say, get lastSaid() { return lastSaid.slice(); },
     gulp(size = 0, combo = 0) { // a combo climbs: each swallow in the chain is a step higher, up to a fifth
       const f = (720 - size * 420) * R(0.92, 1.08) * Math.pow(2, Math.min(7, Math.max(0, combo - 1)) / 12);
       tone(f, f * 0.35, 0.13, { type: 'sine', vol: 0.55 });
       tone(f * 2.1, f * 0.9, 0.06, { type: 'triangle', vol: 0.12 });
+      if (combo >= 3 && combo % 4 === 3) say('nyam', { at: 0.06, every: 1.6 }); // a 냠 now and then in a chain, never a chatter
+      else if (size > 0.7) say('umm', { at: 0.08, every: 1.6 }); // something big: a satisfied 음!
     },
     tap() { tone(1200, 900, 0.04, { type: 'triangle', vol: 0.18 }); },
-    star() { [72, 76, 79, 84].forEach((n, i) => tone(note(n), note(n), 0.22, { type: 'triangle', vol: 0.3, at: i * 0.07 })); },
+    star() { [72, 76, 79, 84].forEach((n, i) => tone(note(n), note(n), 0.22, { type: 'triangle', vol: 0.3, at: i * 0.07 })); say('yay', { at: 0.3 }); },
     coin() { tone(note(88), note(88), 0.09, { type: 'square', vol: 0.08 }); tone(note(95), note(95), 0.25, { type: 'square', vol: 0.08, at: 0.08 }); },
     level() { [67, 72, 76, 79, 84].forEach((n, i) => tone(note(n), note(n), 0.3, { type: 'triangle', vol: 0.32, at: i * 0.09 })); },
-    lit() { tone(260, 180, 0.18, { type: 'sawtooth', vol: 0.07 }); tone(250, 175, 0.18, { type: 'sawtooth', vol: 0.07, at: 0.2 }); },
+    lit() { tone(260, 180, 0.18, { type: 'sawtooth', vol: 0.07 }); tone(250, 175, 0.18, { type: 'sawtooth', vol: 0.07, at: 0.2 }); say('ah', { at: 0.02, every: 3 }); }, // 앗! (out in the sun)
     night() { [84, 79, 76, 72, 67].forEach((n, i) => tone(note(n), note(n), 0.5, { type: 'sine', vol: 0.25, at: i * 0.12 })); },
-    grow() { tone(320, 960, 0.35, { type: 'triangle', vol: 0.25 }); [79, 84, 88].forEach((n, i) => tone(note(n), note(n), 0.25, { type: 'sine', vol: 0.22, at: 0.3 + i * 0.08 })); },
+    grow() { tone(320, 960, 0.35, { type: 'triangle', vol: 0.25 }); [79, 84, 88].forEach((n, i) => tone(note(n), note(n), 0.25, { type: 'sine', vol: 0.22, at: 0.3 + i * 0.08 })); say('wow', { at: 0.12 }); },
     hit() { tone(180, 60, 0.18, { type: 'square', vol: 0.35 }); tone(900, 1800, 0.12, { type: 'triangle', vol: 0.2, at: 0.02 }); [84, 91].forEach((n, i) => tone(note(n), note(n), 0.3, { type: 'triangle', vol: 0.25, at: 0.1 + i * 0.08 })); },
     tick() { tone(1500, 1500, 0.06, { type: 'square', vol: 0.12 }); },
     spit() { hiss(0.09, { f: 1600, q: 1.2, vol: .32 }); tone(460, 150, 0.13, { type: 'triangle', vol: .3, at: 0.02 }); }, // 퉤: a short burst and a falling thump
@@ -138,8 +183,8 @@
     wind(dur) { hiss(dur, { f: 420, q: 0.8, type: 'lowpass', vol: 0.16 }); }, // a cloud front rolling in
     parade() { [67, 71, 74, 79, 74, 79].forEach((n, i) => tone(note(n), note(n), 0.13, { type: 'square', vol: 0.09, at: i * 0.12 })); }, // a little march
     combo(n) { const f = note(72 + Math.min(12, n)); tone(f, f * 1.5, 0.08, { type: 'square', vol: 0.1 }); }, // each link a step higher
-    win() { [60, 64, 67, 72, 76].forEach((n, i) => tone(note(n), note(n), 0.35, { type: 'triangle', vol: 0.3, at: i * 0.1 })); },
-    lose() { [67, 64, 60].forEach((n, i) => tone(note(n), note(n), 0.4, { type: 'triangle', vol: 0.25, at: i * 0.16 })); },
+    win() { [60, 64, 67, 72, 76].forEach((n, i) => tone(note(n), note(n), 0.35, { type: 'triangle', vol: 0.3, at: i * 0.1 })); say('hehe', { at: 0.6 }); },
+    lose() { [67, 64, 60].forEach((n, i) => tone(note(n), note(n), 0.4, { type: 'triangle', vol: 0.25, at: i * 0.16 })); say('hing', { at: 0.55 }); },
   };
 
   // Background music: a small band, scheduled a little ahead of time. Every region shares one core (a soft pad
@@ -457,5 +502,5 @@
     bus.gain.setTargetAtTime(v ? level : 0, ctx.currentTime, 0.05);
   }
 
-  root.DuskSound = { sfx, music, setOn, band: { TUNES, INST, BASS, LINES, DRUMS }, get on() { return Object.assign({}, on); }, get ctx() { return ctx; } };
+  root.DuskSound = { sfx, music, setOn, band: { TUNES, INST, BASS, LINES, DRUMS }, voice: { VOWELS, WORDS }, get on() { return Object.assign({}, on); }, get ctx() { return ctx; } };
 })(this);

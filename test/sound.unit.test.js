@@ -38,3 +38,21 @@ test('a bass line gives a note or nothing on every step, and always starts the b
     for (let s = 0; s < 16; s++) { const v = line(s, chord); assert.ok(v === null || Number.isInteger(v), `${name} step ${s}: ${v}`); }
   }
 });
+
+test('the character voice: every word is syllables of a known vowel (or a short nasal hum), each a short, rising or falling pitch', () => {
+  const { VOWELS, WORDS } = DuskSound.voice;
+  for (const [name, w] of Object.entries(WORDS)) {
+    assert.ok(w.length >= 1 && w.some(s => VOWELS[s[0]]), `${name} says a vowel`);
+    for (const s of w) {
+      if (s[0] === 'n' || s[0] === 'm') { assert.ok(s[1] > 0 && s[1] < 0.15, `${name}: hum ${s}`); continue; }
+      assert.ok(VOWELS[s[0]], `${name}: vowel ${s[0]}`);
+      assert.ok(s[1] > 0 && s[1] <= 0.4 && s[2] > 0.5 && s[2] < 2 && s[3] > 0.5 && s[3] < 2, `${name}: ${s}`);
+    }
+    assert.ok(w.reduce((a, s) => a + s[1], 0) < 0.6, `${name} stays a quick word`);
+  }
+});
+
+test('say() remembers what was said even with no audio context (the game calls it the same way either way)', () => {
+  DuskSound.sfx.say('wow'); DuskSound.sfx.say('nope');
+  assert.equal(DuskSound.sfx.lastSaid.at(-1), 'wow');
+});
