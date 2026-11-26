@@ -56,7 +56,7 @@
       desc: '동그란 헬멧을 쓰고 밤하늘을 유영해요. 별과 별 사이의 어둠도 놓치지 않아요.' },
     // Gems only (no App Store product): `reward: 'gems'` keeps it through entitlement rebuilds like the earned skins.
     // `car`: the renderer seats the body on a little car (render3d setSkin).
-    { id: 'car', cat: 'costume', name: '붕붕', body: 0xffe3ee, rim: 0x7fc8ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, car: true,
+    { id: 'car', cat: 'costume', art: 'ghostcar', name: '붕붕', body: 0xffe3ee, rim: 0x7fc8ff, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, car: true,
       desc: '작은 자동차에 쏙 올라탄 친구예요. 달리면 바퀴가 데굴데굴 굴러가요.' },
     { id: 'bunny', cat: 'costume', art: 'bunny', name: '토끼 후드', body: 0xf3e8ff, rim: 0xffb3d0, eye: 0x2a1640, pupil: 0xffffff, reward: 'gems', gems: 600, wear: ['bow', 0xffb3d0],
       desc: '폭신한 토끼 후드를 뒤집어썼어요. 긴 귀가 걸을 때마다 쫑긋거려요.' },

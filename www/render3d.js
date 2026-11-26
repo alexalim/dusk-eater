@@ -1986,7 +1986,7 @@
     // `debug` is read by the QA scripts (pixel checks, memory counters); the game never uses it.
     // Cosmetic skin: body, unlit rim (also the growth glow), eye colors and what it wears. The lit warning stays red regardless.
     function setSkin(skin) {
-      carOn = !!skin.car;
+      carOn = !!skin.car && !skin.art; // the 3D car only for a car skin without its painted picture (tester: 붕붕 looked apart)
       bodyColor.setHex(skin.body);
       glowColor.setHex(skin.rim);
       rimColor = skin.rim;
