@@ -538,6 +538,11 @@
   .bcat.waiting .rw { color: #d62c3a; font-size: 13px; }
   @keyframes claimglow { to { box-shadow: inset 0 0 0 2px #ffc83d, 0 0 0 7px rgba(255,200,61,.12), 0 2px 0 var(--paper-line); } }
   .hexes { display: flex; gap: 4px; }
+  /* the monthly badges: the whole width, twelve months in two rows, this month ringed in purple */
+  .bcat.month { grid-column: 1 / -1; }
+  .mhexes { display: grid; grid-template-columns: repeat(6, auto); gap: 4px 8px; }
+  .mcell { display: flex; flex-direction: column; align-items: center; gap: 1px; } .mcell small { font-size: 12px; }
+  .hex.now { background: linear-gradient(#e2d4ff, #b9a2ef); } .hex.now img { opacity: .6; }
   .hex { width: 44px; height: 50px; display: grid; place-items: center; padding: 0; border: 0; cursor: pointer; font: 18px var(--display);
     color: #a595b5; background: var(--paper-dim); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
   .hex img { width: 24px; height: 24px; filter: grayscale(1); opacity: .35; }
@@ -880,6 +885,24 @@
     pilot:     { r: 5,  color: '#2a3a6a' },
     kid:       { r: 4,  color: '#ffd25c', colors: ['#ffd25c', '#ff8fb1', '#5bc0eb', '#9bc53d'] },
     slide:     { r: 14, color: '#ff7f9e' },
+    satellite: { r: 6,  color: '#d8dde8' },
+    alien:     { r: 4,  color: '#8fe07a', colors: ['#8fe07a', '#b48cff', '#7fd6e8'] },
+    moonrock:  { r: 5,  color: '#b8b4c8' },
+    jellyfish: { r: 4,  color: '#ffb3e6', colors: ['#ffb3e6', '#b8a8ff', '#9fe8ff'] },
+    turtle:    { r: 5,  color: '#5a9a5a' },
+    seal:      { r: 6,  color: '#8a9aa8' },
+    monkey:    { r: 4,  color: '#a87a5a' },
+    eggbasket: { r: 4,  color: '#b58a55' },
+    geta:      { r: 3,  color: '#a8784a' },
+    skewer:    { r: 3,  color: '#e2674f' },
+    fishbread: { r: 3,  color: '#d89a4a' },
+    hotteok:   { r: 3,  color: '#c8843a' },
+    passenger: { r: 5,  color: '#9bc53d', colors: ['#9bc53d', '#5bc0eb', '#ff8fb1', '#f2c14e'] },
+    bagcart:   { r: 7,  color: '#5bc0eb', colors: ['#5bc0eb', '#9bc53d', '#3a3a44'] },
+    dutybag:   { r: 3,  color: '#ffd25c', colors: ['#ffd25c', '#ff8fb1', '#f4f1ea', '#3a3a44'] },
+    seesaw:    { r: 10, color: '#ff9ec4' },
+    sandpail:  { r: 3,  color: '#5bc0eb', colors: ['#5bc0eb', '#ff5d73', '#9bc53d'] },
+    junglegym: { r: 14, color: '#ff7f9e' },
     // city
     officer:   { r: 5,  color: '#3b3f52', colors: ['#3b3f52', '#5a5f73', '#2f3e66', '#6b5b4b'] },
     vending:   { r: 6,  color: '#d9534f', colors: ['#d9534f', '#4fb0c6', '#f4f1ea'] },
@@ -2332,7 +2355,17 @@
   function renderBadges() {
     const w = Store.wallet, c = badgeCtx(), got = Badges.earned(c);
     $('badges-sum').textContent = `${got.length} / ${Badges.BADGES.length} 땄어요 · 딴 배지를 누르면 보석을 드려요`;
-    $('badges-list').innerHTML = Badges.CATS.map(cat => {
+    // The monthly badges first, across the whole width: this year's twelve months, the won ones in gold (challenge.js
+    // monthStatus; tester: "I got the November badge, where do I see it?" — it was only on the missions card)
+    const day = dayKey(), year = day.slice(0, 4), cur = +day.slice(5, 7), mo = Challenge.monthStatus(w, day);
+    const months = Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
+      const won = (w.monthBadges || []).includes(`${year}-${String(m).padStart(2, '0')}`);
+      return `<span class="mcell"><button class="hex t2${won ? ' on' : ''}${m === cur && !won ? ' now' : ''}" data-month="${m}">` +
+        `<img src="img/ui/medal.svg" alt=""></button><small>${m}월</small></span>`;
+    }).join('');
+    const mline = mo.claimed || (w.monthBadges || []).includes(day.slice(0, 7)) ? `${mo.label}의 배지를 받았어요!` : mo.done ? `${mo.label}의 배지를 미션 창에서 받으세요!` : `${mo.label} 퀘스트 ${mo.points} / ${mo.goal}`;
+    const monthCard = `<div class="bcat month${mo.done && !mo.claimed ? ' waiting' : ''}"><h4>${ico('medal')} 월간 배지</h4><div class="mhexes">${months}</div><small>${mline}</small></div>`;
+    $('badges-list').innerHTML = monthCard + Badges.CATS.map(cat => {
       const list = Badges.BADGES.filter(b => b.cat === cat), have = list.filter(b => got.includes(b.id));
       const hexes = list.map(b => {
         const on = got.includes(b.id), fresh = on && !w.badges.includes(b.id), secret = cat.secret && !on;
@@ -2344,7 +2377,13 @@
       return `<div class="bcat${waiting ? ' waiting' : ''}"><h4>${ico(cat.icon)} ${cat.name}</h4><div class="hexes">${hexes}</div><small>${line}</small>` +
         (waiting ? `<span class="rw gem">${GEM}${waiting} 받기</span>` : '') + '</div>';
     }).join('');
-    $('badges-list').querySelectorAll('.hex').forEach(el => el.addEventListener('pointerup', () => {
+    $('badges-list').querySelectorAll('.hex[data-month]').forEach(el => el.addEventListener('pointerup', () => {
+      const m = +el.dataset.month, won = el.classList.contains('on');
+      $('badges-msg').textContent = won ? `${m}월의 배지 · 그 달 미션 보상 ${mo.goal}개를 모아 받았어요.`
+        : m === cur ? `${mo.label} 퀘스트 ${mo.points} / ${mo.goal} · 미션 보상을 모으면 배지와 보석 ${mo.gems}개!`
+        : m > cur ? `${m}월이 되면 도전할 수 있어요.` : `${m}월의 배지는 지나갔어요.`;
+    }));
+    $('badges-list').querySelectorAll('.hex[data-badge]').forEach(el => el.addEventListener('pointerup', () => {
       const b = Badges.BADGES.find(x => x.id === el.dataset.badge), c2 = badgeCtx(), on = b.ok(c2);
       const w2 = Badges.claim(Store.wallet, b.id, c2);
       $('badges-msg').textContent = w2 !== Store.wallet ? `${b.name} 배지! 보석 ${b.gems}개를 받았어요.`

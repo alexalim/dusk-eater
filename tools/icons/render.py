@@ -2,8 +2,9 @@
 #  - www/img/dex/<kind>.png: every collection-book kind, drawn with the game's own 3D part lists
 #  - www/img/map/<theme>.png: each map's signature thing, clear around it (maps with a painting in
 #    design/art/map are left to tools/map/pack.py)
-# Usage: python3 tools/icons/render.py   (needs Playwright + ImageMagick `convert`)
-import base64, json, pathlib, re, subprocess
+# Usage: python3 tools/icons/render.py [kind ...]   (needs Playwright + ImageMagick `convert`)
+#   with kinds: only those book pictures, and no map icons (a new kind needs its picture, the rest stay as they are)
+import base64, json, pathlib, re, subprocess, sys
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -32,9 +33,12 @@ with sync_playwright() as p:
     b = p.chromium.launch(args=GL + ['--allow-file-access-from-files'])
     pg = b.new_page()
     pg.goto((ROOT / 'tools/icons/dex.html').as_uri())
+    only = set(sys.argv[1:])
     for kid in entries['e']:
+        if only and kid not in only: continue
         save_png(pg.evaluate('([id, c]) => renderIcon(id, c)', [kid, colors.get(kid, '#ffffff')]), WWW / 'img/dex' / f'{kid}.png', 128)
-    print('dex', len(entries['e']))
+    print('dex', len(only) if only else len(entries['e']))
+    if only: b.close(); sys.exit(0)
 
     # Map icons: the map's signature thing, on a clear background.
     for theme in entries['t']:
