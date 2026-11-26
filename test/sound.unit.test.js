@@ -63,7 +63,9 @@ test('recorded sounds: every effect and background track the code names has its 
   for (const n of SFX_FILES) assert.ok(fs.existsSync(path.join(www, `audio/sfx/${n}.m4a`)), `sfx ${n}`);
   for (const n of Object.keys(BGM_LUFS)) assert.ok(fs.existsSync(path.join(www, `audio/bgm/bgm_${n}.m4a`)), `bgm ${n}`);
   for (const [theme, t] of Object.entries(St.THEMES)) assert.ok(BGM_LUFS[t.base || theme] !== undefined, `track for ${theme}`);
-  for (const k of ['car', 'bus', 'tree', 'bench', 'building']) assert.ok(SFX_FILES.includes(EAT_FILE(k)), `eat sound for ${k}`);
+  for (const k of ['car', 'bus', 'tree', 'bench', 'building', 'cat', 'cow', 'gull', 'zombie']) assert.ok(SFX_FILES.includes(EAT_FILE(k)), `eat sound for ${k}`);
+  for (const k of ['person', 'grandma', 'guard', 'boss']) assert.equal(EAT_FILE(k), 'eat_person', `a person's file for ${k}`);
+  for (const w of Object.keys(DuskSound.voice.WORDS)) assert.ok(SFX_FILES.includes(`voice_${w}_1`), `voice file for ${w}`);
 });
 
 test('every effect still runs with no audio context (falls back quietly)', () => {

@@ -3,466 +3,843 @@
     {
       "file": "bgm/bgm_title.m4a",
       "bpm": 84,
-      "duration": 68.571,
-      "lufs": -16.0,
+      "duration": 68.5714,
+      "lufs": -16.01,
       "programs": [
         10,
         24,
         8
-      ]
+      ],
+      "true_peak_dbtp": -4.58,
+      "midi": "midi/bgm_title.mid",
+      "loop_samples": 3024000,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_night.m4a",
       "bpm": 126,
-      "duration": 68.571,
-      "lufs": -17.29,
+      "duration": 60.9524,
+      "lufs": -16.01,
       "programs": [
         9,
         12,
         24
-      ]
+      ],
+      "true_peak_dbtp": -2.8,
+      "midi": "midi/bgm_night.mid",
+      "loop_samples": 2688000,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_boss.m4a",
       "bpm": 120,
-      "duration": 72.0,
-      "lufs": -16.03,
+      "duration": 64.0,
+      "lufs": -16.01,
       "programs": [
         15,
         32,
         57
-      ]
+      ],
+      "true_peak_dbtp": -5.83,
+      "midi": "midi/bgm_boss.mid",
+      "loop_samples": 2822400,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_town.m4a",
       "bpm": 100,
       "duration": 76.8,
-      "lufs": -19.48,
+      "lufs": -16.01,
       "programs": [
         12,
         24,
         32
-      ]
+      ],
+      "true_peak_dbtp": -3.83,
+      "midi": "midi/bgm_town.mid",
+      "loop_samples": 3386880,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_city.m4a",
       "bpm": 115,
-      "duration": 75.13,
-      "lufs": -16.0,
+      "duration": 66.7826,
+      "lufs": -16.01,
       "programs": [
         4,
         12,
         32
-      ]
+      ],
+      "true_peak_dbtp": -6.91,
+      "midi": "midi/bgm_city.mid",
+      "loop_samples": 2945113,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_oasis.m4a",
       "bpm": 95,
-      "duration": 70.737,
-      "lufs": -16.0,
+      "duration": 80.8421,
+      "lufs": -16.01,
       "programs": [
         73,
         108,
         32
-      ]
+      ],
+      "true_peak_dbtp": -8.48,
+      "midi": "midi/bgm_oasis.mid",
+      "loop_samples": 3565137,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_hanok.m4a",
       "bpm": 100,
       "duration": 72.0,
-      "lufs": -16.0,
+      "lufs": -16.01,
       "programs": [
         107,
         73,
         15
-      ]
+      ],
+      "true_peak_dbtp": -4.84,
+      "midi": "midi/bgm_hanok.mid",
+      "loop_samples": 3175200,
+      "meter": "3/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_campus.m4a",
       "bpm": 112,
-      "duration": 68.571,
+      "duration": 68.5714,
       "lufs": -16.0,
       "programs": [
         78,
         105,
         32
-      ]
+      ],
+      "true_peak_dbtp": -8.52,
+      "midi": "midi/bgm_campus.mid",
+      "loop_samples": 3024000,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_snow.m4a",
       "bpm": 90,
-      "duration": 72.0,
+      "duration": 64.0,
       "lufs": -16.0,
       "programs": [
         10,
         9,
         48
-      ]
+      ],
+      "true_peak_dbtp": -7.65,
+      "midi": "midi/bgm_snow.mid",
+      "loop_samples": 2822400,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_market.m4a",
       "bpm": 120,
-      "duration": 72.0,
-      "lufs": -16.0,
+      "duration": 64.0,
+      "lufs": -16.01,
       "programs": [
         21,
         45,
         32
-      ]
+      ],
+      "true_peak_dbtp": -8.47,
+      "midi": "midi/bgm_market.mid",
+      "loop_samples": 2822400,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_crossing.m4a",
       "bpm": 118,
-      "duration": 73.22,
+      "duration": 65.0847,
       "lufs": -16.0,
       "programs": [
         71,
         4,
         32
-      ]
+      ],
+      "true_peak_dbtp": -9.37,
+      "midi": "midi/bgm_crossing.mid",
+      "loop_samples": 2870237,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_stadium.m4a",
       "bpm": 124,
-      "duration": 69.677,
-      "lufs": -16.0,
+      "duration": 61.9355,
+      "lufs": -16.01,
       "programs": [
         56,
         58,
         32
-      ]
+      ],
+      "true_peak_dbtp": -7.55,
+      "midi": "midi/bgm_stadium.mid",
+      "loop_samples": 2731355,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_harbor.m4a",
       "bpm": 105,
-      "duration": 68.571,
-      "lufs": -16.0,
+      "duration": 68.5714,
+      "lufs": -16.01,
       "programs": [
         21,
         25,
         32
-      ]
+      ],
+      "true_peak_dbtp": -10.0,
+      "midi": "midi/bgm_harbor.mid",
+      "loop_samples": 3024000,
+      "meter": "3/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_construction.m4a",
       "bpm": 110,
-      "duration": 69.818,
-      "lufs": -19.41,
+      "duration": 69.8182,
+      "lufs": -16.01,
       "programs": [
         12,
         70,
         32
-      ]
+      ],
+      "true_peak_dbtp": -1.08,
+      "midi": "midi/bgm_construction.mid",
+      "loop_samples": 3078982,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_park.m4a",
       "bpm": 115,
-      "duration": 75.13,
+      "duration": 75.1304,
       "lufs": -16.0,
       "programs": [
         19,
         9,
         32
-      ]
+      ],
+      "true_peak_dbtp": -9.34,
+      "midi": "midi/bgm_park.mid",
+      "loop_samples": 3313252,
+      "meter": "3/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_beach.m4a",
       "bpm": 108,
-      "duration": 71.111,
-      "lufs": -18.36,
+      "duration": 71.1111,
+      "lufs": -16.01,
       "programs": [
         114,
         24,
         32
-      ]
+      ],
+      "true_peak_dbtp": -4.15,
+      "midi": "midi/bgm_beach.mid",
+      "loop_samples": 3136000,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_desert.m4a",
       "bpm": 102,
-      "duration": 75.294,
-      "lufs": -20.07,
+      "duration": 75.2941,
+      "lufs": -16.02,
       "programs": [
         106,
         24,
         32
-      ]
+      ],
+      "true_peak_dbtp": -6.4,
+      "midi": "midi/bgm_desert.mid",
+      "loop_samples": 3320471,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_farm.m4a",
       "bpm": 110,
-      "duration": 69.818,
-      "lufs": -16.0,
+      "duration": 69.8182,
+      "lufs": -16.01,
       "programs": [
         22,
         105,
         32
-      ]
+      ],
+      "true_peak_dbtp": -6.86,
+      "midi": "midi/bgm_farm.mid",
+      "loop_samples": 3078982,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_playground.m4a",
       "bpm": 118,
-      "duration": 73.22,
-      "lufs": -17.85,
+      "duration": 73.2203,
+      "lufs": -16.01,
       "programs": [
         9,
         19,
         32
-      ]
+      ],
+      "true_peak_dbtp": -6.44,
+      "midi": "midi/bgm_playground.mid",
+      "loop_samples": 3229017,
+      "meter": "3/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_aquarium.m4a",
       "bpm": 96,
       "duration": 75.0,
-      "lufs": -16.0,
+      "lufs": -16.01,
       "programs": [
         9,
         4,
         48
-      ]
+      ],
+      "true_peak_dbtp": -6.62,
+      "midi": "midi/bgm_aquarium.mid",
+      "loop_samples": 3307500,
+      "meter": "3/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_onsen.m4a",
       "bpm": 84,
-      "duration": 68.571,
+      "duration": 68.5714,
       "lufs": -16.0,
       "programs": [
         73,
         24,
         32
-      ]
+      ],
+      "true_peak_dbtp": -7.93,
+      "midi": "midi/bgm_onsen.mid",
+      "loop_samples": 3024000,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_nightmarket.m4a",
       "bpm": 112,
-      "duration": 68.571,
-      "lufs": -16.0,
+      "duration": 68.5714,
+      "lufs": -16.01,
       "programs": [
         21,
         24,
         32
-      ]
+      ],
+      "true_peak_dbtp": -8.54,
+      "midi": "midi/bgm_nightmarket.mid",
+      "loop_samples": 3024000,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_airport.m4a",
       "bpm": 108,
-      "duration": 71.111,
-      "lufs": -17.45,
+      "duration": 71.1111,
+      "lufs": -16.01,
       "programs": [
         12,
         4,
         32
-      ]
+      ],
+      "true_peak_dbtp": -1.61,
+      "midi": "midi/bgm_airport.mid",
+      "loop_samples": 3136000,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_space.m4a",
       "bpm": 92,
-      "duration": 70.435,
-      "lufs": -16.0,
+      "duration": 62.6087,
+      "lufs": -16.01,
       "programs": [
         10,
         8,
         48
-      ]
+      ],
+      "true_peak_dbtp": -6.75,
+      "midi": "midi/bgm_space.mid",
+      "loop_samples": 2761043,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     },
     {
       "file": "bgm/bgm_xmas.m4a",
       "bpm": 100,
-      "duration": 72.0,
-      "lufs": -16.0,
+      "duration": 76.8,
+      "lufs": -16.01,
       "programs": [
         8,
         10,
         32
-      ]
+      ],
+      "true_peak_dbtp": -4.75,
+      "midi": "midi/bgm_xmas.mid",
+      "loop_samples": 3386880,
+      "meter": "4/4",
+      "method": "original acoustic-inspired procedural synthesis, no external samples"
     }
   ],
   "sfx": {
     "gulp_small": {
       "duration": 0.15,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.49,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/gulp_small.m4a"
     },
     "gulp_big": {
       "duration": 0.3,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.53,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/gulp_big.m4a"
     },
     "combo": {
       "duration": 0.1,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.46,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/combo.m4a"
     },
     "grow": {
       "duration": 0.8,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.61,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/grow.m4a"
     },
     "spit": {
       "duration": 0.2,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.33,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/spit.m4a"
     },
     "yuck": {
       "duration": 1.5,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.66,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/yuck.m4a"
     },
     "star": {
       "duration": 0.6,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.61,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/star.m4a"
     },
     "coin": {
       "duration": 0.3,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.61,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/coin.m4a"
     },
     "level_up": {
-      "duration": 1,
-      "method": "sampled instrument arrangement"
+      "duration": 1.0,
+      "true_peak_dbtp": -3.62,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/level_up.m4a"
     },
     "win": {
       "duration": 1.5,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.61,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/win.m4a"
     },
     "lose": {
       "duration": 1.2,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.61,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/lose.m4a"
     },
     "tap": {
       "duration": 0.05,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.61,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/tap.m4a"
     },
     "tick": {
       "duration": 0.08,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.68,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/tick.m4a"
     },
     "sunlight": {
       "duration": 0.4,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -2.99,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/sunlight.m4a"
     },
     "hit": {
       "duration": 0.5,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.6,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/hit.m4a"
     },
     "night": {
-      "duration": 2,
-      "method": "sampled instrument arrangement"
+      "duration": 2.0,
+      "true_peak_dbtp": -3.62,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/night.m4a"
     },
     "shard": {
       "duration": 0.4,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.7,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/shard.m4a"
     },
     "dash": {
       "duration": 0.05,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.79,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/dash.m4a"
     },
     "rain": {
-      "duration": 3,
-      "method": "procedural Foley approximation"
+      "duration": 3.0,
+      "true_peak_dbtp": -3.32,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/rain.m4a"
     },
     "wind": {
-      "duration": 3,
-      "method": "procedural Foley approximation"
+      "duration": 3.0,
+      "true_peak_dbtp": -3.8,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/wind.m4a"
     },
     "parade": {
       "duration": 1.5,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.61,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/parade.m4a"
     },
     "eat_car": {
       "duration": 0.45,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.57,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/eat_car.m4a"
     },
     "eat_bus": {
       "duration": 0.5,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.34,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/eat_bus.m4a"
     },
     "eat_boat": {
       "duration": 0.55,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.62,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/eat_boat.m4a"
     },
     "eat_bicycle": {
       "duration": 0.4,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.61,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/eat_bicycle.m4a"
     },
     "eat_plant": {
       "duration": 0.4,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.79,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/eat_plant.m4a"
     },
     "eat_wood": {
       "duration": 0.35,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.65,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/eat_wood.m4a"
     },
     "eat_metal": {
       "duration": 0.5,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.59,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/eat_metal.m4a"
     },
     "eat_stone": {
       "duration": 0.4,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.6,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/eat_stone.m4a"
     },
     "eat_soft": {
       "duration": 0.35,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.58,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/eat_soft.m4a"
     },
     "eat_balloon": {
       "duration": 0.3,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.57,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/eat_balloon.m4a"
     },
     "eat_fountain": {
       "duration": 0.5,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.97,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/eat_fountain.m4a"
     },
     "eat_carousel": {
       "duration": 0.6,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.54,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/eat_carousel.m4a"
     },
     "eat_reindeer": {
       "duration": 0.4,
-      "method": "sampled instrument arrangement"
+      "true_peak_dbtp": -3.58,
+      "method": "original procedural instrument model (no external sample)",
+      "file": "sfx/eat_reindeer.m4a"
     },
     "eat_building": {
       "duration": 0.6,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.68,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/eat_building.m4a"
     },
     "eat_pop": {
       "duration": 0.3,
-      "method": "procedural Foley approximation"
+      "true_peak_dbtp": -3.43,
+      "method": "original procedural Foley approximation",
+      "file": "sfx/eat_pop.m4a"
+    },
+    "eat_person_high": {
+      "duration": 0.5,
+      "true_peak_dbtp": -3.35,
+      "method": "original formant animal/person approximation plus suction (not recorded)",
+      "file": "sfx/eat_person_high.m4a"
+    },
+    "eat_person_low": {
+      "duration": 0.5,
+      "true_peak_dbtp": -3.55,
+      "method": "original formant animal/person approximation plus suction (not recorded)",
+      "file": "sfx/eat_person_low.m4a"
+    },
+    "eat_cat": {
+      "duration": 0.5,
+      "true_peak_dbtp": -3.51,
+      "method": "original formant animal/person approximation plus suction (not recorded)",
+      "file": "sfx/eat_cat.m4a"
+    },
+    "eat_chicken": {
+      "duration": 0.5,
+      "true_peak_dbtp": -3.65,
+      "method": "original formant animal/person approximation plus suction (not recorded)",
+      "file": "sfx/eat_chicken.m4a"
+    },
+    "eat_sheep": {
+      "duration": 0.5,
+      "true_peak_dbtp": -3.69,
+      "method": "original formant animal/person approximation plus suction (not recorded)",
+      "file": "sfx/eat_sheep.m4a"
+    },
+    "eat_cow": {
+      "duration": 0.5,
+      "true_peak_dbtp": -3.57,
+      "method": "original formant animal/person approximation plus suction (not recorded)",
+      "file": "sfx/eat_cow.m4a"
+    },
+    "eat_camel": {
+      "duration": 0.5,
+      "true_peak_dbtp": -3.59,
+      "method": "original formant animal/person approximation plus suction (not recorded)",
+      "file": "sfx/eat_camel.m4a"
+    },
+    "eat_gull": {
+      "duration": 0.5,
+      "true_peak_dbtp": -3.52,
+      "method": "original formant animal/person approximation plus suction (not recorded)",
+      "file": "sfx/eat_gull.m4a"
+    },
+    "eat_zombie": {
+      "duration": 0.5,
+      "true_peak_dbtp": -3.61,
+      "method": "original formant animal/person approximation plus suction (not recorded)",
+      "file": "sfx/eat_zombie.m4a"
+    },
+    "voice_nyam_1": {
+      "duration": 0.42,
+      "true_peak_dbtp": -3.58,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_nyam_1.m4a"
+    },
+    "voice_nyam_2": {
+      "duration": 0.42,
+      "true_peak_dbtp": -3.57,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_nyam_2.m4a"
+    },
+    "voice_nyam_3": {
+      "duration": 0.42,
+      "true_peak_dbtp": -3.56,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_nyam_3.m4a"
+    },
+    "voice_umm_1": {
+      "duration": 0.58,
+      "true_peak_dbtp": -3.49,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_umm_1.m4a"
+    },
+    "voice_umm_2": {
+      "duration": 0.58,
+      "true_peak_dbtp": -3.7,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_umm_2.m4a"
+    },
+    "voice_umm_3": {
+      "duration": 0.58,
+      "true_peak_dbtp": -3.61,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_umm_3.m4a"
+    },
+    "voice_wow_1": {
+      "duration": 0.62,
+      "true_peak_dbtp": -3.48,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_wow_1.m4a"
+    },
+    "voice_wow_2": {
+      "duration": 0.62,
+      "true_peak_dbtp": -3.44,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_wow_2.m4a"
+    },
+    "voice_wow_3": {
+      "duration": 0.62,
+      "true_peak_dbtp": -3.57,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_wow_3.m4a"
+    },
+    "voice_yay_1": {
+      "duration": 0.48,
+      "true_peak_dbtp": -3.55,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_yay_1.m4a"
+    },
+    "voice_yay_2": {
+      "duration": 0.48,
+      "true_peak_dbtp": -3.4,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_yay_2.m4a"
+    },
+    "voice_yay_3": {
+      "duration": 0.48,
+      "true_peak_dbtp": -3.51,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_yay_3.m4a"
+    },
+    "voice_ah_1": {
+      "duration": 0.32,
+      "true_peak_dbtp": -3.58,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_ah_1.m4a"
+    },
+    "voice_ah_2": {
+      "duration": 0.32,
+      "true_peak_dbtp": -3.5,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_ah_2.m4a"
+    },
+    "voice_ah_3": {
+      "duration": 0.32,
+      "true_peak_dbtp": -3.56,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_ah_3.m4a"
+    },
+    "voice_hehe_1": {
+      "duration": 0.72,
+      "true_peak_dbtp": -3.5,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_hehe_1.m4a"
+    },
+    "voice_hehe_2": {
+      "duration": 0.72,
+      "true_peak_dbtp": -3.61,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_hehe_2.m4a"
+    },
+    "voice_hehe_3": {
+      "duration": 0.72,
+      "true_peak_dbtp": -3.68,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_hehe_3.m4a"
+    },
+    "voice_hing_1": {
+      "duration": 0.68,
+      "true_peak_dbtp": -3.53,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_hing_1.m4a"
+    },
+    "voice_hing_2": {
+      "duration": 0.68,
+      "true_peak_dbtp": -3.51,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_hing_2.m4a"
+    },
+    "voice_hing_3": {
+      "duration": 0.68,
+      "true_peak_dbtp": -3.52,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_hing_3.m4a"
+    },
+    "voice_hello_1": {
+      "duration": 0.66,
+      "true_peak_dbtp": -3.62,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_hello_1.m4a"
+    },
+    "voice_hello_2": {
+      "duration": 0.66,
+      "true_peak_dbtp": -3.55,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_hello_2.m4a"
+    },
+    "voice_hello_3": {
+      "duration": 0.66,
+      "true_peak_dbtp": -3.53,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_hello_3.m4a"
+    },
+    "voice_yawn_1": {
+      "duration": 0.86,
+      "true_peak_dbtp": -3.53,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_yawn_1.m4a"
+    },
+    "voice_yawn_2": {
+      "duration": 0.86,
+      "true_peak_dbtp": -3.59,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_yawn_2.m4a"
+    },
+    "voice_yawn_3": {
+      "duration": 0.86,
+      "true_peak_dbtp": -3.51,
+      "method": "original source-filter formant mascot babble (not recorded speech)",
+      "file": "sfx/voice_yawn_3.m4a"
     }
   },
-  "missing": [
-    "eat_person_high.m4a",
-    "eat_person_low.m4a",
-    "eat_cat.m4a",
-    "eat_chicken.m4a",
-    "eat_sheep.m4a",
-    "eat_cow.m4a",
-    "eat_camel.m4a",
-    "eat_gull.m4a",
-    "eat_zombie.m4a",
-    "voice_nyam_1.m4a",
-    "voice_nyam_2.m4a",
-    "voice_nyam_3.m4a",
-    "voice_umm_1.m4a",
-    "voice_umm_2.m4a",
-    "voice_umm_3.m4a",
-    "voice_wow_1.m4a",
-    "voice_wow_2.m4a",
-    "voice_wow_3.m4a",
-    "voice_yay_1.m4a",
-    "voice_yay_2.m4a",
-    "voice_yay_3.m4a",
-    "voice_ah_1.m4a",
-    "voice_ah_2.m4a",
-    "voice_ah_3.m4a",
-    "voice_hehe_1.m4a",
-    "voice_hehe_2.m4a",
-    "voice_hehe_3.m4a",
-    "voice_hing_1.m4a",
-    "voice_hing_2.m4a",
-    "voice_hing_3.m4a",
-    "voice_hello_1.m4a",
-    "voice_hello_2.m4a",
-    "voice_hello_3.m4a",
-    "voice_yawn_1.m4a",
-    "voice_yawn_2.m4a",
-    "voice_yawn_3.m4a"
-  ],
-  "codec": "AAC",
+  "missing": [],
+  "codec": "aac",
   "sample_rate": 44100,
-  "note": "Original composition demos using TimGM6mb instrument samples. Procedural Foley is not recorded sound. Korean traditional instruments are approximations. AAC gapless playback depends on decoder. Sample bank GPL-2; commercial distribution clearance of rendered audio not verified.",
+  "version": "2.0-procedural",
+  "note": "No third-party soundfont/sample used. New original arrangements. GM programs zero-based.",
   "verified_media": [
     {
       "file": "bgm/bgm_airport.m4a",
@@ -490,7 +867,7 @@
       "codec_name": "aac",
       "sample_rate": "44100",
       "channels": 2,
-      "duration": "72.000000"
+      "duration": "64.000000"
     },
     {
       "file": "bgm/bgm_campus.m4a",
@@ -504,7 +881,7 @@
       "codec_name": "aac",
       "sample_rate": "44100",
       "channels": 2,
-      "duration": "75.130000"
+      "duration": "66.781995"
     },
     {
       "file": "bgm/bgm_construction.m4a",
@@ -518,7 +895,7 @@
       "codec_name": "aac",
       "sample_rate": "44100",
       "channels": 2,
-      "duration": "73.220000"
+      "duration": "65.083991"
     },
     {
       "file": "bgm/bgm_desert.m4a",
@@ -553,14 +930,14 @@
       "codec_name": "aac",
       "sample_rate": "44100",
       "channels": 2,
-      "duration": "72.000000"
+      "duration": "64.000000"
     },
     {
       "file": "bgm/bgm_night.m4a",
       "codec_name": "aac",
       "sample_rate": "44100",
       "channels": 2,
-      "duration": "68.570998"
+      "duration": "60.951995"
     },
     {
       "file": "bgm/bgm_nightmarket.m4a",
@@ -574,7 +951,7 @@
       "codec_name": "aac",
       "sample_rate": "44100",
       "channels": 2,
-      "duration": "70.737007"
+      "duration": "80.841995"
     },
     {
       "file": "bgm/bgm_onsen.m4a",
@@ -602,21 +979,21 @@
       "codec_name": "aac",
       "sample_rate": "44100",
       "channels": 2,
-      "duration": "72.000000"
+      "duration": "64.000000"
     },
     {
       "file": "bgm/bgm_space.m4a",
       "codec_name": "aac",
       "sample_rate": "44100",
       "channels": 2,
-      "duration": "70.435011"
+      "duration": "62.608005"
     },
     {
       "file": "bgm/bgm_stadium.m4a",
       "codec_name": "aac",
       "sample_rate": "44100",
       "channels": 2,
-      "duration": "69.677007"
+      "duration": "61.935011"
     },
     {
       "file": "bgm/bgm_title.m4a",
@@ -637,7 +1014,7 @@
       "codec_name": "aac",
       "sample_rate": "44100",
       "channels": 2,
-      "duration": "72.000000"
+      "duration": "76.800000"
     },
     {
       "file": "sfx/coin.m4a",
@@ -696,6 +1073,13 @@
       "duration": "0.500000"
     },
     {
+      "file": "sfx/eat_camel.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.500000"
+    },
+    {
       "file": "sfx/eat_car.m4a",
       "codec_name": "aac",
       "sample_rate": "44100",
@@ -710,6 +1094,27 @@
       "duration": "0.600000"
     },
     {
+      "file": "sfx/eat_cat.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.500000"
+    },
+    {
+      "file": "sfx/eat_chicken.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.500000"
+    },
+    {
+      "file": "sfx/eat_cow.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.500000"
+    },
+    {
       "file": "sfx/eat_fountain.m4a",
       "codec_name": "aac",
       "sample_rate": "44100",
@@ -717,7 +1122,28 @@
       "duration": "0.500000"
     },
     {
+      "file": "sfx/eat_gull.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.500000"
+    },
+    {
       "file": "sfx/eat_metal.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.500000"
+    },
+    {
+      "file": "sfx/eat_person_high.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.500000"
+    },
+    {
+      "file": "sfx/eat_person_low.m4a",
       "codec_name": "aac",
       "sample_rate": "44100",
       "channels": 2,
@@ -745,6 +1171,13 @@
       "duration": "0.400000"
     },
     {
+      "file": "sfx/eat_sheep.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.500000"
+    },
+    {
       "file": "sfx/eat_soft.m4a",
       "codec_name": "aac",
       "sample_rate": "44100",
@@ -764,6 +1197,13 @@
       "sample_rate": "44100",
       "channels": 2,
       "duration": "0.350000"
+    },
+    {
+      "file": "sfx/eat_zombie.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.500000"
     },
     {
       "file": "sfx/grow.m4a",
@@ -869,6 +1309,195 @@
       "sample_rate": "44100",
       "channels": 2,
       "duration": "0.080000"
+    },
+    {
+      "file": "sfx/voice_ah_1.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.320000"
+    },
+    {
+      "file": "sfx/voice_ah_2.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.320000"
+    },
+    {
+      "file": "sfx/voice_ah_3.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.320000"
+    },
+    {
+      "file": "sfx/voice_hehe_1.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.720000"
+    },
+    {
+      "file": "sfx/voice_hehe_2.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.720000"
+    },
+    {
+      "file": "sfx/voice_hehe_3.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.720000"
+    },
+    {
+      "file": "sfx/voice_hello_1.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.660000"
+    },
+    {
+      "file": "sfx/voice_hello_2.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.660000"
+    },
+    {
+      "file": "sfx/voice_hello_3.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.660000"
+    },
+    {
+      "file": "sfx/voice_hing_1.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.680000"
+    },
+    {
+      "file": "sfx/voice_hing_2.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.680000"
+    },
+    {
+      "file": "sfx/voice_hing_3.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.680000"
+    },
+    {
+      "file": "sfx/voice_nyam_1.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.420000"
+    },
+    {
+      "file": "sfx/voice_nyam_2.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.420000"
+    },
+    {
+      "file": "sfx/voice_nyam_3.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.420000"
+    },
+    {
+      "file": "sfx/voice_umm_1.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.580000"
+    },
+    {
+      "file": "sfx/voice_umm_2.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.580000"
+    },
+    {
+      "file": "sfx/voice_umm_3.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.580000"
+    },
+    {
+      "file": "sfx/voice_wow_1.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.620000"
+    },
+    {
+      "file": "sfx/voice_wow_2.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.620000"
+    },
+    {
+      "file": "sfx/voice_wow_3.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.620000"
+    },
+    {
+      "file": "sfx/voice_yawn_1.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.860000"
+    },
+    {
+      "file": "sfx/voice_yawn_2.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.860000"
+    },
+    {
+      "file": "sfx/voice_yawn_3.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.860000"
+    },
+    {
+      "file": "sfx/voice_yay_1.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.480000"
+    },
+    {
+      "file": "sfx/voice_yay_2.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.480000"
+    },
+    {
+      "file": "sfx/voice_yay_3.m4a",
+      "codec_name": "aac",
+      "sample_rate": "44100",
+      "channels": 2,
+      "duration": "0.480000"
     },
     {
       "file": "sfx/win.m4a",

@@ -25,7 +25,17 @@
   const SFX_FILES = ['coin', 'combo', 'dash', 'eat_balloon', 'eat_bicycle', 'eat_boat', 'eat_building', 'eat_bus', 'eat_car',
     'eat_carousel', 'eat_fountain', 'eat_metal', 'eat_plant', 'eat_pop', 'eat_reindeer', 'eat_soft', 'eat_stone', 'eat_wood',
     'grow', 'gulp_big', 'gulp_small', 'hit', 'level_up', 'lose', 'night', 'parade', 'rain', 'shard', 'spit', 'star',
-    'sunlight', 'tap', 'tick', 'win', 'wind', 'yuck'];
+    'sunlight', 'tap', 'tick', 'win', 'wind', 'yuck',
+    'eat_person_high', 'eat_person_low', 'eat_cat', 'eat_chicken', 'eat_sheep', 'eat_cow', 'eat_camel', 'eat_gull', 'eat_zombie',
+    ...['nyam', 'umm', 'wow', 'yay', 'ah', 'hehe', 'hing'].flatMap(w => [1, 2, 3].map(i => `voice_${w}_${i}`))];
+  // dB per file, measured (RMS) so the pack keeps the balance the calls below were tuned to: a replaced effect plays as
+  // loud as the one it replaced, a new eat sound sits with the other eat sounds, a voice sits under the effects.
+  const LEVEL = { coin: -2, combo: -1, dash: -2, eat_balloon: -5, eat_bicycle: -1, eat_boat: -8, eat_building: -3, eat_bus: -10,
+    eat_car: -3, eat_carousel: -1, eat_fountain: 1, eat_metal: -8, eat_plant: -3, eat_pop: -3, eat_reindeer: -9, eat_soft: -3,
+    eat_stone: -5, eat_wood: -5, grow: -3, gulp_big: -3, gulp_small: -4, hit: -3, level_up: -2, lose: 0, night: -2, parade: -4,
+    rain: 1, shard: -5, spit: -6, star: -4, sunlight: -2, tap: -7, tick: -11, win: -2, wind: 0, yuck: -1,
+    eat_person_high: -5, eat_person_low: -4, eat_cat: -5, eat_chicken: -5, eat_sheep: -4, eat_cow: -4, eat_camel: -2,
+    eat_gull: -6, eat_zombie: -1, voice: -8 };
   const buffers = {}, loading = {};
   const canFetch = () => !!(root.fetch && root.location && root.location.protocol !== 'file:');
   function load(path) {
@@ -43,6 +53,7 @@
     if (!b) { load(`audio/sfx/${name}.m4a`); return false; }
     if (ctx.state !== 'running') return true;
     const t = ctx.currentTime + at, src = ctx.createBufferSource(), g = ctx.createGain();
+    vol *= Math.pow(10, (LEVEL[name.startsWith('voice_') ? 'voice' : name] || 0) / 20);
     src.buffer = b; src.playbackRate.value = rate; g.gain.value = vol;
     if (loopFor) { src.loop = true; g.gain.setValueAtTime(vol, t + Math.max(0, loopFor - 0.4)); g.gain.linearRampToValueAtTime(0.0001, t + loopFor); }
     src.connect(g).connect(sfxBus); src.start(t); if (loopFor) src.stop(t + loopFor + 0.05);
@@ -110,11 +121,16 @@
   const EAT_FILE = t => ['car', 'taxi', 'foodtruck', 'scooter'].includes(t) ? 'eat_car' : ['bus', 'tractor', 'excavator'].includes(t) ? 'eat_bus'
     : ['boat', 'bicycle', 'balloon', 'fountain', 'carousel', 'reindeer', 'building'].includes(t) ? 'eat_' + t
     : PLANTS.includes(t) ? 'eat_plant' : METAL.includes(t) ? 'eat_metal' : WOOD.includes(t) ? 'eat_wood' : STONE.includes(t) ? 'eat_stone'
-    : SOFT.includes(t) ? 'eat_soft' : null; // people, animals and zombies have no recording yet: they keep their synthesized voices
+    : SOFT.includes(t) ? 'eat_soft' : ['cat', 'chicken', 'sheep', 'cow', 'camel', 'gull', 'zombie'].includes(t) ? 'eat_' + t
+    : PEOPLE.includes(t) || t === 'guard' || t === 'boss' ? 'eat_person' : null;
+  // People are half higher voices, half lower; a guard or the boss always low, a grandma always high.
+  const personFile = t => t === 'guard' || t === 'boss' ? 'eat_person_low' : t === 'grandma' ? 'eat_person_high'
+    : Math.random() < 0.5 ? 'eat_person_low' : 'eat_person_high';
   function voiceOf(type) { // not `voice`: that name is the music synth's note below
     lastVoices.push(type); if (lastVoices.length > 20) lastVoices.shift();
     if (!ctx || ctx.state !== 'running') return;
-    const file = EAT_FILE(type);
+    let file = EAT_FILE(type);
+    if (file === 'eat_person') file = personFile(type);
     if (file && sample(file, { vol: 0.6, rate: R(0.94, 1.06) })) return;
     if (type === 'cat') { const f = R(520, 720); cry(f, f * 1.45, 0.16, { vol: .22, cutoff: 2200, vib: 9, depth: .03, type: 'triangle' }); cry(f * 1.4, f * 0.8, 0.28, { vol: .2, cutoff: 1800, vib: 7, depth: .05, type: 'triangle', at: 0.15 }); return; } // 야옹
     if (type === 'zombie') { const f = R(90, 130); cry(f, f * 0.75, 0.55, { vol: .25, cutoff: 700, vib: 4, depth: .06 }); return; } // 으어어
@@ -170,8 +186,11 @@
     if (ctx && ctx.state === 'running' && every && ctx.currentTime - saidAt < every) return; // the frequent ones keep a gap
     lastSaid.push(word); if (lastSaid.length > 20) lastSaid.shift();
     if (!ctx || ctx.state !== 'running') return;
+    saidAt = ctx.currentTime;
+    // A recorded take of the word (three of each, picked at random) when it has loaded; until then the synth says it.
+    if (sample(`voice_${word}_${1 + Math.floor(Math.random() * 3)}`, { vol: vol * 3.75, at })) return;
     const base = 560 * R(0.95, 1.06);
-    let t = ctx.currentTime + at; saidAt = ctx.currentTime;
+    let t = ctx.currentTime + at;
     for (const [v, dur, p0, p1] of w) {
       if (v === 'n' || v === 'm') { tone(base * 1.15, base * 1.1, dur, { type: 'sine', vol: vol * 0.45, at: t - ctx.currentTime, attack: 0.01 }); t += dur; continue; }
       const o = ctx.createOscillator(), g = ctx.createGain(), sum = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
@@ -530,9 +549,9 @@
   // Background tracks (www/audio/bgm): the menus, each map, the night stretch and the boss. One track is decoded at a
   // time (a minute of stereo is ~25 MB decoded) and swapped with a short crossfade; each is levelled to -16 LUFS from
   // its measured loudness. While a track loads, nothing plays; if it cannot load, the synthesized band takes over.
-  const BGM_LUFS = { title: -16, night: -17.29, boss: -16.03, town: -19.48, city: -16, oasis: -16, hanok: -16, campus: -16, snow: -16,
-    market: -16, crossing: -16, stadium: -16, harbor: -16, construction: -19.41, park: -16, beach: -18.36, desert: -20.07, farm: -16,
-    playground: -17.85, aquarium: -16, onsen: -16, nightmarket: -16, airport: -17.45, space: -16, xmas: -16 };
+  const BGM_LUFS = { title: -16, night: -16, boss: -16, town: -16, city: -16, oasis: -16, hanok: -16, campus: -16, snow: -16,
+    market: -16, crossing: -16, stadium: -16, harbor: -16, construction: -16, park: -16, beach: -16, desert: -16, farm: -16,
+    playground: -16, aquarium: -16, onsen: -16, nightmarket: -16, airport: -16, space: -16, xmas: -16 };
   let tuneName = 'town', track = null; // track: { name, src, g } while a file plays (or { name } while it loads)
   const trackFor = () => mode === 'title' ? 'title' : mode === 'night' ? 'night' : mode === 'boss' ? 'boss' : BGM_LUFS[tuneName] !== undefined ? tuneName : 'town';
   function syncTrack() {

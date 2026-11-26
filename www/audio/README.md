@@ -1,9 +1,18 @@
-# Dusk Eater — Audio Demo Pack
+# Dusk Eater Audio Pack v2.0 — procedural edition
 
-- SFX 36/45, BGM 25/25, voice 0/27. 총 61/97개 실제 AAC M4A.
-- BGM 60–90초, 44.1 kHz stereo. SFX 44.1 kHz stereo. 지정 파일명 유지.
-- BGM은 새로 생성한 멜로디와 GM 악기 샘플(TimGM6mb, GPL-2)로 제작한 시퀀싱 데모. 가야금·대금·장구 등 일부 악기는 유사 GM 악기이며 실연이 아님. 라이선스상 상업 배포에 대한 개별 확인 필요.
-- 일부 SFX는 직접 녹음이 아닌 절차적 Foley/악기 대체음. yuck, lose 등은 목소리가 아닌 소리/악기 표현.
-- BGM 사전 인코딩 음량 -20.07 ~ -16 LUFS. 피크 여유 때문에 일부 곡은 목표보다 조용함. AAC 디코더의 지연/패딩 처리에 따라 반복 재생의 이음새가 달라질 수 있음. 청감 품질과 디코딩 후 true peak 및 루프는 게임에서 추가 검수 필요.
-- 미제작: 사람/동물/좀비 효과음 9개, 캐릭터 목소리 27개. 파일 이름은 manifest.json의 missing 참조. 가짜 파일이나 무음으로 채우지 않았음.
-- 프로토타입용, 출시용 최종 음원 아님.
+## Contents
+97 AAC M4A files at 44.1 kHz stereo: 25 BGM, 45 effects (36 replacements + 9 new person/animal effects), 27 mascot voice variants. All 25 corresponding GM MIDI files are included. Voice files are located in `sfx/` to retain the v1 manifest structure; no eat_dog file is included. `missing` is empty because all requested names have non-silent generated audio, not because all sound design has been approved.
+
+## What changed
+The v1 ZIP was inspected for exact filenames, durations, BPM and GM programs. Its MIDI source was not included. The v2 compositions were newly created, preserving v1 BPM and program numbers; they are not faithful re-renders of v1 melodies. All 36 original SFX were replaced to ensure no dependency on v1 audio. No installed TimGM6mb soundfont was used. A licensed external soundfont could not be obtained in this environment (network/DNS failure); therefore this edition uses original procedural synthesis, NOT real instrument samples. The GM program labels in MIDI describe intended instruments, not the exact timbre of the mathematical renderer.
+
+## Methods
+- BGM: original seeded motifs, harmonic progressions, phrase variations, three melodic/accompaniment/bass tracks, 3/4 or 4/4; modal percussion, harmonic plucked strings, simple reed/wind models, and circular room reflections. Styles are simplified: traditional instruments and genre-specific drum arrangements are not fully recreated.
+- SFX: modeled resonances, pitch sweeps, filtered random noise and envelope shaping. These are not recorded Foley. Rain/wind use shaped noise; audition their repeat transitions.
+- Voices: original harmonic source with time-varying formant resonances and pitch contours. Each mascot utterance has three pitch variants. Human, animal and zombie sounds are stylized approximations with suction effects; not recordings, voice clones or accurate Korean speech. Some may sound synthetic or less recognizable than desired. No listening-based approval was performed.
+
+## Audio and integration
+BGM uses full-bar loops, no final fadeout, and circular reflections. `loop_samples` is the intended PCM loop length at 44.1 kHz. AAC can introduce codec priming/padding; use a decoder/player that respects edit lists and loop the decoded PCM range, and test the actual game engine for clicks or gaps. A seamless transition has not been confirmed by listening or in-game playback. MIDI has 480 ticks per beat, tempo/time signature, and zero-based GM program numbers (add one for 1-based GM tables). MIDI files can be rendered with a verified licensed soundfont on your machine. Audio includes approximate integrated LUFS (pyloudnorm) and 4x oversampled decoded true peak values in manifest. The duration field is intended source PCM duration; verified_media records AAC container durations.
+
+## Release gate
+All names, codec, sample rate, channel counts, MIDI program changes, intended track durations and decoded peak thresholds were checked. No external sample license issue remains in this procedural pack, but the requested real acoustic sample fidelity was not achieved. Review all tracks by ear, especially mascot/animal effects and loop boundaries, before shipping. See LICENSES.md for provenance. This is not an assertion of App Store legal approval or final audio quality.
