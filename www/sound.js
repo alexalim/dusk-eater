@@ -30,10 +30,10 @@
     ...['nyam', 'umm', 'wow', 'yay', 'ah', 'hehe', 'hing'].flatMap(w => [1, 2, 3].map(i => `voice_${w}_${i}`))];
   // dB per file, measured (RMS) so the pack keeps the balance the calls below were tuned to: a replaced effect plays as
   // loud as the one it replaced, a new eat sound sits with the other eat sounds, a voice sits under the effects.
-  const LEVEL = { coin: -2, combo: -1, dash: -2, eat_balloon: -5, eat_bicycle: -1, eat_boat: -8, eat_building: -3, eat_bus: -10,
-    eat_car: -3, eat_carousel: -1, eat_fountain: 1, eat_metal: -8, eat_plant: -3, eat_pop: -3, eat_reindeer: -9, eat_soft: -3,
-    eat_stone: -5, eat_wood: -5, grow: -3, gulp_big: -3, gulp_small: -4, hit: -3, level_up: -2, lose: 0, night: -2, parade: -4,
-    rain: 1, shard: -5, spit: -6, star: -4, sunlight: -2, tap: -7, tick: -11, win: -2, wind: 0, yuck: -1,
+  const LEVEL = { coin: -1, combo: 3, dash: -2, eat_balloon: -5, eat_bicycle: -1, eat_boat: -8, eat_building: -3, eat_bus: -10,
+    eat_car: -3, eat_carousel: -1, eat_fountain: 1, eat_metal: -8, eat_plant: -3, eat_pop: -3, eat_reindeer: -4, eat_soft: -3,
+    eat_stone: -5, eat_wood: -5, grow: -2, gulp_big: -3, gulp_small: -4, hit: 0, level_up: 0, lose: 1, night: -1, parade: 0,
+    rain: 1, shard: -4, spit: -6, star: -3, sunlight: -2, tap: -4, tick: -8, win: 0, wind: 0, yuck: -1,
     eat_person_high: -5, eat_person_low: -4, eat_cat: -5, eat_chicken: -5, eat_sheep: -4, eat_cow: -4, eat_camel: -2,
     eat_gull: -6, eat_zombie: -1, voice: -8 };
   const buffers = {}, loading = {};
@@ -550,7 +550,7 @@
   // time (a minute of stereo is ~25 MB decoded) and swapped with a short crossfade; each is levelled to -16 LUFS from
   // its measured loudness. While a track loads, nothing plays; if it cannot load, the synthesized band takes over.
   const BGM_LUFS = { title: -16, night: -16, boss: -16, town: -16, city: -16, oasis: -16, hanok: -16, campus: -16, snow: -16,
-    market: -16, crossing: -16, stadium: -16, harbor: -16, construction: -16, park: -16, beach: -16, desert: -16, farm: -16,
+    market: -16, crossing: -16, stadium: -16, harbor: -16, construction: -16, park: -16, beach: -18, desert: -17.3, farm: -16,
     playground: -16, aquarium: -16, onsen: -16, nightmarket: -16, airport: -16, space: -16, xmas: -16 };
   let tuneName = 'town', track = null; // track: { name, src, g } while a file plays (or { name } while it loads)
   const trackFor = () => mode === 'title' ? 'title' : mode === 'night' ? 'night' : mode === 'boss' ? 'boss' : BGM_LUFS[tuneName] !== undefined ? tuneName : 'town';
