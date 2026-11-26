@@ -23,6 +23,7 @@
     --ink: #2f2447; --ink-muted: #776891; --plum: #3a2860; --plum-mid: #5b4290; --peach: #ff9e7d;
     --font: 'Gowun Dodum', -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
     --display: 'Yeon Sung', var(--font);
+    --title: 'BM Kkubulim', var(--display); /* the big words: screen titles, the end of a run, combos and streaks */
   }
   /* Display face: one weight only, so never fake-bolded. No text under 12 px (tester: small text did not read), but
      the tiny tags on level nodes. */
@@ -36,6 +37,10 @@
      Yeonsung draws small on its em, so it is scaled up to sit where the old titles did.
      Subset to the 2,350 common Hangul; a rarer character (say in a nickname) falls back to the system font. */
   @font-face { font-family: 'Yeon Sung'; src: url(fonts/yeonsung.woff) format('woff'); font-weight: 100 900; size-adjust: 112%; font-display: swap; }
+  /* BM Kkubulim (SIL OFL with a Reserved Font Name): the official TTF exactly as downloaded, so not subset or converted */
+  @font-face { font-family: 'BM Kkubulim'; src: url(fonts/BMKkubulimTTF.ttf) format('truetype'); font-weight: 100 900; font-display: swap; }
+  /* the big words take the wavy title face (tester's pick, with HS산토끼 for the small ones to come) */
+  h1, h2, #end-title, #result, .sheet .name { font-family: var(--title); } /* and #hitcount, #streak, .lvhead, #twist h4, .region b where they are styled */
   @font-face { font-family: 'Gowun Dodum'; src: url(fonts/gowun-dodum.woff) format('woff'); font-weight: 100 900; size-adjust: 106%; font-display: swap; }
   html, body {
     margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
@@ -147,7 +152,7 @@
   @keyframes wave { 0% { transform: scale(.25); opacity: .95; } 100% { transform: scale(1.5); opacity: 0; border-width: 1px; } }
   /* the combo count: big in the upper middle, slammed in at each swallow */
   #hitcount { position: fixed; left: 50%; top: 27%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; z-index: 4; opacity: 0;
-    font: 900 var(--hs, 40px) / 1 var(--display); color: var(--hc, #fff1a8); -webkit-text-stroke: 2px rgba(60,20,90,.6); text-shadow: 0 4px 0 rgba(0,0,0,.28); }
+    font: 900 var(--hs, 40px) / 1 var(--title); color: var(--hc, #fff1a8); -webkit-text-stroke: 2px rgba(60,20,90,.6); text-shadow: 0 4px 0 rgba(0,0,0,.28); }
   #hitcount small { display: block; font-size: 15px; -webkit-text-stroke: 1px rgba(60,20,90,.5); }
   #hitcount.go { animation: hitcount 1.1s ease-out forwards; }
   @keyframes hitcount { 0% { transform: translate(-50%, -50%) scale(1.9); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(.92); opacity: 1; }
@@ -280,7 +285,7 @@
   .eatrow .ico.ui { width: 16px; height: 16px; margin: 0 2px; }
   /* Streak banner: a slanted gold slab that slides through the middle of the screen at every fifth combo. */
   #streak { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%) rotate(-8deg); padding: 8px 26px; border-radius: 10px;
-    background: var(--star); color: #2a1a05; font: 32px var(--display); letter-spacing: 1px; box-shadow: 0 6px 0 #c9931d; pointer-events: none; z-index: 4; opacity: 0; }
+    background: var(--star); color: #2a1a05; font: 32px var(--title); letter-spacing: 1px; box-shadow: 0 6px 0 #c9931d; pointer-events: none; z-index: 4; opacity: 0; }
   #streak.go { animation: streak 1.6s ease-out forwards; }
   @keyframes streak { 0% { transform: translate(-170%, -50%) rotate(-8deg); opacity: 0; } 22% { transform: translate(-50%, -50%) rotate(-8deg); opacity: 1; }
     72% { transform: translate(-46%, -50%) rotate(-8deg); opacity: 1; } 100% { transform: translate(70%, -50%) rotate(-8deg); opacity: 0; } }
@@ -300,7 +305,7 @@
   .info-body .sound-row { justify-content: flex-start; }
   .info-body .chip { background: var(--paper-dim); color: var(--ink); }
   .info-body { overflow-y: auto; padding: 4px 18px 16px; text-align: left; font-size: 14px; line-height: 1.6; }
-  .lvhead { display: flex; align-items: baseline; gap: 8px; font-family: var(--display); font-size: 24px; margin-top: 10px; }
+  .lvhead { display: flex; align-items: baseline; gap: 8px; font-family: var(--title); font-size: 24px; margin-top: 10px; }
   .lvhead small { font-size: 15px; color: #6b45b8; }
   .lvroad { display: flex; flex-direction: column; gap: 8px; }
   .lvstep { display: flex; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 14px; background: var(--paper-card); box-shadow: 0 2px 0 var(--paper-line); }
@@ -310,7 +315,7 @@
   .lvstep ul { margin: 0; padding-left: 16px; font-size: 13px; color: #4a3d66; }
   .twist-body { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 12px; }
   .twist-body img { width: 88px; height: 88px; }
-  #twist .twist-body h4 { font-family: var(--display); font-size: 24px; font-weight: 400; margin: 4px 0 0; }
+  #twist .twist-body h4 { font-family: var(--title); font-size: 24px; font-weight: 400; margin: 4px 0 0; }
   .twist-body ul { text-align: left; margin: 6px 0 10px; padding-left: 20px; font-size: 14px; line-height: 1.6; color: #4a3d66; align-self: stretch; }
   .twist-body .btn { align-self: stretch; text-align: center; }
   #twist-card.boss .dexhead { background: linear-gradient(#a24dff, #5a2a6e); }
@@ -434,7 +439,7 @@
     background: linear-gradient(135deg, var(--plum-mid), #8a6bd0); color: var(--paper); box-shadow: 0 4px 0 var(--plum); position: sticky; top: 0; z-index: 2; }
   .pager .chip { background: rgba(255,255,255,.2); color: #fff; }
   .region { display: flex; flex-direction: column; align-items: center; gap: 1px; flex: 1; min-width: 0; }
-  .region b { font-family: var(--display); font-weight: 400; font-size: 18px; }
+  .region b { font-family: var(--title); font-weight: 400; font-size: 18px; }
   .region small { font-size: 12px; color: rgba(255,255,255,.85); font-weight: 700; }
   .pager .chip.off { opacity: .35; }
   .sheet { box-sizing: border-box; width: min(100%, 380px); display: flex; flex-direction: column; gap: 8px; text-align: left;
