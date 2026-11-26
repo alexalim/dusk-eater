@@ -2,7 +2,7 @@
 // file in memory and rendered with the same synth as the background tracks.
 // Needs `npm i spessasynth_core` beside it (not a project dependency) and FluidR3_GM.sf2 (MIT, Debian/Ubuntu package
 // fluid-soundfont-gm); the WAV is levelled and AAC-encoded with ffmpeg afterwards (see www/audio/LICENSES.md).
-// usage: node sfx.mjs <sf2> <outdir>
+// usage: node sfx.mjs <sf2> <outdir> [names...]  (no names: every cue)
 import * as fs from 'node:fs/promises';
 import { audioToWav, BasicMIDI, SoundBankLoader, SpessaSynthProcessor, SpessaSynthSequencer } from 'spessasynth_core';
 
@@ -32,14 +32,30 @@ const CUES = {
     .concat([[0.3, 91, 0.5, 70, 1], [0.38, 96, 0.5, 65, 1]]) },
   eat_carousel: { prog: { 0: 10 }, len: 0.8, notes: [72, 76, 79, 84, 79].map((n, i) => [i * 0.1, n, 0.25, 90]) },
   eat_reindeer: { prog: { 0: 9 }, len: 0.6, notes: [[0, 54, 0.3, 90, 9], [0.12, 54, 0.3, 80, 9], [0, 96, 0.2, 60], [0.09, 98, 0.2, 55]] },
+  // The swallow: a kalimba note that slides up (뽁) over a soft marimba body; the big one first sinks (꿀) then pops (꺽).
+  // bends: [time s, semitones, channel], joined in straight lines.
+  gulp_small: { prog: { 0: 108, 1: 12 }, len: 0.3, notes: [[0, 74, 0.1, 105], [0, 62, 0.08, 70, 1]],
+    bends: [[0, -5, 0], [0.07, 4, 0]] },
+  gulp_big: { prog: { 0: 12, 1: 108, 2: 116 }, len: 0.55, notes: [[0, 57, 0.11, 105], [0.12, 67, 0.14, 110, 1], [0.12, 43, 0.12, 60, 2]],
+    bends: [[0, 0, 0], [0.1, -4, 0], [0.12, -6, 1], [0.22, 5, 1]] },
 };
+const only = process.argv.slice(4);
 
 const vlq = n => { const b = [n & 0x7f]; while ((n >>= 7)) b.unshift((n & 0x7f) | 0x80); return b; };
-function smf({ prog, notes }) {
+function smf({ prog, notes, bends = [] }) {
   const ev = [];
-  for (const [ch, p] of Object.entries(prog)) ev.push([0, [0xc0 | +ch, p]]);
+  for (const [ch, p] of Object.entries(prog)) ev.push([0, [0xc0 | +ch, p]], [0, [0xb0 | +ch, 101, 0]], [0, [0xb0 | +ch, 100, 0]], [0, [0xb0 | +ch, 6, 12]]); // bend range 12
+  const bendAt = (ch, s) => { const v = Math.max(0, Math.min(16383, Math.round(8192 + s / 12 * 8191))); return [0xe0 | ch, v & 127, v >> 7]; };
+  for (const ch of new Set(bends.map(b => b[2]))) { // straight lines between points, a step every 5 ms
+    const pts = bends.filter(b => b[2] === ch);
+    pts.forEach(([t, s], i) => {
+      const [t1, s1] = pts[i + 1] || [t, s];
+      for (let u = t; u < t1 || u === t; u += 0.005) { ev.push([sec(u), bendAt(ch, t1 > t ? s + (s1 - s) * (u - t) / (t1 - t) : s)]); if (t1 <= t) break; }
+    });
+  }
   for (const [t, n, l, v, ch = 0] of notes) { ev.push([sec(t), [0x90 | ch, n, v]]); ev.push([sec(t + l), [0x80 | ch, n, 0]]); }
-  ev.sort((a, b) => a[0] - b[0] || (a[1][0] & 0xf0) - (b[1][0] & 0xf0)); // program changes, then note-offs before note-ons
+  const order = { 0xc0: 0, 0xb0: 1, 0xe0: 2, 0x80: 3, 0x90: 4 }; // at one tick: program, controllers, bend, note-offs, note-ons
+  ev.sort((a, b) => a[0] - b[0] || order[a[1][0] & 0xf0] - order[b[1][0] & 0xf0]);
   const tempo = [0, 0xff, 0x51, 3, 0x07, 0xa1, 0x20]; // 500000 us per beat = 120 BPM
   const body = [...tempo]; let last = 0;
   for (const [t, e] of ev) { body.push(...vlq(t - last), ...e); last = t; }
@@ -51,6 +67,7 @@ function smf({ prog, notes }) {
 const sf = await fs.readFile(sfPath);
 const bank = SoundBankLoader.fromArrayBuffer(sf.buffer.slice(sf.byteOffset, sf.byteOffset + sf.byteLength));
 for (const [name, cue] of Object.entries(CUES)) {
+  if (only.length && !only.includes(name)) continue;
   const synth = new SpessaSynthProcessor(SR, { eventsEnabled: false });
   synth.soundBankManager.addSoundBank(bank, 'main');
   await synth.ready;

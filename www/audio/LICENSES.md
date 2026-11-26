@@ -19,7 +19,8 @@ FluidR3Mono GM: Debian package information https://packages.debian.org/sid/fluid
 ## Re-rendered in the Dusk Eater repo with FluidR3_GM (supersedes the "procedural" note above for these files)
 All 25 `bgm/*.m4a` and these 15 effects were re-rendered from the v2 MIDI (and short in-code cues) with real
 instrument samples from FluidR3_GM: coin, combo, eat_carousel, eat_reindeer, grow, hit, level_up, lose, night,
-parade, shard, star, tap, tick, win. Renderer: spessasynth_core (Apache-2.0); encoder: FFmpeg AAC. Neither is shipped.
+parade, shard, star, tap, tick, win, and the swallow (gulp_small, gulp_big). The title track (bgm_title) is a new
+waltz written in `tools/audio/title.mjs`, not the v2 tune. Renderer: spessasynth_core (Apache-2.0); encoder: FFmpeg AAC. Neither is shipped.
 Scripts: `tools/audio/render.mjs` (BGM), `tools/audio/sfx.mjs` (effects). Source package: Ubuntu jammy
 `fluid-soundfont-gm` 3.1-5.3 (`FluidR3_GM.sf2`). The other effects and all voices remain v2 procedural audio.
 
