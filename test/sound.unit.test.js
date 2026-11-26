@@ -73,3 +73,15 @@ test('every effect still runs with no audio context (falls back quietly)', () =>
   for (const k of ['tap', 'star', 'coin', 'level', 'lit', 'night', 'grow', 'hit', 'tick', 'spit', 'yuck', 'dash', 'parade', 'win', 'lose']) sfx[k]();
   sfx.gulp(0.8, 4); sfx.combo(3); sfx.shard('bolt'); sfx.rain(2); sfx.wind(2); sfx.voice('car'); sfx.voice('person');
 });
+
+test("Dusk's lines are babbled one syllable per Hangul syllable, on its own vowel, lifting at a ! or ?", () => {
+  const { syllables, VOWELS } = DuskSound.voice;
+  const s = syllables('퉤! 좀비가 날아갔어요');
+  assert.equal(s.length, 9);
+  assert.deepEqual(s.map(x => x.v).join(''), 'eoiaaaaoo'); // 퉤 좀 비 가 날 아 갔 어 요
+  assert.ok(s[0].lift && !s[1].lift, 'the ! lifts the syllable before it');
+  assert.ok(s[1].nasal && s[4].stop && !s[3].stop, 'ㅁ hums, ㄹ closes, an open 가 does neither');
+  for (const x of syllables('가갸거겨고교구규그기개게괘궤귀긔')) assert.ok(VOWELS[x.v], x.v);
+  DuskSound.sfx.speak('안녕?'); DuskSound.sfx.speak('abc');
+  assert.equal(DuskSound.sfx.lastSpoken.at(-1), '안녕?'); // no Hangul, nothing to say
+});

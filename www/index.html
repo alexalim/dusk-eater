@@ -1124,6 +1124,7 @@
   }
   function banner(html, secs, kind) { // kind: 'good' = a bigger gold panel (stars), 'bad' = a red warning panel (light, hunger, a zombie)
     const b = $('banner'); b.innerHTML = html; bannerUntil = elapsed + secs;
+    if (html.includes('class="ico face"')) Sound.sfx.speak(b.textContent); // a line with Dusk's face is Dusk talking: it babbles it
     b.classList.toggle('good', kind === 'good'); b.classList.toggle('bad', kind === 'bad');
     b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); // bounce in every time
   }
@@ -2150,7 +2151,7 @@
     $('tutorial').classList.toggle('hidden', !tut);
     if (tut) {
       const step = `${tut.i + 1} / ${TUTORIAL.length}`;
-      if ($('tut-step').textContent !== step) { $('tut-step').textContent = step; $('tut-text').textContent = TUTORIAL[tut.i].text; }
+      if ($('tut-step').textContent !== step) { $('tut-step').textContent = step; $('tut-text').textContent = TUTORIAL[tut.i].text; Sound.sfx.speak(TUTORIAL[tut.i].text); }
     }
     const chips = stage.goals.map(g => {
       const p = C.goalProgress(g, stats);

@@ -31,9 +31,9 @@
   // dB per file, measured (RMS) so the pack keeps the balance the calls below were tuned to: a replaced effect plays as
   // loud as the one it replaced, a new eat sound sits with the other eat sounds, a voice sits under the effects.
   const LEVEL = { coin: -1, combo: 3, dash: -2, eat_balloon: -5, eat_bicycle: -1, eat_boat: -8, eat_building: -3, eat_bus: -10,
-    eat_car: -3, eat_carousel: -1, eat_fountain: 1, eat_metal: -8, eat_plant: -3, eat_pop: -3, eat_reindeer: -4, eat_soft: -3,
-    eat_stone: -5, eat_wood: -5, grow: -2, gulp_big: -3, gulp_small: -4, hit: 0, level_up: 0, lose: 1, night: -1, parade: 0,
-    rain: 1, shard: -4, spit: -6, star: -3, sunlight: -2, tap: -4, tick: -8, win: 0, wind: 0, yuck: -1,
+    eat_car: -3, eat_carousel: -1, eat_fountain: 1, eat_metal: -8, eat_plant: -3, eat_pop: -3, eat_reindeer: -3, eat_soft: -3,
+    eat_stone: -5, eat_wood: -5, grow: -2, gulp_big: -2, gulp_small: -3, hit: 1, level_up: 2, lose: 1, night: -1, parade: 2,
+    rain: 1, shard: -3, spit: -6, star: -2, sunlight: -2, tap: 3, tick: 0, win: 0, wind: 0, yuck: -1,
     eat_person_high: -5, eat_person_low: -4, eat_cat: -5, eat_chicken: -5, eat_sheep: -4, eat_cow: -4, eat_camel: -2,
     eat_gull: -6, eat_zombie: -1, voice: -8 };
   const buffers = {}, loading = {};
@@ -189,8 +189,40 @@
     saidAt = ctx.currentTime;
     // A recorded take of the word (three of each, picked at random) when it has loaded; until then the synth says it.
     if (sample(`voice_${word}_${1 + Math.floor(Math.random() * 3)}`, { vol: vol * 3.75, at })) return;
-    const base = 560 * R(0.95, 1.06);
-    let t = ctx.currentTime + at;
+    voiced(w, ctx.currentTime + at, vol, 560 * R(0.95, 1.06));
+  }
+  // Dusk reads a line aloud in babble (tester: "a voice for Dusk's lines"): one short syllable per Hangul syllable,
+  // on that syllable's own vowel, a closing ㄴ/ㅁ/ㅇ hummed; it lifts at a ! or ?, settles at the end otherwise, and
+  // stops after a dozen syllables so a long line does not chatter. Same voice as say(), just faster.
+  // JUNG: the 21 medial vowels in Unicode order (ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ) as the five sung vowels.
+  const JUNG = 'aeaeoeoeoaeeouoeiuuii';
+  function syllables(text) {
+    const out = [];
+    for (const ch of text) {
+      const c = ch.codePointAt(0) - 0xac00;
+      if (c >= 0 && c < 11172) out.push({ v: JUNG[Math.floor((c % 588) / 28)], nasal: [4, 16, 21].includes(c % 28), stop: c % 28 > 0 });
+      else if (/[!?！？]/.test(ch) && out.length) out[out.length - 1].lift = true;
+    }
+    return out;
+  }
+  const lastSpoken = [];
+  let spokeUntil = 0;
+  function speak(text, { vol = 0.16 } = {}) {
+    const syl = syllables(String(text)).slice(0, 12);
+    if (!syl.length) return;
+    lastSpoken.push(text); if (lastSpoken.length > 20) lastSpoken.shift();
+    if (!ctx || ctx.state !== 'running' || ctx.currentTime < spokeUntil) return; // one line at a time
+    const base = 600 * R(0.96, 1.05), w = [];
+    syl.forEach((s, i) => {
+      const last = i === syl.length - 1, p = 1 + R(-0.08, 0.1) + (s.lift && last ? 0.25 : 0);
+      w.push([s.v, s.stop ? 0.05 : 0.065, p, last ? (s.lift ? p * 1.15 : p * 0.88) : p * R(0.97, 1.04)]);
+      if (s.nasal) w.push(['n', 0.03]);
+    });
+    spokeUntil = ctx.currentTime + voiced(w, ctx.currentTime + 0.02, vol, base, 0.008) + 0.15;
+  }
+  // Plays syllables (see WORDS) from time t; returns how long it lasts.
+  function voiced(w, t, vol, base, gap = 0.015) {
+    const t0 = t;
     for (const [v, dur, p0, p1] of w) {
       if (v === 'n' || v === 'm') { tone(base * 1.15, base * 1.1, dur, { type: 'sine', vol: vol * 0.45, at: t - ctx.currentTime, attack: 0.01 }); t += dur; continue; }
       const o = ctx.createOscillator(), g = ctx.createGain(), sum = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
@@ -205,12 +237,14 @@
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       sum.connect(g).connect(sfxBus);
       o.start(t); lfo.start(t); o.stop(t + dur + 0.02); lfo.stop(t + dur + 0.02);
-      t += dur + 0.015;
+      t += dur + gap;
     }
+    return t - t0;
   }
 
   const sfx = {
     voice: voiceOf, get lastVoices() { return lastVoices.slice(); }, say, get lastSaid() { return lastSaid.slice(); },
+    speak, get lastSpoken() { return lastSpoken.slice(); },
     gulp(size = 0, combo = 0) { // a combo climbs: each swallow in the chain is a step higher, up to a fifth
       const up = Math.min(7, Math.max(0, combo - 1));
       if (!sample(size > 0.5 ? 'gulp_big' : 'gulp_small', { vol: 0.8, rate: semis(up) * R(0.96, 1.04) })) {
@@ -595,5 +629,5 @@
     bus.gain.setTargetAtTime(v ? level : 0, ctx.currentTime, 0.05);
   }
 
-  root.DuskSound = { sfx, music, setOn, band: { TUNES, INST, BASS, LINES, DRUMS }, voice: { VOWELS, WORDS }, files: { SFX_FILES, BGM_LUFS, EAT_FILE }, get on() { return Object.assign({}, on); }, get ctx() { return ctx; } };
+  root.DuskSound = { sfx, music, setOn, band: { TUNES, INST, BASS, LINES, DRUMS }, voice: { VOWELS, WORDS, syllables }, files: { SFX_FILES, BGM_LUFS, EAT_FILE }, get on() { return Object.assign({}, on); }, get ctx() { return ctx; } };
 })(this);
