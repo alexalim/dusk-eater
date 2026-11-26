@@ -22,7 +22,7 @@
     --paper: #fff9f0; --paper-card: #fff3e2; --paper-dim: #f3e4cf; --paper-line: #e8d5be;
     --ink: #2f2447; --ink-muted: #776891; --plum: #3a2860; --plum-mid: #5b4290; --peach: #ff9e7d;
     --font: 'Gowun Dodum', -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-    --display: 'Yeon Sung', var(--font);
+    --display: 'HS SanTokki', var(--font);
     --title: 'BM Kkubulim', var(--display); /* the big words: screen titles, the end of a run, combos and streaks */
   }
   /* Display face: one weight only, so never fake-bolded. No text under 12 px (tester: small text did not read), but
@@ -31,15 +31,14 @@
   .node .num, .hex, .rw, .gem, .item .nm, .item .pr, .sheet .name, .region, #skin-box .nm, #dex-new, #banner,
   #end-title, #result, .card .nm, .bcat small, .dexset b, .boost .row {
     font-family: var(--display); font-weight: 400; font-synthesis: none; }
-  /* Fonts (fonts/LICENSE.txt, both SIL OFL): hand-lettered, so the game reads made by hand rather than by an app kit.
-     BM Yeonsung (a brush pen) for titles, buttons and numbers, Gowun Dodum (soft brushed strokes) for reading text.
-     Both come in one weight: every weight maps to it, and nothing is fake-bolded (a smeared bold is worse than none).
-     Yeonsung draws small on its em, so it is scaled up to sit where the old titles did.
-     Subset to the 2,350 common Hangul; a rarer character (say in a nickname) falls back to the system font. */
-  @font-face { font-family: 'Yeon Sung'; src: url(fonts/yeonsung.woff) format('woff'); font-weight: 100 900; size-adjust: 112%; font-display: swap; }
-  /* BM Kkubulim (SIL OFL with a Reserved Font Name): the official TTF exactly as downloaded, so not subset or converted */
+  /* Fonts (fonts/LICENSE.txt), three faces the testers picked, each one weight (every weight maps to it, nothing is
+     fake-bolded: a smeared bold is worse than none):
+       BM Kkubulim (--title)   the big words: screen titles, the end of a run, combos, streaks, region and level names
+       HS SanTokki 2.0 (--display)  buttons, numbers, chips, labels
+       Gowun Dodum (--font)    reading text
+     Kkubulim (SIL OFL with a Reserved Font Name) and SanTokki ship exactly as downloaded, not subset or converted. */
   @font-face { font-family: 'BM Kkubulim'; src: url(fonts/BMKkubulimTTF.ttf) format('truetype'); font-weight: 100 900; font-display: swap; }
-  /* the big words take the wavy title face (tester's pick, with HS산토끼 for the small ones to come) */
+  @font-face { font-family: 'HS SanTokki'; src: url(fonts/HSSanTokki2.0.ttf) format('truetype'); font-weight: 100 900; font-display: swap; }
   h1, h2, #end-title, #result, .sheet .name { font-family: var(--title); } /* and #hitcount, #streak, .lvhead, #twist h4, .region b where they are styled */
   @font-face { font-family: 'Gowun Dodum'; src: url(fonts/gowun-dodum.woff) format('woff'); font-weight: 100 900; size-adjust: 106%; font-display: swap; }
   html, body {

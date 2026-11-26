@@ -1,6 +1,6 @@
 # Rebuilds www/fonts/*.woff: the KS X 1001 Hangul (2,350 common syllables) plus every character the game's sources use.
-# Usage: python3 tools/fonts/subset.py <dir with YeonSung-Regular.ttf and GowunDodum-Regular.ttf>
-#   both from github.com/google/fonts (ofl/yeonsung, ofl/gowundodum)
+# Usage: python3 tools/fonts/subset.py <dir with GowunDodum-Regular.ttf>
+#   from github.com/google/fonts (ofl/gowundodum). The title faces (BM Kkubulim, HS SanTokki) ship as downloaded, not subset.
 # Re-run after adding text with a rare Hangul syllable, or it falls back to the system font.
 import glob, os, sys
 from fontTools import subset
@@ -12,7 +12,7 @@ used = ''.join(open(f, encoding='utf8').read() for f in glob.glob(os.path.join(r
 text = set(ks) | {c for c in used if ord(c) >= 0x80} | {chr(c) for c in range(0x20, 0x7f)} | set('·‹›×…~₩★☆→←—–‘’“”•%')
 chars = os.path.join(root, '..', 'tools', 'fonts', '.chars.txt')
 open(chars, 'w', encoding='utf8').write(''.join(sorted(text)))
-for name, out in [('YeonSung-Regular.ttf', 'yeonsung.woff'), ('GowunDodum-Regular.ttf', 'gowun-dodum.woff')]:
+for name, out in [('GowunDodum-Regular.ttf', 'gowun-dodum.woff')]:
     dst = os.path.join(root, 'fonts', out)
     subset.main([os.path.join(src_dir, name), f'--text-file={chars}', f'--output-file={dst}', '--flavor=woff',
                  '--layout-features=*', '--no-hinting', '--desubroutinize'])
