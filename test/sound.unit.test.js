@@ -56,3 +56,18 @@ test('say() remembers what was said even with no audio context (the game calls i
   DuskSound.sfx.say('wow'); DuskSound.sfx.say('nope');
   assert.equal(DuskSound.sfx.lastSaid.at(-1), 'wow');
 });
+
+test('recorded sounds: every effect and background track the code names has its file, and every map has a track', () => {
+  const fs = require('node:fs'), path = require('node:path'), www = path.join(__dirname, '../www');
+  const { SFX_FILES, BGM_LUFS, EAT_FILE } = DuskSound.files;
+  for (const n of SFX_FILES) assert.ok(fs.existsSync(path.join(www, `audio/sfx/${n}.m4a`)), `sfx ${n}`);
+  for (const n of Object.keys(BGM_LUFS)) assert.ok(fs.existsSync(path.join(www, `audio/bgm/bgm_${n}.m4a`)), `bgm ${n}`);
+  for (const [theme, t] of Object.entries(St.THEMES)) assert.ok(BGM_LUFS[t.base || theme] !== undefined, `track for ${theme}`);
+  for (const k of ['car', 'bus', 'tree', 'bench', 'building']) assert.ok(SFX_FILES.includes(EAT_FILE(k)), `eat sound for ${k}`);
+});
+
+test('every effect still runs with no audio context (falls back quietly)', () => {
+  const sfx = DuskSound.sfx;
+  for (const k of ['tap', 'star', 'coin', 'level', 'lit', 'night', 'grow', 'hit', 'tick', 'spit', 'yuck', 'dash', 'parade', 'win', 'lose']) sfx[k]();
+  sfx.gulp(0.8, 4); sfx.combo(3); sfx.shard('bolt'); sfx.rain(2); sfx.wind(2); sfx.voice('car'); sfx.voice('person');
+});

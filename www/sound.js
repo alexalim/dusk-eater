@@ -1,5 +1,6 @@
-// Sound: every effect and the background tune are synthesized with Web Audio, so there are no sound files to ship
-// or license. Effects and music each have an on/off switch the game saves. iOS only lets audio start inside a tap,
+// Sound: recorded effects and a background track per map (www/audio, a demo pack: see audio/README) where a file is
+// there and loads; everything else, and the whole of it when files cannot load (a file:// page, a decode error), is
+// synthesized with Web Audio as before, so a missing file only changes how one sound is made, never whether it plays. Effects and music each have an on/off switch the game saves. iOS only lets audio start inside a tap,
 // so the first pointerdown anywhere unlocks it.
 (function (root) {
   'use strict';
@@ -15,8 +16,39 @@
     master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
     sfxBus = ctx.createGain(); sfxBus.gain.value = on.sfx ? 0.6 : 0; sfxBus.connect(master);
     musicBus = ctx.createGain(); musicBus.gain.value = on.music ? 0.3 : 0; musicBus.connect(master);
+    for (const name of SFX_FILES) load(`audio/sfx/${name}.m4a`); // the effects are small: all of them, once
     return ctx;
   }
+
+  // Recorded sounds. A buffer is fetched and decoded once; until then (or if it fails) the caller synthesizes instead.
+  // A file:// page (the test runs) cannot fetch, so no file is tried there and nothing is logged.
+  const SFX_FILES = ['coin', 'combo', 'dash', 'eat_balloon', 'eat_bicycle', 'eat_boat', 'eat_building', 'eat_bus', 'eat_car',
+    'eat_carousel', 'eat_fountain', 'eat_metal', 'eat_plant', 'eat_pop', 'eat_reindeer', 'eat_soft', 'eat_stone', 'eat_wood',
+    'grow', 'gulp_big', 'gulp_small', 'hit', 'level_up', 'lose', 'night', 'parade', 'rain', 'shard', 'spit', 'star',
+    'sunlight', 'tap', 'tick', 'win', 'wind', 'yuck'];
+  const buffers = {}, loading = {};
+  const canFetch = () => !!(root.fetch && root.location && root.location.protocol !== 'file:');
+  function load(path) {
+    if (path in buffers || loading[path] || !ctx || !canFetch()) return loading[path];
+    loading[path] = root.fetch(path).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status)))
+      .then(b => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej)))
+      .then(buf => { buffers[path] = buf; return buf; }, () => { buffers[path] = null; return null; })
+      .finally(() => { delete loading[path]; });
+    return loading[path];
+  }
+  // Plays a recorded effect; false when there is none to play yet (the caller then synthesizes).
+  function sample(name, { vol = 0.75, rate = 1, at = 0, loopFor = 0 } = {}) {
+    if (!SFX_FILES.includes(name)) return false;
+    const b = buffers[`audio/sfx/${name}.m4a`];
+    if (!b) { load(`audio/sfx/${name}.m4a`); return false; }
+    if (ctx.state !== 'running') return true;
+    const t = ctx.currentTime + at, src = ctx.createBufferSource(), g = ctx.createGain();
+    src.buffer = b; src.playbackRate.value = rate; g.gain.value = vol;
+    if (loopFor) { src.loop = true; g.gain.setValueAtTime(vol, t + Math.max(0, loopFor - 0.4)); g.gain.linearRampToValueAtTime(0.0001, t + loopFor); }
+    src.connect(g).connect(sfxBus); src.start(t); if (loopFor) src.stop(t + loopFor + 0.05);
+    return true;
+  }
+  const semis = n => Math.pow(2, n / 12);
   const unlock = () => { if (init() && ctx.state === 'suspended') ctx.resume(); };
   if (root.addEventListener) {
     root.addEventListener('pointerdown', unlock, true);
@@ -75,9 +107,15 @@
   const SOFT = ['snowman', 'candy', 'ball', 'buoy', 'sandcastle', 'xtree'];
   const STONE = ['statue', 'pagoda'];
   const lastVoices = []; // the kinds voiced most recently (tests read this)
+  const EAT_FILE = t => ['car', 'taxi', 'foodtruck', 'scooter'].includes(t) ? 'eat_car' : ['bus', 'tractor', 'excavator'].includes(t) ? 'eat_bus'
+    : ['boat', 'bicycle', 'balloon', 'fountain', 'carousel', 'reindeer', 'building'].includes(t) ? 'eat_' + t
+    : PLANTS.includes(t) ? 'eat_plant' : METAL.includes(t) ? 'eat_metal' : WOOD.includes(t) ? 'eat_wood' : STONE.includes(t) ? 'eat_stone'
+    : SOFT.includes(t) ? 'eat_soft' : null; // people, animals and zombies have no recording yet: they keep their synthesized voices
   function voiceOf(type) { // not `voice`: that name is the music synth's note below
     lastVoices.push(type); if (lastVoices.length > 20) lastVoices.shift();
     if (!ctx || ctx.state !== 'running') return;
+    const file = EAT_FILE(type);
+    if (file && sample(file, { vol: 0.6, rate: R(0.94, 1.06) })) return;
     if (type === 'cat') { const f = R(520, 720); cry(f, f * 1.45, 0.16, { vol: .22, cutoff: 2200, vib: 9, depth: .03, type: 'triangle' }); cry(f * 1.4, f * 0.8, 0.28, { vol: .2, cutoff: 1800, vib: 7, depth: .05, type: 'triangle', at: 0.15 }); return; } // 야옹
     if (type === 'zombie') { const f = R(90, 130); cry(f, f * 0.75, 0.55, { vol: .25, cutoff: 700, vib: 4, depth: .06 }); return; } // 으어어
     if (PEOPLE.includes(type) || type === 'guard' || type === 'boss') { // 와앙 / 으악, half higher voices, half lower
@@ -105,6 +143,7 @@
     if (type === 'carousel') { [72, 76, 79, 84, 79].forEach((n, i) => tone(note(n), note(n), 0.25, { type: 'sine', vol: .14, at: i * 0.1 })); return; } // 오르골
     if (SOFT.includes(type)) { hiss(0.12, { f: 600, q: .8, vol: .18 }); tone(300, 120, 0.12, { type: 'sine', vol: .12 }); return; } // 푹
     if (type === 'building') { tone(70, 28, 0.7, { type: 'sine', vol: .45 }); hiss(0.6, { f: 300, q: .7, vol: .25 }); hiss(0.3, { f: 1500, q: 1, vol: .1, at: .1 }); return; } // 쿠궁
+    if (!PEOPLE.includes(type) && sample('eat_pop', { vol: 0.6, rate: R(0.94, 1.06) })) return;
     tone(R(600, 800), 260, 0.12, { type: 'sine', vol: .3 }); // anything else: a plain pop
   }
 
@@ -154,37 +193,42 @@
   const sfx = {
     voice: voiceOf, get lastVoices() { return lastVoices.slice(); }, say, get lastSaid() { return lastSaid.slice(); },
     gulp(size = 0, combo = 0) { // a combo climbs: each swallow in the chain is a step higher, up to a fifth
-      const f = (720 - size * 420) * R(0.92, 1.08) * Math.pow(2, Math.min(7, Math.max(0, combo - 1)) / 12);
-      tone(f, f * 0.35, 0.13, { type: 'sine', vol: 0.55 });
-      tone(f * 2.1, f * 0.9, 0.06, { type: 'triangle', vol: 0.12 });
+      const up = Math.min(7, Math.max(0, combo - 1));
+      if (!sample(size > 0.5 ? 'gulp_big' : 'gulp_small', { vol: 0.8, rate: semis(up) * R(0.96, 1.04) })) {
+        const f = (720 - size * 420) * R(0.92, 1.08) * semis(up);
+        tone(f, f * 0.35, 0.13, { type: 'sine', vol: 0.55 });
+        tone(f * 2.1, f * 0.9, 0.06, { type: 'triangle', vol: 0.12 });
+      }
       if (combo >= 3 && combo % 4 === 3) say('nyam', { at: 0.06, every: 1.6 }); // a 냠 now and then in a chain, never a chatter
       else if (size > 0.7) say('umm', { at: 0.08, every: 1.6 }); // something big: a satisfied 음!
     },
-    tap() { tone(1200, 900, 0.04, { type: 'triangle', vol: 0.18 }); },
-    star() { [72, 76, 79, 84].forEach((n, i) => tone(note(n), note(n), 0.22, { type: 'triangle', vol: 0.3, at: i * 0.07 })); say('yay', { at: 0.3 }); },
-    coin() { tone(note(88), note(88), 0.09, { type: 'square', vol: 0.08 }); tone(note(95), note(95), 0.25, { type: 'square', vol: 0.08, at: 0.08 }); },
-    level() { [67, 72, 76, 79, 84].forEach((n, i) => tone(note(n), note(n), 0.3, { type: 'triangle', vol: 0.32, at: i * 0.09 })); },
-    lit() { tone(260, 180, 0.18, { type: 'sawtooth', vol: 0.07 }); tone(250, 175, 0.18, { type: 'sawtooth', vol: 0.07, at: 0.2 }); say('ah', { at: 0.02, every: 3 }); }, // 앗! (out in the sun)
-    night() { [84, 79, 76, 72, 67].forEach((n, i) => tone(note(n), note(n), 0.5, { type: 'sine', vol: 0.25, at: i * 0.12 })); },
-    grow() { tone(320, 960, 0.35, { type: 'triangle', vol: 0.25 }); [79, 84, 88].forEach((n, i) => tone(note(n), note(n), 0.25, { type: 'sine', vol: 0.22, at: 0.3 + i * 0.08 })); say('wow', { at: 0.12 }); },
-    hit() { tone(180, 60, 0.18, { type: 'square', vol: 0.35 }); tone(900, 1800, 0.12, { type: 'triangle', vol: 0.2, at: 0.02 }); [84, 91].forEach((n, i) => tone(note(n), note(n), 0.3, { type: 'triangle', vol: 0.25, at: 0.1 + i * 0.08 })); },
-    tick() { tone(1500, 1500, 0.06, { type: 'square', vol: 0.12 }); },
-    spit() { hiss(0.09, { f: 1600, q: 1.2, vol: .32 }); tone(460, 150, 0.13, { type: 'triangle', vol: .3, at: 0.02 }); }, // 퉤: a short burst and a falling thump
+    tap() { if (!sample('tap', { vol: 0.5 })) tone(1200, 900, 0.04, { type: 'triangle', vol: 0.18 }); },
+    star() { if (!sample('star')) [72, 76, 79, 84].forEach((n, i) => tone(note(n), note(n), 0.22, { type: 'triangle', vol: 0.3, at: i * 0.07 })); say('yay', { at: 0.3 }); },
+    coin() { if (sample('coin', { vol: 0.6 })) return; tone(note(88), note(88), 0.09, { type: 'square', vol: 0.08 }); tone(note(95), note(95), 0.25, { type: 'square', vol: 0.08, at: 0.08 }); },
+    level() { if (!sample('level_up')) [67, 72, 76, 79, 84].forEach((n, i) => tone(note(n), note(n), 0.3, { type: 'triangle', vol: 0.32, at: i * 0.09 })); },
+    lit() { if (!sample('sunlight', { vol: 0.55 })) { tone(260, 180, 0.18, { type: 'sawtooth', vol: 0.07 }); tone(250, 175, 0.18, { type: 'sawtooth', vol: 0.07, at: 0.2 }); } say('ah', { at: 0.02, every: 3 }); }, // 앗! (out in the sun)
+    night() { if (!sample('night')) [84, 79, 76, 72, 67].forEach((n, i) => tone(note(n), note(n), 0.5, { type: 'sine', vol: 0.25, at: i * 0.12 })); },
+    grow() { if (!sample('grow')) { tone(320, 960, 0.35, { type: 'triangle', vol: 0.25 }); [79, 84, 88].forEach((n, i) => tone(note(n), note(n), 0.25, { type: 'sine', vol: 0.22, at: 0.3 + i * 0.08 })); } say('wow', { at: 0.12 }); },
+    hit() { if (sample('hit')) return; tone(180, 60, 0.18, { type: 'square', vol: 0.35 }); tone(900, 1800, 0.12, { type: 'triangle', vol: 0.2, at: 0.02 }); [84, 91].forEach((n, i) => tone(note(n), note(n), 0.3, { type: 'triangle', vol: 0.25, at: 0.1 + i * 0.08 })); },
+    tick() { if (!sample('tick', { vol: 0.5 })) tone(1500, 1500, 0.06, { type: 'square', vol: 0.12 }); },
+    spit() { if (sample('spit')) return; hiss(0.09, { f: 1600, q: 1.2, vol: .32 }); tone(460, 150, 0.13, { type: 'triangle', vol: .3, at: 0.02 }); }, // 퉤: a short burst and a falling thump
     yuck() { // 으엑: a zombie went down, then three seconds of queasy gurgling
+      if (sample('yuck')) return;
       tone(300, 110, 0.28, { type: 'sawtooth', vol: 0.2 }); tone(520, 130, 0.32, { type: 'square', vol: 0.07 });
       for (let i = 0; i < 7; i++) tone(90 + (i % 2) * 25, 60, 0.22, { type: 'sawtooth', vol: 0.06, at: 0.45 + i * 0.38 });
     },
     shard(kind) { // a light shard: a quick rising sparkle, higher for the bolt
+      if (sample('shard', { rate: kind === 'bolt' ? semis(5) : kind === 'cloud' ? semis(-7) : 1 })) return;
       const base = kind === 'bolt' ? 84 : kind === 'cloud' ? 72 : 79;
       [0, 4, 7, 12].forEach((n, i) => tone(note(base + n), note(base + n) * 1.02, 0.12, { type: 'triangle', vol: 0.14, at: i * 0.05 }));
     },
-    dash() { tone(2200, 1800, 0.03, { type: 'square', vol: 0.05 }); }, // quick footsteps while the bolt lasts
-    rain(dur) { hiss(dur, { f: 1800, q: 0.5, vol: 0.12 }); }, // a shower: soft broadband hiss for its length
-    wind(dur) { hiss(dur, { f: 420, q: 0.8, type: 'lowpass', vol: 0.16 }); }, // a cloud front rolling in
-    parade() { [67, 71, 74, 79, 74, 79].forEach((n, i) => tone(note(n), note(n), 0.13, { type: 'square', vol: 0.09, at: i * 0.12 })); }, // a little march
-    combo(n) { const f = note(72 + Math.min(12, n)); tone(f, f * 1.5, 0.08, { type: 'square', vol: 0.1 }); }, // each link a step higher
-    win() { [60, 64, 67, 72, 76].forEach((n, i) => tone(note(n), note(n), 0.35, { type: 'triangle', vol: 0.3, at: i * 0.1 })); say('hehe', { at: 0.6 }); },
-    lose() { [67, 64, 60].forEach((n, i) => tone(note(n), note(n), 0.4, { type: 'triangle', vol: 0.25, at: i * 0.16 })); say('hing', { at: 0.55 }); },
+    dash() { if (!sample('dash', { vol: 0.35, rate: R(0.95, 1.05) })) tone(2200, 1800, 0.03, { type: 'square', vol: 0.05 }); }, // quick footsteps while the bolt lasts
+    rain(dur) { if (!sample('rain', { vol: 0.5, loopFor: dur })) hiss(dur, { f: 1800, q: 0.5, vol: 0.12 }); }, // a shower: soft broadband hiss for its length
+    wind(dur) { if (!sample('wind', { vol: 0.5, loopFor: dur })) hiss(dur, { f: 420, q: 0.8, type: 'lowpass', vol: 0.16 }); }, // a cloud front rolling in
+    parade() { if (!sample('parade')) [67, 71, 74, 79, 74, 79].forEach((n, i) => tone(note(n), note(n), 0.13, { type: 'square', vol: 0.09, at: i * 0.12 })); }, // a little march
+    combo(n) { if (sample('combo', { vol: 0.5, rate: semis(Math.min(12, n)) })) return; const f = note(72 + Math.min(12, n)); tone(f, f * 1.5, 0.08, { type: 'square', vol: 0.1 }); }, // each link a step higher
+    win() { if (!sample('win')) [60, 64, 67, 72, 76].forEach((n, i) => tone(note(n), note(n), 0.35, { type: 'triangle', vol: 0.3, at: i * 0.1 })); say('hehe', { at: 0.6 }); },
+    lose() { if (!sample('lose')) [67, 64, 60].forEach((n, i) => tone(note(n), note(n), 0.4, { type: 'triangle', vol: 0.25, at: i * 0.16 })); say('hing', { at: 0.55 }); },
   };
 
   // Background music: a small band, scheduled a little ahead of time. Every region shares one core (a soft pad
@@ -483,16 +527,46 @@
     }
   }
 
+  // Background tracks (www/audio/bgm): the menus, each map, the night stretch and the boss. One track is decoded at a
+  // time (a minute of stereo is ~25 MB decoded) and swapped with a short crossfade; each is levelled to -16 LUFS from
+  // its measured loudness. While a track loads, nothing plays; if it cannot load, the synthesized band takes over.
+  const BGM_LUFS = { title: -16, night: -17.29, boss: -16.03, town: -19.48, city: -16, oasis: -16, hanok: -16, campus: -16, snow: -16,
+    market: -16, crossing: -16, stadium: -16, harbor: -16, construction: -19.41, park: -16, beach: -18.36, desert: -20.07, farm: -16,
+    playground: -17.85, aquarium: -16, onsen: -16, nightmarket: -16, airport: -17.45, space: -16, xmas: -16 };
+  let tuneName = 'town', track = null; // track: { name, src, g } while a file plays (or { name } while it loads)
+  const trackFor = () => mode === 'title' ? 'title' : mode === 'night' ? 'night' : mode === 'boss' ? 'boss' : BGM_LUFS[tuneName] !== undefined ? tuneName : 'town';
+  function syncTrack() {
+    const name = trackFor();
+    if (track && track.name === name) { if (track.src) track.src.playbackRate.value = rushOn ? 1.06 : 1; return; }
+    const old = track, path = `audio/bgm/bgm_${name}.m4a`;
+    track = { name };
+    if (old && old.src) { old.g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.25); old.src.stop(ctx.currentTime + 1.2); }
+    const p = canFetch() ? root.fetch(path).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status)))
+      .then(b => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej))) : Promise.reject(new Error('no fetch'));
+    p.then(buf => {
+      if (!track || track.name !== name) return; // moved on while it loaded
+      const src = ctx.createBufferSource(), g = ctx.createGain(), level = Math.pow(10, (-16 - BGM_LUFS[name]) / 20);
+      src.buffer = buf; src.loop = true; src.playbackRate.value = rushOn ? 1.06 : 1;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime); g.gain.setTargetAtTime(level * 1.6, ctx.currentTime, 0.3);
+      src.connect(g).connect(musicBus); src.start();
+      track = { name, src, g };
+    }, () => { if (track && track.name === name) track = { name, failed: true }; });
+  }
   const music = {
     start() {
       if (!init() || timer) return;
       nextT = ctx.currentTime + 0.05; step = 0;
-      timer = setInterval(() => { if (ctx.state === 'running') schedule(); else nextT = ctx.currentTime + 0.05; }, 100);
+      timer = setInterval(() => {
+        if (ctx.state !== 'running') { nextT = ctx.currentTime + 0.05; return; }
+        syncTrack();
+        if (track && track.failed) schedule(); else nextT = ctx.currentTime + 0.05; // the band only when the file cannot play
+      }, 100);
     },
-    stop() { clearInterval(timer); timer = null; },
+    stop() { clearInterval(timer); timer = null; if (track && track.src) track.src.stop(); track = null; },
     mode(m) { mode = m; },
     rush(v) { rushOn = !!v; },
-    tune(name) { if (TUNES[name] && tune !== TUNES[name]) setTune(name); }, // region name: town, city, ...
+    tune(name) { if (TUNES[name]) tuneName = name; if (TUNES[name] && tune !== TUNES[name]) setTune(name); }, // region name: town, city, ...
+    get track() { return track && track.name; },
   };
 
   function setOn(kind, v) {
@@ -502,5 +576,5 @@
     bus.gain.setTargetAtTime(v ? level : 0, ctx.currentTime, 0.05);
   }
 
-  root.DuskSound = { sfx, music, setOn, band: { TUNES, INST, BASS, LINES, DRUMS }, voice: { VOWELS, WORDS }, get on() { return Object.assign({}, on); }, get ctx() { return ctx; } };
+  root.DuskSound = { sfx, music, setOn, band: { TUNES, INST, BASS, LINES, DRUMS }, voice: { VOWELS, WORDS }, files: { SFX_FILES, BGM_LUFS, EAT_FILE }, get on() { return Object.assign({}, on); }, get ctx() { return ctx; } };
 })(this);
