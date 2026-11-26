@@ -776,7 +776,9 @@
     // where the 3D body stands; the body and its face step aside. It hops along while moving, breathes at rest,
     // swells with each gulp and wobbles green while poisoned, as the body does. Looks only.
     const artMat = new T.SpriteMaterial({ transparent: true, depthWrite: false, alphaTest: 0.02 });
-    const artSprite = new T.Sprite(artMat); artSprite.center.set(0.5, 0.2); // pinned near its feet, so it stands on the ground
+    const artSprite = new T.Sprite(artMat); artSprite.center.set(0.5, 0.11); // pinned at its feet (the pictures stand on y 171 of 192), so it stands on the ground:
+    // the card faces the camera, which looks down, so whatever hangs below the pin tips under the ground and is hidden by
+    // it; at 0.2 a big body lost its legs (tester, build 94: "the legs get cut off")
     artSprite.visible = false; artSprite.renderOrder = 7; scene.add(artSprite);
     const artTex = {}; let artOn = false, artLean = 0, artHid = false, artNow = null, artFlip = false, artView = 'front', artWarm = false;
     // The picture's face moves: over the painted smile the mouth opens into a tall dark O with its tongue while it
