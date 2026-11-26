@@ -177,13 +177,18 @@
   /* The spit button: bottom right, under the thumb; dim until a swallow loads it, the pips show the shots left. */
   #btn-spit { pointer-events: auto; position: fixed; right: calc(env(safe-area-inset-right) + 18px); bottom: calc(env(safe-area-inset-bottom) + 26px);
     width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); padding: 0; cursor: pointer; touch-action: none;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: rgba(20,18,38,.55); opacity: .5; transition: opacity .2s, scale .12s; }
-  #btn-spit.ready { opacity: 1; background: radial-gradient(circle at 50% 35%, #7a4fd1, #3b2070); box-shadow: 0 0 14px rgba(183,140,255,.6); }
-  #btn-spit:active { scale: .9; }
-  #btn-spit .ico { width: 26px; height: 26px; margin: 0; }
-  #btn-spit i { display: inline-block; width: 7px; height: 7px; margin: 0 2px; border-radius: 50%; background: rgba(255,255,255,.22); }
-  #btn-spit i.on { background: var(--star); }
-  #btn-spit::after { content: '뱉기'; position: absolute; left: 50%; bottom: -18px; transform: translateX(-50%); font: 12px var(--display); color: var(--muted); white-space: nowrap; }
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: opacity .2s, scale .12s, translate .08s;
+    /* paper like the pills and the pause button while empty; the peach of the big buttons once loaded */
+    background: var(--paper-dim); border: 3px solid var(--paper-line); box-shadow: 0 4px 0 rgba(53,41,87,.3); opacity: .7; }
+  #btn-spit.ready { opacity: 1; background: linear-gradient(#ffb899, #ff8d6b); border-color: var(--paper); box-shadow: 0 5px 0 #d96545, 0 8px 14px rgba(24,15,45,.28); }
+  #btn-spit:active { translate: 0 3px; box-shadow: 0 2px 0 #d96545; }
+  #btn-spit .ico { width: 28px; height: 28px; margin: 0; }
+  #btn-spit:not(.ready) .ico { opacity: .55; }
+  #btn-spit .pips { display: flex; margin-bottom: 6px; }
+  #btn-spit i { display: inline-block; width: 8px; height: 8px; margin: 0 2px; border-radius: 50%; background: var(--paper); border: 1.5px solid var(--ink-muted); box-sizing: border-box; }
+  #btn-spit i.on { background: var(--star); border-color: var(--ink); }
+  #btn-spit::after { content: '뱉기'; position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); padding: 0 8px; border-radius: 999px;
+    font: 12px / 18px var(--display); color: var(--ink); background: var(--paper); border: 2px solid var(--paper-line); white-space: nowrap; }
   #tutorial { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 24px);
     width: min(calc(100% - 32px), 360px); box-sizing: border-box; padding: 14px 16px; border-radius: 16px;
     background: rgba(20,18,38,.82); color: var(--text); font-size: 16px; font-weight: 700; line-height: 1.45;
@@ -1167,7 +1172,7 @@
   // ---------- spitting ----------
   function renderAmmo() {
     const b = $('btn-spit'); b.classList.toggle('ready', ammo > 0);
-    b.innerHTML = `<img class="ico" src="img/ui/moon.svg" alt="">${[0, 1, 2].map(i => `<i class="${i < ammo ? 'on' : ''}"></i>`).join('')}`;
+    b.innerHTML = `<img class="ico" src="img/ui/mouth.svg" alt=""><span class="pips">${[0, 1, 2].map(i => `<i class="${i < ammo ? 'on' : ''}"></i>`).join('')}</span>`;
   }
   function spit() {
     if (state !== 'play' || ammo <= 0) return;
