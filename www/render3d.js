@@ -925,9 +925,15 @@
         g.fillStyle = '#e2674f'; g.beginPath(); g.roundRect(24, 86, 80, 16, 8); g.fill(); },
       car(g) { g.fillStyle = '#ffa6ec'; g.beginPath(); g.roundRect(26, 46, 76, 60, 18); g.fill(); g.fillStyle = '#e6f8ff'; g.fillRect(38, 58, 52, 22); g.fillStyle = '#5b4290'; g.fillRect(60, 14, 8, 34); g.beginPath(); g.arc(64, 14, 9, 0, 7); g.fill(); },
     };
+    // Each kind has a painted picture too (img/casters, tools/casters/pack.py), in the characters' own style (tester: the
+    // flat shapes, the map and the characters "each go their own way"): the flat shape shows until it has loaded.
     const casterTex = {}, casterOf = icon => casterTex[icon] || (casterTex[icon] = (() => {
-      const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.shadowColor = 'rgba(30,12,60,.35)'; g.shadowBlur = 4; g.shadowOffsetY = 3;
-      CASTER_ART[icon](g); return new T.CanvasTexture(c);
+      const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+      g.save(); g.scale(2, 2); g.shadowColor = 'rgba(30,12,60,.35)'; g.shadowBlur = 4; g.shadowOffsetY = 3; CASTER_ART[icon](g); g.restore();
+      const tex = new T.CanvasTexture(c), img = new Image();
+      img.onload = () => { g.clearRect(0, 0, 256, 256); g.drawImage(img, 0, 0, 256, 256); tex.needsUpdate = true; };
+      img.src = `img/casters/${icon}.png`;
+      return tex;
     })());
     const casters = Array.from({ length: MAX_CLOUDS }, () => {
       const sp = new T.Sprite(new T.SpriteMaterial({ transparent: true, depthWrite: false, alphaTest: 0.02 }));
