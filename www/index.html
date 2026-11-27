@@ -679,7 +679,10 @@
   #boot { position: fixed; inset: 0; z-index: 10000; display: flex; flex-direction: column; align-items: center; gap: 10px;
     padding: calc(env(safe-area-inset-top) + 13vh) 24px calc(env(safe-area-inset-bottom) + 6vh);
     background: #22164d url(img/boot.webp) center bottom / cover no-repeat; transition: opacity .45s ease-out; }
+  /* a wide screen (an iPad held sideways) shows the whole picture by its height, the sides filled with its own sky */
+  @media (min-aspect-ratio: 3/4) { #boot { background: url(img/boot.webp) center bottom / auto 100% no-repeat, linear-gradient(#22164d, #3d2a78 30%, #7b4f9e 55%, #4a3378 70%, #2e2152); } }
   #boot.done { opacity: 0; pointer-events: none; }
+  #boot .tap { font: 12px var(--display); color: #776891; }
   #boot h1 { margin: 0; font: 48px / 1.05 var(--title); color: #fff3dc; -webkit-text-stroke: 2px #3a2860; text-shadow: 0 4px 0 #3a2860, 0 0 26px rgba(255,214,160,.5); }
   #boot img { width: 150px; height: 150px; object-fit: contain; animation: float 3.2s ease-in-out infinite; filter: drop-shadow(0 10px 14px rgba(20,10,50,.45)); }
   #boot .bfoot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 22px 14px; border-radius: 18px;
@@ -694,8 +697,15 @@
 </style>
 </head>
 <body>
-<div id="boot" aria-hidden="true"><h1>Dusk Eater</h1><img src="img/art/ghost-eat.webp" alt=""><div class="bfoot"><p>옛날 옛적, 해 질 녘 마을에…</p><div class="bbar"><i id="boot-bar"></i></div></div></div>
-<script>if (window.__DUSK_TEST__) document.getElementById('boot').remove(); // automated runs go straight to the game</script>
+<div id="boot" aria-hidden="true"><h1>Dusk Eater</h1><img src="img/art/ghost-eat.webp" alt=""><div class="bfoot"><p>옛날 옛적, 해 질 녘 마을에…</p><div class="bbar"><i id="boot-bar"></i></div><span class="tap">화면을 누르면 바로 시작해요</span></div></div>
+<script>
+  (function () {
+    const boot = document.getElementById('boot');
+    if (window.__DUSK_TEST__) return boot.remove(); // automated runs go straight to the game
+    // a tap skips the wait (tester: "the loading screen should go away when tapped"); the game keeps loading behind it
+    boot.addEventListener('pointerup', () => { boot.classList.add('done'); setTimeout(() => boot.remove(), 450); }, { once: true });
+  })();
+</script>
 <canvas id="c"></canvas>
 <div id="vignette" class="hidden"></div>
 <div id="rain" class="hidden"></div>
