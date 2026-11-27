@@ -2848,7 +2848,7 @@
       + (stats.shards ? `<span>${ico('sparkle').replace('class="ico"', 'class="ico ui"')}빛 조각 ${stats.shards}</span>` : '');
     // step one: the celebration (face, title, stars); step two on a tap or after a moment
     $('cheer-face').src = face; $('cheer-title').innerHTML = title; $('cheer-stars').innerHTML = starText(n);
-    $('cheer-sub').textContent = !cleared ? (endedBy === 'hunger' ? '너무 오래 굶었어요' : '별 하나가 모자랐어요') : n === 3 ? '별 셋 모두!' : `${stats.total}개 삼켰어요`;
+    $('cheer-sub').textContent = !cleared ? (endedBy === 'hunger' ? '너무 오래 굶었어요' : '별 하나가 모자랐어요') : `${stats.total}개 삼켰어요`; // no "별 셋 모두!" line (tester): the stars above say it
     $('end-goals').innerHTML = stage.goals.map((g, k) =>
       `<div><span class="mark">${ico(got[k] ? 'star' : 'star-off')}</span><span>${goalLabel(g)}</span></div>`).join('');
     $('best').textContent = `${stage.name} 최고 기록 ${bestScore[stage.id].toLocaleString()}점`;
