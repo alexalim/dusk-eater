@@ -671,9 +671,27 @@
   .boost.off { opacity: .45; }
   .boost small { color: var(--muted); }
   .hidden { display: none !important; }
+  /* Boot screen (tester: "a loading screen on first launch"): up from the first paint of the page until the fonts, the
+     character's picture, the saved progress and a first frame are ready. It continues the native launch screen's colours
+     (design/splash.svg) so nothing flashes, then fades out. Never under 0.6 s, never over 8 s; tests never see it. */
+  #boot { position: fixed; inset: 0; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    background: radial-gradient(circle at 50% 54%, #7a3dff 0, #3a0e6a 45%, #0b0620 100%); transition: opacity .45s ease-out; }
+  #boot.done { opacity: 0; pointer-events: none; }
+  #boot img { width: 168px; height: 168px; object-fit: contain; animation: float 3.2s ease-in-out infinite; }
+  #boot .bmoon { position: absolute; top: 12%; right: 14%; width: 64px; height: 64px; border-radius: 50%;
+    background: radial-gradient(circle at 36% 34%, #fffaf0, #fff0c8 55%, #f7d98f); box-shadow: 0 0 40px 12px rgba(255,226,160,.3); }
+  #boot p { margin: 0; font: 20px var(--title); color: #fff3dc; text-shadow: 0 3px 0 rgba(30,12,60,.6); }
+  #boot .bbar { width: 180px; height: 12px; border-radius: 999px; background: rgba(255,243,226,.2); border: 2px solid #fff3e2; overflow: hidden; }
+  #boot .bbar i { display: block; height: 100%; width: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffd25c, #ff9e7d);
+    transform-origin: left; transform: scaleX(.04); animation: bootcreep 7s cubic-bezier(.2, .7, .3, 1) forwards; transition: transform .3s ease-out; }
+  /* while the scripts are still being read the page cannot run code, but a transform animation still plays: the bar
+     creeps toward a third on its own, then the real count takes over */
+  @keyframes bootcreep { to { transform: scaleX(.35); } }
 </style>
 </head>
 <body>
+<div id="boot" aria-hidden="true"><i class="bmoon"></i><img src="img/art/ghost-eat.webp" alt=""><p>옛날 옛적, 해 질 녘에…</p><div class="bbar"><i id="boot-bar"></i></div></div>
+<script>if (window.__DUSK_TEST__) document.getElementById('boot').remove(); // automated runs go straight to the game</script>
 <canvas id="c"></canvas>
 <div id="vignette" class="hidden"></div>
 <div id="rain" class="hidden"></div>
@@ -3079,6 +3097,23 @@
   $('ob-skip').addEventListener('pointerup', endOnboard);
 
   const whenReady = f => () => ready.then(f);
+
+  // The boot screen (top of <body>) stays until what the first screen needs is in: the three faces, the character's
+  // picture, saved progress and two painted frames. Each one moves the bar; a missing font or an offline image cannot
+  // hold it past 8 s.
+  (function bootDone() {
+    const el = $('boot'); if (!el) return;
+    const t0 = performance.now(), logo = document.querySelector('#title .logo');
+    const fonts = document.fonts ? ['46px "BM Kkubulim"', '20px "HS SanTokki"', '15px "Gowun Dodum"'].map(f => document.fonts.load(f, '가나다 Dusk')) : [];
+    const tasks = [...fonts, logo && logo.decode ? logo.decode() : null, ready, new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))];
+    let n = 0;
+    const bar = $('boot-bar'), m = getComputedStyle(bar).transform, from = m.startsWith('matrix(') ? +m.slice(7).split(',')[0] : 0.04;
+    bar.style.animation = 'none'; bar.style.transform = `scaleX(${from})`; // the real count takes over from where the creep got to
+    for (const t of tasks) Promise.resolve(t).catch(() => {}).then(() => { bar.style.transform = `scaleX(${from + ++n / tasks.length * (1 - from)})`; });
+    Promise.race([Promise.allSettled(tasks), new Promise(r => setTimeout(r, 8000))]).then(() => setTimeout(() => {
+      el.classList.add('done'); setTimeout(() => el.remove(), 500);
+    }, Math.max(0, 600 - (performance.now() - t0))));
+  })();
 
   // ---------- update check ----------
   // While saves load, the app's build (App plugin) is compared with the newest one in release.json (DuskUpdate). A newer build
