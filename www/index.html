@@ -629,6 +629,15 @@
   .hex.on.t1 { background: linear-gradient(#f6f8fc, #9aa6bd); }
   .hex.on.t2 { background: linear-gradient(#ffe8a0, #e0a52c); }
   .hex.new { animation: wiggle 1.6s ease-in-out infinite; }
+  /* A badge just earned and not yet collected (tester: "mark the badge you got, it is hard to find"): a gold glow
+     behind its hexagon and a red NEW! tag on top, until it is tapped for its gems. */
+  .hexnew { position: relative; display: inline-grid; }
+  .hexnew::before { content: ''; position: absolute; inset: -7px; border-radius: 50%; z-index: -1;
+    background: radial-gradient(circle, rgba(255,214,92,.95) 0, rgba(255,200,61,.55) 45%, transparent 72%); animation: newglow 1.1s ease-in-out infinite alternate; }
+  .hexnew i { position: absolute; left: 50%; top: -11px; transform: translateX(-50%) rotate(-6deg); padding: 1px 6px; border-radius: 999px;
+    background: #e8384a; color: #fff; font: 11px / 15px var(--display); font-style: normal; white-space: nowrap; box-shadow: 0 2px 0 #a3202e; pointer-events: none; }
+  @keyframes newglow { from { opacity: .55; scale: .9; } to { opacity: 1; scale: 1.08; } }
+  .hexes { padding-top: 10px; } /* room for the tag above the first row */
   #dex-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; touch-action: pan-y; padding: 2px 12px 12px; }
   .dexpane { display: none; } .dexpane.on { display: block; }
   #dex h3 { display: flex; align-items: center; gap: 8px; margin: 14px 0 8px; font-size: 14px; color: var(--plum-mid); }
@@ -2502,7 +2511,8 @@
       const list = Badges.BADGES.filter(b => b.cat === cat), have = list.filter(b => got.includes(b.id));
       const hexes = list.map(b => {
         const on = got.includes(b.id), fresh = on && !w.badges.includes(b.id), secret = cat.secret && !on;
-        return `<button class="hex t${b.k}${on ? ' on' : ''}${fresh ? ' new' : ''}" data-badge="${b.id}">${secret ? '?' : `<img src="img/ui/${cat.icon}.svg" alt="">`}</button>`;
+        const hex = `<button class="hex t${b.k}${on ? ' on' : ''}${fresh ? ' new' : ''}" data-badge="${b.id}">${secret ? '?' : `<img src="img/ui/${cat.icon}.svg" alt="">`}</button>`;
+        return fresh ? `<span class="hexnew">${hex}<i>NEW!</i></span>` : hex; // just earned: glow and a tag (the hexagon clips anything of its own)
       }).join('');
       const next = cat.steps && cat.steps.find(n => cat.value(c) < n);
       const line = cat.secret ? `${have.length} / 3 찾음` : next ? `${Math.floor(cat.value(c)).toLocaleString()} / ${next.toLocaleString()}${cat.unit}` : '모두 땄어요!';
@@ -2529,7 +2539,7 @@
   // Opens scrolled to the first category with a reward waiting (it is outlined in gold and says the gems in red).
   function openBadges() {
     $('badges-msg').textContent = ''; renderBadges(); show('badges');
-    const list = $('badges-list'), w = list.querySelector('.bcat.waiting');
+    const list = $('badges-list'), w = list.querySelector('.hexnew') && list.querySelector('.hexnew').closest('.bcat') || list.querySelector('.bcat.waiting');
     list.scrollTop = 0;
     if (w) list.scrollTop = Math.max(0, w.offsetTop - list.clientHeight / 2 + w.offsetHeight / 2);
   }
