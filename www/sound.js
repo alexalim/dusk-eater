@@ -39,9 +39,13 @@
   const buffers = {}, loading = {};
   let lastError = ''; // the newest file that failed to fetch or decode, for the info screen's sound check
   const canFetch = () => !!(root.fetch && root.location && root.location.protocol !== 'file:');
+  // The app on iOS (Capacitor) serves its own files with status 0, not 200 (the body is all there): that counts as a file
+  // too. Before this every recording failed on the phone and only the synthesized stand-ins played (tester, build 118's
+  // sound check: "0/68, last error … : 0").
+  const body = r => r.ok || r.status === 0 ? r.arrayBuffer() : Promise.reject(new Error(r.status));
   function load(path) {
     if (path in buffers || loading[path] || !ctx || !canFetch()) return loading[path];
-    loading[path] = root.fetch(path).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status)))
+    loading[path] = root.fetch(path).then(body)
       .then(b => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej)))
       .then(buf => { buffers[path] = buf; return buf; }, e => { buffers[path] = null; lastError = `${path.split('/').pop()}: ${e && e.message || e}`; return null; })
       .finally(() => { delete loading[path]; });
@@ -215,7 +219,7 @@
     const old = track, path = `audio/bgm/bgm_${name}.m4a`;
     track = { name };
     if (old && old.src) { old.g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.25); old.src.stop(ctx.currentTime + 1.2); }
-    const p = canFetch() ? root.fetch(path).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status)))
+    const p = canFetch() ? root.fetch(path).then(body)
       .then(b => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej))) : Promise.reject(new Error('no fetch'));
     p.then(buf => {
       if (!track || track.name !== name) return; // moved on while it loaded
