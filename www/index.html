@@ -369,6 +369,7 @@
   .tile img { width: 34px; height: 34px; }
   .tile .badge { position: absolute; top: -6px; right: -4px; margin: 0; }
   .sound-row { display: flex; gap: 8px; justify-content: center; }
+  .sndstat { margin: 6px 0 0; font-size: 12px; color: var(--ink-muted); word-break: break-all; }
   .info-body .sound-row { justify-content: flex-start; }
   .info-body .chip { background: var(--paper-dim); color: var(--ink); }
   .info-body { overflow-y: auto; padding: 4px 18px 16px; text-align: left; font-size: 14px; line-height: 1.6; }
@@ -818,7 +819,8 @@
     <div class="dexhead"><span>정보</span><span class="x" id="btn-info-back" aria-label="닫기" style="margin-left: auto">×</span></div>
     <div class="info-body">
       <h4>소리</h4>
-      <div class="sound-row"><div class="chip" id="btn-sfx2"></div><div class="chip" id="btn-music2"></div></div>
+      <div class="sound-row"><div class="chip" id="btn-sfx2"></div><div class="chip" id="btn-music2"></div><div class="chip" id="btn-sndtest">소리 확인</div></div>
+      <p class="sndstat" id="snd-status"></p>
       <h4>개인정보는 이렇게 다뤄요</h4>
       <p>로그인하지 않으면 모든 기록이 이 휴대폰에만 저장돼요.</p>
       <p>로그인하면 기기를 바꿔도 이어서 할 수 있도록 별, 최고 점수, 보석·스킨·도감·배지 기록, 닉네임, 친구 목록을 서버에 저장해요. 로그인 서비스가 알려 준 계정 정보(이메일 등)도 함께 보관돼요.</p>
@@ -3203,7 +3205,8 @@
   $('btn-shop-map').addEventListener('pointerup', () => openShop('select'));
   $('btn-select-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
   $('btn-dex').addEventListener('pointerup', whenReady(openDex));
-  $('btn-info').addEventListener('pointerup', () => show('info'));
+  $('btn-info').addEventListener('pointerup', () => { show('info'); renderSndStatus(); });
+  $('btn-sndtest').addEventListener('pointerup', () => { Sound.sfx.coin(); setTimeout(renderSndStatus, 300); });
   $('btn-missions').addEventListener('pointerup', whenReady(() => { renderMissions(); show('missions'); }));
   $('btn-missions-back').addEventListener('pointerup', () => { state = 'title'; show('title'); });
   function closeDaily() {
@@ -3351,6 +3354,12 @@
     slowT = 0; slowN = 0;
   }
   // Sound switches (pause screen and info box), saved on this phone.
+  // The sound check (info screen): plays a coin and says what the audio is doing, so a silent phone can be told apart:
+  // a context that never started, files that did not decode, or a track that failed.
+  function renderSndStatus() {
+    const st = Sound.status();
+    $('snd-status').textContent = `상태 ${st.state} · 효과음 ${st.ok}/${st.total} (실패 ${st.failed}, 불러오는 중 ${st.loading}) · 음악 ${st.track}${st.lastError ? ` · 마지막 오류 ${st.lastError}` : ''}`;
+  }
   function renderSound() {
     const o = Sound.on;
     for (const id of ['btn-sfx', 'btn-sfx2']) $(id).textContent = `효과음 ${o.sfx ? '켜짐' : '꺼짐'}`;

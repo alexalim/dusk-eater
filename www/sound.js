@@ -37,12 +37,13 @@
     eat_person_high: -5, eat_person_low: -4, eat_cat: -3, eat_chicken: -5, eat_sheep: -3, eat_cow: -4, eat_camel: -2,
     eat_gull: -5, eat_zombie: -1, voice: -8 };
   const buffers = {}, loading = {};
+  let lastError = ''; // the newest file that failed to fetch or decode, for the info screen's sound check
   const canFetch = () => !!(root.fetch && root.location && root.location.protocol !== 'file:');
   function load(path) {
     if (path in buffers || loading[path] || !ctx || !canFetch()) return loading[path];
     loading[path] = root.fetch(path).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status)))
       .then(b => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej)))
-      .then(buf => { buffers[path] = buf; return buf; }, () => { buffers[path] = null; return null; })
+      .then(buf => { buffers[path] = buf; return buf; }, e => { buffers[path] = null; lastError = `${path.split('/').pop()}: ${e && e.message || e}`; return null; })
       .finally(() => { delete loading[path]; });
     return loading[path];
   }
@@ -60,13 +61,25 @@
     return true;
   }
   const semis = n => Math.pow(2, n / 12);
-  const unlock = () => { if (init()) { if (ctx.state === 'suspended') ctx.resume(); SFX_FILES.forEach(n => load(`audio/sfx/${n}.m4a`)); } }; // every effect and voice, so none is missed the first time
+  // iOS only lets audio start inside a tap, and its context can also sit 'interrupted' (a call, another app, the app
+  // launching), not just 'suspended': any state but running is resumed, on every kind of tap (some iOS versions do not
+  // count a pointerdown), and a one-sample silent sound is played inside the tap, the reliable way to wake WebKit audio.
+  // The first tap also fetches every effect and voice, so none is missed the first time.
+  let fetched = false;
+  const unlock = () => {
+    if (!init()) return;
+    if (ctx.state !== 'running') {
+      ctx.resume().catch(() => {});
+      const b = ctx.createBufferSource(); b.buffer = ctx.createBuffer(1, 1, 22050); b.connect(ctx.destination); b.start(0);
+    }
+    if (!fetched) { fetched = true; SFX_FILES.forEach(n => load(`audio/sfx/${n}.m4a`)); }
+  };
   if (root.addEventListener) {
-    root.addEventListener('pointerdown', unlock, true);
-    // Leaving the app stops the sound; coming back resumes it.
+    for (const ev of ['pointerdown', 'touchend', 'click']) root.addEventListener(ev, unlock, true);
+    // Leaving the app stops the sound; coming back resumes it (if iOS refuses without a tap, the next tap does it).
     root.document && root.document.addEventListener('visibilitychange', () => {
       if (!ctx) return;
-      if (root.document.hidden) ctx.suspend(); else ctx.resume();
+      if (root.document.hidden) ctx.suspend(); else ctx.resume().catch(() => {});
     });
   }
 
@@ -224,6 +237,13 @@
     tune(name) { if (BGM_LUFS[name] !== undefined) tuneName = name; }, // region name: town, city, ...
     get track() { return track && track.name; },
   };
+  // What the info screen shows so a silent phone can be diagnosed without a debugger: the context's state, how many
+  // files decoded or failed (and the last error), and the background track's state.
+  function status() {
+    const v = Object.values(buffers);
+    return { state: ctx ? ctx.state : 'none', ok: v.filter(Boolean).length, failed: v.filter(b => b === null).length, loading: Object.keys(loading).length,
+      total: SFX_FILES.length, lastError, track: !track ? '-' : track.src ? track.name : track.failed ? `${track.name} 실패` : `${track.name} 불러오는 중` };
+  }
 
 
   function setOn(kind, v) {
@@ -233,5 +253,5 @@
     bus.gain.setTargetAtTime(v ? level : 0, ctx.currentTime, 0.05);
   }
 
-  root.DuskSound = { sfx, music, setOn, voice: { VOWELS, WORDS, syllables }, files: { SFX_FILES, BGM_LUFS, EAT_FILE }, get on() { return Object.assign({}, on); }, get ctx() { return ctx; } };
+  root.DuskSound = { sfx, music, setOn, status, voice: { VOWELS, WORDS, syllables }, files: { SFX_FILES, BGM_LUFS, EAT_FILE }, get on() { return Object.assign({}, on); }, get ctx() { return ctx; } };
 })(this);
