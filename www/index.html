@@ -62,15 +62,20 @@
   #status .pill.muted { display: none; }
   /* Casual HUD: chunky rounded bars with a white outline, a glossy top and a drop shadow. */
   /* The HUD card: a sheet of the same paper as the pills and buttons, inked edge, a dashed stitch inside and a little
-     moon tab at the top, so it reads as part of the storybook, not an app toolbar. */
+     star tab at the top, so it reads as part of the storybook, not an app toolbar. */
   #hudcard { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 9px 11px 9px; border-radius: 20px;
     background: var(--paper); border: 2px solid var(--paper-line); box-shadow: 0 4px 0 rgba(53,41,87,.32), 0 10px 22px rgba(24,15,45,.22); }
   #hudcard::before { content: ''; position: absolute; inset: 4px; border-radius: 16px; border: 1.5px dashed rgba(119,104,145,.28); pointer-events: none; }
   #hudcard::after { content: ''; position: absolute; left: 50%; top: -9px; width: 22px; height: 22px; margin-left: -11px;
-    background: url(img/ui/moon.svg) center / 16px no-repeat, var(--paper); border: 2px solid var(--paper-line); border-radius: 50%; }
+    background: url(img/ui/sparkle.svg) center / 15px no-repeat, var(--paper); border: 2px solid var(--paper-line); border-radius: 50%; } /* a star: the moon on the bar alone means night */
   .sunrow { display: flex; align-items: center; gap: 8px; }
-  #clock { min-width: 38px; text-align: right; font: 15px var(--display); color: var(--ink); font-variant-numeric: tabular-nums; }
+  #clock { min-width: 72px; white-space: nowrap; text-align: right; font: 15px var(--display); color: var(--ink); font-variant-numeric: tabular-nums; }
   #clock.low { color: var(--danger); }
+  #clock.night { color: var(--plum-mid); }
+  /* where night begins on the day bar (tester: "show when the evening starts, how long is left"): a moon on a stalk */
+  #nightmark { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--plum); border-radius: 1px; z-index: 0; }
+  #nightmark::after { content: ''; position: absolute; left: 50%; top: -15px; width: 14px; height: 14px; margin-left: -7px;
+    background: url(img/ui/moon.svg) center / contain no-repeat; }
   #sunbar { position: relative; flex: 1; height: 14px; border-radius: 999px; border: 2px solid var(--paper-line);
     background: linear-gradient(90deg, #ffd166, #ffe6a8 45%, #ff9e7d 85%, #5b4290 85%, #3a2860);
     box-shadow: 0 2px 0 rgba(53,41,87,.25), inset 0 4px 0 rgba(255,255,255,.35); margin: 0 6px; }
@@ -723,7 +728,7 @@
 <div id="burst"></div>
 <div id="hud">
   <div id="hudcard"><!-- one paper card: the day and its time left, size, score, pause, and the three star goals -->
-    <div class="sunrow"><div id="sunbar"><div id="sun"></div></div><span id="clock">0:00</span></div>
+    <div class="sunrow"><div id="sunbar"><i id="nightmark"></i><div id="sun"></div></div><span id="clock">0:00</span></div>
     <div id="stats"><span id="size">크기 0</span><span id="score-pill"><span id="score">0</span><span id="combo" class="hidden"></span></span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></div>
     <div id="goals"></div>
   </div>
@@ -2254,9 +2259,14 @@
     }
     hudStatus();
     $('sun').style.left = (Math.min(elapsed / runDuration, 1) * 100) + '%';
-    const leftS = Math.max(0, Math.ceil(runDuration - elapsed)), clock = `${Math.floor(leftS / 60)}:${String(leftS % 60).padStart(2, '0')}`;
+    // By day the clock counts down to night (the whole map turns to shade there); at night, what is left of the run.
+    const mmss = t => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+    const nightIn = Math.max(0, Math.ceil(runDuration * C.NIGHT_START - elapsed)), leftS = Math.max(0, Math.ceil(runDuration - elapsed));
+    const clock = phase.night ? `밤 ${mmss(leftS)}` : `밤까지 ${mmss(nightIn)}`;
     if ($('clock').textContent !== clock) $('clock').textContent = clock;
-    $('clock').classList.toggle('low', leftS <= 10);
+    $('clock').classList.toggle('night', !!phase.night);
+    $('clock').classList.toggle('low', !!phase.night && leftS <= 10);
+    $('nightmark').style.left = C.NIGHT_START * 100 + '%';
     $('size').textContent = '크기 ' + (player.r / 4).toFixed(1) + 'm';
     if ($('score').textContent !== score.toLocaleString()) showScore();
     $('warn').style.opacity = player.lit ? 1 : 0;
