@@ -674,14 +674,18 @@
   /* Boot screen (tester: "a loading screen on first launch"): up from the first paint of the page until the fonts, the
      character's picture, the saved progress and a first frame are ready. It continues the native launch screen's colours
      (design/splash.svg) so nothing flashes, then fades out. Never under 0.6 s, never over 8 s; tests never see it. */
-  #boot { position: fixed; inset: 0; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
-    background: radial-gradient(circle at 50% 54%, #7a3dff 0, #3a0e6a 45%, #0b0620 100%); transition: opacity .45s ease-out; }
+  /* The picture is the tester's painted places made into one storybook village at dusk (tools/boot/compose.py, one
+     ~100 KB file so the boot screen itself loads at once); the title, the character and the bar sit on it. */
+  #boot { position: fixed; inset: 0; z-index: 10000; display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: calc(env(safe-area-inset-top) + 13vh) 24px calc(env(safe-area-inset-bottom) + 6vh);
+    background: #22164d url(img/boot.webp) center bottom / cover no-repeat; transition: opacity .45s ease-out; }
   #boot.done { opacity: 0; pointer-events: none; }
-  #boot img { width: 168px; height: 168px; object-fit: contain; animation: float 3.2s ease-in-out infinite; }
-  #boot .bmoon { position: absolute; top: 12%; right: 14%; width: 64px; height: 64px; border-radius: 50%;
-    background: radial-gradient(circle at 36% 34%, #fffaf0, #fff0c8 55%, #f7d98f); box-shadow: 0 0 40px 12px rgba(255,226,160,.3); }
-  #boot p { margin: 0; font: 20px var(--title); color: #fff3dc; text-shadow: 0 3px 0 rgba(30,12,60,.6); }
-  #boot .bbar { width: 180px; height: 12px; border-radius: 999px; background: rgba(255,243,226,.2); border: 2px solid #fff3e2; overflow: hidden; }
+  #boot h1 { margin: 0; font: 48px / 1.05 var(--title); color: #fff3dc; -webkit-text-stroke: 2px #3a2860; text-shadow: 0 4px 0 #3a2860, 0 0 26px rgba(255,214,160,.5); }
+  #boot img { width: 150px; height: 150px; object-fit: contain; animation: float 3.2s ease-in-out infinite; filter: drop-shadow(0 10px 14px rgba(20,10,50,.45)); }
+  #boot .bfoot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 22px 14px; border-radius: 18px;
+    background: rgba(255,249,240,.92); border: 2px solid #e8d5be; box-shadow: 0 4px 0 rgba(53,41,87,.35); }
+  #boot p { margin: 0; font: 17px var(--title); color: #2f2447; }
+  #boot .bbar { width: 190px; height: 12px; border-radius: 999px; background: #f3e4cf; border: 2px solid #d9c3a5; overflow: hidden; }
   #boot .bbar i { display: block; height: 100%; width: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffd25c, #ff9e7d);
     transform-origin: left; transform: scaleX(.04); animation: bootcreep 7s cubic-bezier(.2, .7, .3, 1) forwards; transition: transform .3s ease-out; }
   /* while the scripts are still being read the page cannot run code, but a transform animation still plays: the bar
@@ -690,7 +694,7 @@
 </style>
 </head>
 <body>
-<div id="boot" aria-hidden="true"><i class="bmoon"></i><img src="img/art/ghost-eat.webp" alt=""><p>옛날 옛적, 해 질 녘에…</p><div class="bbar"><i id="boot-bar"></i></div></div>
+<div id="boot" aria-hidden="true"><h1>Dusk Eater</h1><img src="img/art/ghost-eat.webp" alt=""><div class="bfoot"><p>옛날 옛적, 해 질 녘 마을에…</p><div class="bbar"><i id="boot-bar"></i></div></div></div>
 <script>if (window.__DUSK_TEST__) document.getElementById('boot').remove(); // automated runs go straight to the game</script>
 <canvas id="c"></canvas>
 <div id="vignette" class="hidden"></div>
