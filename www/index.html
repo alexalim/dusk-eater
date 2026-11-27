@@ -973,8 +973,18 @@
 
   const canvas = document.getElementById('c');
   const $ = id => document.getElementById(id);
-  let vw = 0, vh = 0, R = null;
-  try { R = window.DuskRender.create(canvas); } catch (e) { console.error('3D renderer unavailable:', e); }
+  // The 3D world (WebGL, the painted skins, the shaders) is the slowest thing the game makes, seconds on a busy phone,
+  // and it holds the page the whole time (tester: "the loading screen does not go away when tapped"). The title is a
+  // painted page and needs none of it, so it is made just after the title is up (bootWorld), or at once if a level
+  // starts first (setupStage).
+  let vw = 0, vh = 0, R = null, rTried = false;
+  function ensureRenderer() {
+    if (rTried) return R;
+    rTried = true;
+    try { R = window.DuskRender.create(canvas); } catch (e) { console.error('3D renderer unavailable:', e); }
+    resize();
+    return R;
+  }
 
   function resize() {
     vw = window.innerWidth; vh = window.innerHeight;
@@ -1800,6 +1810,7 @@
   }
 
   function setupStage(i, boosts = []) {
+    ensureRenderer();
     stageIndex = i; stage = list[i];
     buildWorld(Date.now() & 0xffff);
     elapsed = 0; score = 0; bannerUntil = 0; eclipse = false; continued = false; nextGold = 4; rush = false; rushTick = 0; Sound.music.rush(false); bonus = null;
@@ -3398,11 +3409,17 @@
     $('btn-fps').textContent = on ? 'FPS 숨기기' : 'FPS 표시';
   });
 
-  // Title screen shows the first stage idling behind the overlay.
-  setupStage(0);
+  // The title comes up first; the 3D world and the first stage are made right after it (or at once in tests, which
+  // drive the game straight away). Without WebGL there is nothing to play, so the title gives way to no3d.
   state = 'title';
-  show(R ? 'title' : 'no3d'); // without WebGL there is nothing to play, so don't offer Start
+  show('title');
   requestAnimationFrame(frame);
+  const bootWorld = () => {
+    if (!stage) setupStage(0); // a level started meanwhile has already made it
+    if (!R) { if (state === 'title') show('no3d'); return; }
+    paintFaces(); // the worn skin's painted faces need the renderer's face drawing
+  };
+  if (window.__DUSK_TEST__) bootWorld(); else setTimeout(bootWorld, 1300); // after the boot screen has faded (0.6 s at least, then a 0.45 s fade)
 
   // Test hook: only exists when a test harness sets window.__DUSK_TEST__ before load.
   if (window.__DUSK_TEST__) {
