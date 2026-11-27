@@ -243,9 +243,55 @@
   .stats .stat:nth-child(2) { animation-delay: .06s; } .stats .stat:nth-child(3) { animation-delay: .12s; }
   @keyframes popcard { 0% { transform: scale(.86); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   /* Title: one big start button, the side menus as a row of tiles, account and info in the top corners. */
-  #title { gap: 12px; }
-  #title h1 { font-size: 42px; letter-spacing: 0; background: linear-gradient(#fff5e4, #d6c2ff 55%, #b794f6); -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent; filter: drop-shadow(0 4px 0 var(--plum)); }
+  /* Title as a storybook page at dusk (tester: "the main screen itself, in a fairy-tale style"): an opaque painted sky
+     instead of the dimmed map, a big moon, twinkling stars, drifting clouds, and three hills with a little village of the
+     map's own painted places. Everything here is #title only; the other screens keep their panel. */
+  #title { gap: 10px; background: linear-gradient(#22164d 0%, #3d2a78 30%, #7b4f9e 55%, #d98aa6 75%, #ffc39a 92%); isolation: isolate; }
+  #title > :not(.scene) { position: relative; z-index: 1; }
+  #title .scene { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  #title .moon { position: absolute; top: 9%; right: 10%; width: 92px; height: 92px; border-radius: 50%;
+    background: radial-gradient(circle at 36% 34%, #fffaf0, #fff0c8 55%, #f7d98f);
+    box-shadow: 0 0 0 10px rgba(255,240,200,.08), 0 0 50px 18px rgba(255,226,160,.35); }
+  #title .moon::before, #title .moon::after { content: ''; position: absolute; border-radius: 50%; background: rgba(214,180,110,.35); }
+  #title .moon::before { width: 18px; height: 18px; left: 22px; top: 48px; } #title .moon::after { width: 11px; height: 11px; left: 54px; top: 26px; }
+  #title .stars { position: absolute; inset: 0 0 45% 0; animation: twinkle 3.6s ease-in-out infinite;
+    background-image: radial-gradient(1.6px 1.6px at 12% 18%, #fff, transparent), radial-gradient(1.2px 1.2px at 28% 8%, #fff, transparent),
+      radial-gradient(2px 2px at 44% 22%, #fff6d0, transparent), radial-gradient(1.3px 1.3px at 62% 12%, #fff, transparent),
+      radial-gradient(1.6px 1.6px at 8% 40%, #fff, transparent), radial-gradient(1.2px 1.2px at 35% 48%, #fff, transparent),
+      radial-gradient(1.8px 1.8px at 72% 40%, #fff6d0, transparent), radial-gradient(1.2px 1.2px at 90% 55%, #fff, transparent),
+      radial-gradient(1.4px 1.4px at 20% 62%, #fff, transparent), radial-gradient(1.2px 1.2px at 55% 66%, #fff, transparent); }
+  #title .stars.s2 { animation-delay: -1.8s; transform: translate(7%, 5%); }
+  @keyframes twinkle { 50% { opacity: .35; } }
+  #title .cloud { position: absolute; width: 120px; height: 34px; border-radius: 999px; background: rgba(255,232,240,.28); filter: blur(1px); animation: drift 38s linear infinite; }
+  #title .cloud::before, #title .cloud::after { content: ''; position: absolute; border-radius: 50%; background: inherit; }
+  #title .cloud::before { width: 54px; height: 44px; left: 18px; top: -22px; } #title .cloud::after { width: 40px; height: 34px; left: 60px; top: -14px; }
+  #title .cloud.c1 { top: 30%; left: -30%; } #title .cloud.c2 { top: 44%; left: -60%; transform: scale(.7); animation-duration: 52s; animation-delay: -20s; }
+  @keyframes drift { to { translate: 170vw 0; } }
+  #title .hills { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 42%; }
+  #title .hills .h1 { fill: #6a4a96; } #title .hills .h2 { fill: #4a3378; } #title .hills .h3 { fill: #2e2152; }
+  #title .village { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 2%); display: flex; justify-content: space-around; align-items: flex-end; padding: 0 2%; }
+  #title .village img { width: 20%; max-width: 96px; filter: drop-shadow(0 4px 0 rgba(30,18,60,.4)); }
+  #title .village img:nth-child(2n) { width: 16%; margin-bottom: 5%; filter: drop-shadow(0 4px 0 rgba(30,18,60,.4)) brightness(.88); }
+  @media (prefers-reduced-motion: reduce) { #title .stars, #title .cloud, #title .logo { animation: none; } }
+  /* the content sits between the corner chips and the village: room above for the two chip rows, below for the houses */
+  #title { padding-top: calc(env(safe-area-inset-top) + 104px); padding-bottom: calc(env(safe-area-inset-bottom) + 84px); }
+  @media (max-height: 760px) { /* a small phone (SE, mini): everything a size smaller so nothing overlaps */
+    #title { gap: 7px; padding-top: calc(env(safe-area-inset-top) + 96px); padding-bottom: calc(env(safe-area-inset-bottom) + 58px); }
+    #title .logo { width: 112px; height: 112px; }
+    #title h1 { font-size: 38px; }
+    #title .tagline { font-size: 13px; padding: 9px 14px; }
+    #title .btn.hero { padding: 14px 0; font-size: 20px; }
+    #title .village img { width: 15%; } #title .village img:nth-child(2n) { width: 12%; }
+  }
+  #title h1 { font: 46px / 1.05 var(--title); letter-spacing: 0; color: #fff3dc; -webkit-text-stroke: 2px var(--plum);
+    text-shadow: 0 4px 0 var(--plum), 0 0 24px rgba(255,214,160,.45); }
+  #title .ribbon { margin-top: -4px; padding: 5px 26px; font: 15px var(--display); color: #3d1a12; background: linear-gradient(#ffcfae, #ff9e7d);
+    clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%, 12px 50%); filter: drop-shadow(0 3px 0 #c9603f); }
+  #title .tagline { margin: 2px 0 0; padding: 12px 16px; max-width: 300px; border-radius: 6px 18px 6px 18px; color: var(--ink); background: var(--paper);
+    border: 2px solid var(--paper-line); box-shadow: 0 4px 0 rgba(53,41,87,.3); font-size: 14px; line-height: 1.55; rotate: -1.2deg; }
+  #title .chip { background: var(--paper); color: var(--ink); border: 2px solid var(--paper-line); box-shadow: 0 3px 0 rgba(53,41,87,.3); }
+  #title .chip .lvbar { background: rgba(91,66,144,.18); }
+  #title .menu-row .tile { border: 2px solid var(--paper-line); }
   #title .corner { position: absolute; top: calc(env(safe-area-inset-top) + 12px); left: max(16px, env(safe-area-inset-left));
     right: max(16px, env(safe-area-inset-right)); display: flex; justify-content: space-between; }
   #title .corner .left { display: flex; gap: 8px; }
@@ -314,7 +360,6 @@
   .xpbar { height: 12px; border: 2px solid rgba(255,255,255,.5); }
   .xpbar i { transition: width .9s ease-out; }
   .chip.round { width: 36px; height: 36px; padding: 0; display: grid; place-items: center; font: italic 900 17px Georgia, serif; }
-  #title .tagline { margin: 0; color: var(--muted); line-height: 1.55; }
   .btn.hero { width: min(100%, 300px); box-sizing: border-box; padding: 18px 0; font-size: 22px; text-align: center; margin-top: 6px; }
   .btn.hero.wait { opacity: .6; }
   .menu-row { display: flex; gap: 8px; width: min(100%, 320px); }
@@ -665,10 +710,20 @@
 </div>
 <div id="tutorial" class="hidden"><img class="face" data-mood="happy" src="img/ui/face-happy.svg" alt=""><span class="step" id="tut-step"></span><span id="tut-text"></span><br><span class="skip" id="tut-skip">설명 건너뛰기</span></div>
 <div id="title" class="overlay">
+  <div class="scene" aria-hidden="true"><!-- a storybook dusk: sky, moon, stars, and a little village of the map's places on the hills -->
+    <i class="moon"></i><i class="stars"></i><i class="stars s2"></i><i class="cloud c1"></i><i class="cloud c2"></i>
+    <svg class="hills" viewBox="0 0 400 300" preserveAspectRatio="none">
+      <path class="h1" d="M0 120 C 60 80 120 95 180 110 S 300 70 400 100 V300 H0Z"/>
+      <path class="h2" d="M0 175 C 70 140 150 150 210 168 S 330 140 400 160 V300 H0Z"/>
+      <path class="h3" d="M0 230 C 90 205 170 215 240 228 S 350 210 400 222 V300 H0Z"/>
+    </svg>
+    <div class="village"><img src="img/map/hanok.png" alt=""><img src="img/map/town.png" alt=""><img src="img/map/farm.png" alt=""><img src="img/map/campus.png" alt=""><img src="img/map/harbor.png" alt=""></div>
+  </div>
   <div class="corner"><span class="left"><span class="chip round" id="btn-info" aria-label="정보">i</span><span class="chip lv" id="title-level"></span></span><span class="chip" id="btn-account">계정 · 친구</span></div>
   <div class="strip"><span class="chip gem gem-count"></span><span class="chip" id="title-streak"></span><span class="chip" id="title-region"></span></div><!-- status row: gems, check-ins, where you are -->
   <img class="logo" src="img/art/ghost-eat.webp" alt="">
   <h1>Dusk Eater</h1>
+  <div class="ribbon">해 질 녘 그늘 먹보 이야기</div>
   <p class="tagline">어둠을 냠냠 먹고 쑥쑥 자라는 아이예요.<br>그늘에 숨어 꿀꺽, 해가 지면 온 동네가 내 거예요!</p>
   <div class="btn hero" id="btn-title">시작</div>
   <div class="menu-row">
