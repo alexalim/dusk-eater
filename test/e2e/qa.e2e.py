@@ -313,7 +313,7 @@ with sync_playwright() as p:
           const things = s.objects.filter(o => o.state === 0).concat(s.guards);
           // HUD pieces drawn over the ground (banners, timers, warnings) would read as "bright": skip points under them
           document.getElementById('warn').style.visibility = 'hidden'; // the sunlight edge glow tints the frame; not ground
-          const covers = ['#banner', '#status', '#goals', '#stats', '#sunbar', '#tutorial', '#dex-new']
+          const covers = ['#banner', '#status', '#hudcard', '#goals', '#stats', '#sunbar', '#tutorial', '#dex-new']
             .map(q => document.querySelector(q)).filter(e => e && !e.classList.contains('hidden') && getComputedStyle(e).opacity !== '0')
             .map(e => e.getBoundingClientRect()).filter(r => r.width && r.height);
           const covered = (sx, sy) => covers.some(r => sx > r.left - 4 && sx < r.right + 4 && sy > r.top - 4 && sy < r.bottom + 4);

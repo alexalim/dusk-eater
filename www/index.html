@@ -61,32 +61,46 @@
   #status { display: flex; justify-content: center; min-height: 0; }
   #status .pill.muted { display: none; }
   /* Casual HUD: chunky rounded bars with a white outline, a glossy top and a drop shadow. */
-  #sunbar { position: relative; height: 14px; border-radius: 999px; border: 2px solid var(--paper);
+  /* The HUD card: a sheet of the same paper as the pills and buttons, inked edge, a dashed stitch inside and a little
+     moon tab at the top, so it reads as part of the storybook, not an app toolbar. */
+  #hudcard { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 9px 11px 9px; border-radius: 20px;
+    background: var(--paper); border: 2px solid var(--paper-line); box-shadow: 0 4px 0 rgba(53,41,87,.32), 0 10px 22px rgba(24,15,45,.22); }
+  #hudcard::before { content: ''; position: absolute; inset: 4px; border-radius: 16px; border: 1.5px dashed rgba(119,104,145,.28); pointer-events: none; }
+  #hudcard::after { content: ''; position: absolute; left: 50%; top: -9px; width: 22px; height: 22px; margin-left: -11px;
+    background: url(img/ui/moon.svg) center / 16px no-repeat, var(--paper); border: 2px solid var(--paper-line); border-radius: 50%; }
+  .sunrow { display: flex; align-items: center; gap: 8px; }
+  #clock { min-width: 38px; text-align: right; font: 15px var(--display); color: var(--ink); font-variant-numeric: tabular-nums; }
+  #clock.low { color: var(--danger); }
+  #sunbar { position: relative; flex: 1; height: 14px; border-radius: 999px; border: 2px solid var(--paper-line);
     background: linear-gradient(90deg, #ffd166, #ffe6a8 45%, #ff9e7d 85%, #5b4290 85%, #3a2860);
-    box-shadow: 0 3px 0 rgba(0,0,0,.35), inset 0 4px 0 rgba(255,255,255,.35); margin: 0 6px; }
+    box-shadow: 0 2px 0 rgba(53,41,87,.25), inset 0 4px 0 rgba(255,255,255,.35); margin: 0 6px; }
   #sun { position: absolute; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; box-sizing: border-box;
     border-radius: 50%; border: 3px solid #fff; background: radial-gradient(circle at 40% 35%, #fffbe0, #ffc94d 70%);
     box-shadow: 0 0 12px #ffd27a, 0 2px 0 rgba(0,0,0,.3); transition: background .4s; }
   #sun.moon { background: radial-gradient(circle at 40% 35%, #ffffff, #d9ccff 70%); box-shadow: 0 0 14px #b78cff, 0 2px 0 rgba(0,0,0,.3); }
-  #stats { display: flex; justify-content: space-between; align-items: center; font-weight: 900;
+  #stats { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-weight: 900;
     font-variant-numeric: tabular-nums; }
   .pill { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: 999px;
     background: var(--paper); color: var(--ink); border: 2px solid var(--paper-line); box-shadow: 0 3px 0 rgba(53,41,87,.3); }
-  #size { font-size: 12px; }
-  #score { font-size: 18px; color: var(--ink); }
-  #score::before { content: ''; display: inline-block; width: 18px; height: 18px; margin-right: 4px; vertical-align: -2px; background: url(img/ui/star.svg) center / contain no-repeat; }
+  #size { justify-self: start; font: 13px var(--display); color: var(--ink-muted); }
+  #size::before { content: ''; display: inline-block; width: 15px; height: 15px; margin-right: 3px; vertical-align: -2px; background: url(img/ui/grow.svg) center / contain no-repeat; }
+  #score-pill { position: relative; display: inline-flex; align-items: center; }
+  #score { font: 24px var(--display); color: var(--ink); }
+  #score::before { content: ''; display: inline-block; width: 21px; height: 21px; margin-right: 5px; vertical-align: -3px; background: url(img/ui/goldcoin.svg) center / contain no-repeat; } /* points are coins: the stars are the goals below */
   #score.pop { animation: pop .28s ease-out; }
   @keyframes pop { 40% { transform: scale(1.22); } 100% { transform: scale(1); } }
   .gain { position: absolute; right: 8px; top: 100%; color: var(--star); font: 16px var(--display);
     text-shadow: 0 2px 0 rgba(0,0,0,.4); pointer-events: none; animation: gain .8s ease-out forwards; }
   @keyframes gain { from { opacity: 1; transform: translateY(0) scale(1.1); } to { opacity: 0; transform: translateY(-34px) scale(.9); } }
   /* Each mission chip fills like a progress bar (--p) and turns gold with a check when done. */
-  #goals { display: flex; flex-wrap: wrap; gap: 5px; font-size: 13px; font-weight: 800; }
-  #goals span { padding: 2px 9px; border-radius: 999px; border: 2px solid var(--paper-line); color: var(--ink);
-    background: linear-gradient(90deg, #cdb4ff var(--p, 0%), var(--paper) var(--p, 0%));
-    box-shadow: 0 2px 0 rgba(53,41,87,.3); transition: background .2s; }
-  #goals span.done { color: #2a1a05; background: var(--star); border-color: #fff; }
-  #goals span.done::before { content: ''; display: inline-block; width: 1em; height: 1em; margin-right: 4px; vertical-align: -2px; background: url(img/ui/check.svg) center / contain no-repeat; }
+  /* The three goals are the three stars: each chip carries an empty star that fills gold when it is earned, and fills
+     like a progress bar (--p) on the way. */
+  #goals { display: flex; justify-content: center; flex-wrap: wrap; gap: 5px; font-size: 13px; font-weight: 800; }
+  #goals span { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px 2px 5px; border-radius: 999px; border: 2px solid var(--paper-line); color: var(--ink);
+    background: linear-gradient(90deg, #e3d4ff var(--p, 0%), var(--paper-card) var(--p, 0%)); transition: background .2s; }
+  #goals span::before { content: ''; flex: none; width: 15px; height: 15px; background: url(img/ui/star-empty.svg) center / contain no-repeat; } /* an empty star drawn for paper */
+  #goals span.done { color: #2a1a05; background: var(--star); border-color: #e8b93c; }
+  #goals span.done::before { background-image: url(img/ui/star.svg); }
   #cont .btn.off { opacity: .45; pointer-events: none; }
   #bonus-pill { align-self: center; flex-direction: column; align-items: stretch; gap: 2px; min-width: 150px; font-size: 13px; padding: 2px 12px 4px; border-color: #f5a623; }
   #bonus-pill .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
@@ -171,8 +185,7 @@
   #boss-pill.ready { color: #2a1a05; background: var(--star); border-color: #fff; }
   #warn { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .15s;
     box-shadow: inset 0 0 70px 14px rgba(255, 107, 107, .55); }
-  #stats .right { display: flex; align-items: center; gap: 10px; }
-  #btn-pause { pointer-events: auto; width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+  #btn-pause { justify-self: end; pointer-events: auto; width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
     background: var(--paper); color: var(--ink); box-shadow: 0 3px 0 rgba(53,41,87,.3); font: 14px var(--display); }
   /* The spit button: bottom right, under the thumb; dim until a swallow loads it, the pips show the shots left. */
   #btn-spit { pointer-events: auto; position: fixed; right: calc(env(safe-area-inset-right) + 18px); bottom: calc(env(safe-area-inset-bottom) + 26px);
@@ -189,12 +202,13 @@
   #btn-spit i.on { background: var(--star); border-color: var(--ink); }
   #btn-spit::after { content: '뱉기'; position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); padding: 0 8px; border-radius: 999px;
     font: 12px / 18px var(--display); color: var(--ink); background: var(--paper); border: 2px solid var(--paper-line); white-space: nowrap; }
-  #tutorial { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 24px);
-    width: min(calc(100% - 32px), 360px); box-sizing: border-box; padding: 14px 16px; border-radius: 16px;
-    background: rgba(20,18,38,.82); color: var(--text); font-size: 16px; font-weight: 700; line-height: 1.45;
-    word-break: keep-all; text-align: center; pointer-events: none; }
-  #tutorial .step { display: block; font-size: 12px; color: var(--star); margin-bottom: 4px; }
-  #tutorial .skip { pointer-events: auto; display: inline-block; margin-top: 8px; font-size: 13px; color: var(--muted); cursor: pointer; }
+  /* The tutorial is a paper note from Dusk in the lower left, clear of the spit button on the right. */
+  #tutorial { position: fixed; left: max(14px, env(safe-area-inset-left)); right: calc(env(safe-area-inset-right) + 98px); bottom: calc(env(safe-area-inset-bottom) + 22px);
+    max-width: 340px; box-sizing: border-box; padding: 12px 14px; border-radius: 18px;
+    background: var(--paper); border: 2px solid var(--paper-line); box-shadow: 0 4px 0 rgba(53,41,87,.32), 0 10px 22px rgba(24,15,45,.22);
+    color: var(--ink); font-size: 15px; font-weight: 700; line-height: 1.45; word-break: keep-all; text-align: left; pointer-events: none; }
+  #tutorial .step { display: block; font-size: 12px; color: var(--plum-mid); margin-bottom: 2px; }
+  #tutorial .skip { pointer-events: auto; display: inline-block; margin-top: 6px; font-size: 13px; color: var(--ink-muted); text-decoration: underline; cursor: pointer; }
   #banner { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 150px); transform: translateX(-50%); width: max-content; max-width: min(88vw, 340px); text-align: center; line-height: 1.4; padding: 6px 14px; border-radius: 16px; font-weight: 800; font-size: 15px;
     color: #2a1a05; background: var(--star); opacity: 0; transition: opacity .3s; }
   .overlay {
@@ -626,9 +640,11 @@
 <div id="flash"></div>
 <div id="burst"></div>
 <div id="hud">
-  <div id="sunbar"><div id="sun"></div></div>
-  <div id="stats"><span id="size" class="pill">크기 0</span><span class="right"><span class="pill" id="score-pill"><span id="score">0</span><span id="combo" class="hidden"></span></span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></span></div>
-  <div id="goals"></div>
+  <div id="hudcard"><!-- one paper card: the day and its time left, size, score, pause, and the three star goals -->
+    <div class="sunrow"><div id="sunbar"><div id="sun"></div></div><span id="clock">0:00</span></div>
+    <div id="stats"><span id="size">크기 0</span><span id="score-pill"><span id="score">0</span><span id="combo" class="hidden"></span></span><button id="btn-pause" aria-label="일시정지">Ⅱ</button></div>
+    <div id="goals"></div>
+  </div>
   <div id="status"><!-- one status at a time (hudStatus): hunger, then the bolt mission, the rush, the boss -->
     <div id="boss-pill" class="pill hidden"></div>
     <div id="rush-pill" class="pill hidden"></div>
@@ -2145,6 +2161,9 @@
     }
     hudStatus();
     $('sun').style.left = (Math.min(elapsed / runDuration, 1) * 100) + '%';
+    const leftS = Math.max(0, Math.ceil(runDuration - elapsed)), clock = `${Math.floor(leftS / 60)}:${String(leftS % 60).padStart(2, '0')}`;
+    if ($('clock').textContent !== clock) $('clock').textContent = clock;
+    $('clock').classList.toggle('low', leftS <= 10);
     $('size').textContent = '크기 ' + (player.r / 4).toFixed(1) + 'm';
     if ($('score').textContent !== score.toLocaleString()) showScore();
     $('warn').style.opacity = player.lit ? 1 : 0;
