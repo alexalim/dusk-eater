@@ -27,13 +27,13 @@
     'grow', 'gulp_big', 'gulp_small', 'hit', 'level_up', 'lose', 'night', 'parade', 'rain', 'shard', 'spit', 'star',
     'sunlight', 'tap', 'tick', 'win', 'wind', 'yuck',
     'eat_person_high', 'eat_person_low', 'eat_cat', 'eat_chicken', 'eat_sheep', 'eat_cow', 'eat_camel', 'eat_gull', 'eat_zombie',
-    ...['nyam', 'umm', 'wow', 'yay', 'ah', 'hehe', 'hing'].flatMap(w => [1, 2, 3].map(i => `voice_${w}_${i}`))];
+    ...['nyam', 'umm', 'wow', 'yay', 'ah', 'hehe', 'hing'].flatMap(w => [1, 2, 3].map(i => `voice_${w}_${i}`)), 'voice_blip_a', 'voice_blip_o'];
   // dB per file, measured (RMS) so the pack keeps the balance the calls below were tuned to: a replaced effect plays as
   // loud as the one it replaced, a new eat sound sits with the other eat sounds, a voice sits under the effects.
-  const LEVEL = { coin: -1, combo: 3, dash: -2, eat_balloon: -5, eat_bicycle: -1, eat_boat: -8, eat_building: -3, eat_bus: -10,
-    eat_car: -3, eat_carousel: -1, eat_fountain: 1, eat_metal: -8, eat_plant: -3, eat_pop: -3, eat_reindeer: -3, eat_soft: -3,
-    eat_stone: -5, eat_wood: -5, grow: -2, gulp_big: -2, gulp_small: -3, hit: 1, level_up: 2, lose: 1, night: -1, parade: 2,
-    rain: 1, shard: -3, spit: -6, star: -2, sunlight: -2, tap: 3, tick: 0, win: 0, wind: 0, yuck: -1,
+  const LEVEL = { coin: -1, combo: 3, dash: -1, eat_balloon: -5, eat_bicycle: -1, eat_boat: -8, eat_building: 1, eat_bus: -9,
+    eat_car: -3, eat_carousel: -1, eat_fountain: 7, eat_metal: -6, eat_plant: -3, eat_pop: -1, eat_reindeer: -3, eat_soft: 3,
+    eat_stone: -3, eat_wood: -2, grow: -2, gulp_big: -2, gulp_small: -3, hit: 1, level_up: 2, lose: 1, night: -1, parade: 2,
+    rain: 2, shard: -3, spit: -1, star: -2, sunlight: -2, tap: 3, tick: 0, win: 0, wind: 0, yuck: -1,
     eat_person_high: -5, eat_person_low: -4, eat_cat: -5, eat_chicken: -5, eat_sheep: -4, eat_cow: -4, eat_camel: -2,
     eat_gull: -6, eat_zombie: -1, voice: -8 };
   const buffers = {}, loading = {};
@@ -60,7 +60,7 @@
     return true;
   }
   const semis = n => Math.pow(2, n / 12);
-  const unlock = () => { if (init() && ctx.state === 'suspended') ctx.resume(); };
+  const unlock = () => { if (init()) { if (ctx.state === 'suspended') ctx.resume(); preloadVoice(); } };
   if (root.addEventListener) {
     root.addEventListener('pointerdown', unlock, true);
     // Leaving the app stops the sound; coming back resumes it.
@@ -163,12 +163,13 @@
     tone(R(600, 800), 260, 0.12, { type: 'sine', vol: .3 }); // anything else: a plain pop
   }
 
-  // The character's own voice (tester: "a cute voice for the character"): babble syllables, synthesized like the rest.
-  // A bright saw at a child's pitch goes through two band-pass filters set to a vowel's first two formants, so it
-  // says 아, 에, 이, 오, 우; a nasal (ㄴ/ㅁ) is a short closed-mouth hum before or after the vowel.
+  // The character's own voice (tester: "a cute voice for the character", then "no synth"): recorded singers from
+  // FluidR3_GM (a choir "aah", a voice "ooh"), rendered by tools/audio/sfx.mjs. The words below are what was sung, three
+  // takes each; a line of dialogue is babbled from two single syllables. Nothing here is synthesized: until the files
+  // have loaded the character is simply quiet.
   // WORDS: each syllable is [vowel, seconds, start pitch, end pitch] (pitch as a multiple of the base), a nasal 'n'/'m'
-  // hum takes [n, seconds]. The base pitch wobbles a little per word, so the same word never sounds stamped out.
-  const VOWELS = { a: [850, 1250], e: [520, 1900], i: [320, 2450], o: [520, 920], u: [360, 860] };
+  // hum takes [n, seconds]. VOWELS: the five sung vowels, each sung on the choir (a, e) or the voice (i, o, u).
+  const VOWELS = { a: 'a', e: 'a', i: 'o', o: 'o', u: 'o' };
   const WORDS = {
     nyam: [['n', 0.035], ['a', 0.13, 1.1, 1.35], ['m', 0.06]],                              // 냠
     wow: [['u', 0.09, 0.95, 1.05], ['a', 0.26, 1.15, 1.55]],                                   // 우와~
@@ -178,22 +179,21 @@
     ah: [['a', 0.1, 1.2, 1.65]],                                                                // 앗!
     umm: [['m', 0.05], ['u', 0.12, 1.0, 1.15], ['m', 0.08]],                                    // 음!
   };
+  const VOICE_FILES = [...Object.keys(WORDS).flatMap(w => [1, 2, 3].map(i => `voice_${w}_${i}`)), 'voice_blip_a', 'voice_blip_o'];
+  const preloadVoice = () => VOICE_FILES.forEach(n => load(`audio/sfx/${n}.m4a`)); // so the first line is not lost
   const lastSaid = []; // the words said most recently (tests read this)
   let saidAt = -9;
-  function say(word, { at = 0, vol = 0.2, every = 0 } = {}) {
-    const w = WORDS[word];
-    if (!w) return;
+  function say(word, { at = 0, vol = 0.75, every = 0 } = {}) {
+    if (!WORDS[word]) return;
     if (ctx && ctx.state === 'running' && every && ctx.currentTime - saidAt < every) return; // the frequent ones keep a gap
     lastSaid.push(word); if (lastSaid.length > 20) lastSaid.shift();
     if (!ctx || ctx.state !== 'running') return;
     saidAt = ctx.currentTime;
-    // A recorded take of the word (three of each, picked at random) when it has loaded; until then the synth says it.
-    if (sample(`voice_${word}_${1 + Math.floor(Math.random() * 3)}`, { vol: vol * 3.75, at })) return;
-    voiced(w, ctx.currentTime + at, vol, 560 * R(0.95, 1.06));
+    sample(`voice_${word}_${1 + Math.floor(Math.random() * 3)}`, { vol, at });
   }
-  // Dusk reads a line aloud in babble (tester: "a voice for Dusk's lines"): one short syllable per Hangul syllable,
-  // on that syllable's own vowel, a closing ㄴ/ㅁ/ㅇ hummed; it lifts at a ! or ?, settles at the end otherwise, and
-  // stops after a dozen syllables so a long line does not chatter. Same voice as say(), just faster.
+  // Dusk reads a line aloud in babble (tester: "a voice for Dusk's lines"): one sung syllable per Hangul syllable, on
+  // that syllable's vowel (choir or voice), each pitched a little apart; a closing consonant makes it shorter, a ! or ?
+  // lifts the last one, otherwise it settles; at most a dozen syllables, one line at a time.
   // JUNG: the 21 medial vowels in Unicode order (ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ) as the five sung vowels.
   const JUNG = 'aeaeoeoeoaeeouoeiuuii';
   function syllables(text) {
@@ -207,39 +207,19 @@
   }
   const lastSpoken = [];
   let spokeUntil = 0;
-  function speak(text, { vol = 0.16 } = {}) {
+  function speak(text, { vol = 0.55 } = {}) {
     const syl = syllables(String(text)).slice(0, 12);
     if (!syl.length) return;
     lastSpoken.push(text); if (lastSpoken.length > 20) lastSpoken.shift();
     if (!ctx || ctx.state !== 'running' || ctx.currentTime < spokeUntil) return; // one line at a time
-    const base = 600 * R(0.96, 1.05), w = [];
+    const base = R(1.08, 1.2); // the syllables were sung at C5; Dusk speaks a little above that
+    let at = 0.02;
     syl.forEach((s, i) => {
-      const last = i === syl.length - 1, p = 1 + R(-0.08, 0.1) + (s.lift && last ? 0.25 : 0);
-      w.push([s.v, s.stop ? 0.05 : 0.065, p, last ? (s.lift ? p * 1.15 : p * 0.88) : p * R(0.97, 1.04)]);
-      if (s.nasal) w.push(['n', 0.03]);
+      const last = i === syl.length - 1, p = base * (1 + R(-0.06, 0.08)) * (last ? (s.lift ? 1.22 : 0.9) : 1);
+      sample(`voice_blip_${VOWELS[s.v]}`, { vol: vol * (s.nasal ? 0.8 : 1), rate: p, at });
+      at += s.stop ? 0.07 : 0.085;
     });
-    spokeUntil = ctx.currentTime + voiced(w, ctx.currentTime + 0.02, vol, base, 0.008) + 0.15;
-  }
-  // Plays syllables (see WORDS) from time t; returns how long it lasts.
-  function voiced(w, t, vol, base, gap = 0.015) {
-    const t0 = t;
-    for (const [v, dur, p0, p1] of w) {
-      if (v === 'n' || v === 'm') { tone(base * 1.15, base * 1.1, dur, { type: 'sine', vol: vol * 0.45, at: t - ctx.currentTime, attack: 0.01 }); t += dur; continue; }
-      const o = ctx.createOscillator(), g = ctx.createGain(), sum = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
-      o.type = 'sawtooth'; o.frequency.setValueAtTime(base * p0, t); o.frequency.exponentialRampToValueAtTime(base * p1, t + dur);
-      lfo.frequency.value = 7; lg.gain.value = base * 0.025; lfo.connect(lg).connect(o.frequency);
-      for (const [k, f] of VOWELS[v].entries()) {
-        const bp = ctx.createBiquadFilter(), bg = ctx.createGain();
-        bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 5; bg.gain.value = k ? 0.55 : 1;
-        o.connect(bp).connect(bg).connect(sum);
-      }
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.setValueAtTime(vol, t + dur * 0.6);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      sum.connect(g).connect(sfxBus);
-      o.start(t); lfo.start(t); o.stop(t + dur + 0.02); lfo.stop(t + dur + 0.02);
-      t += dur + gap;
-    }
-    return t - t0;
+    spokeUntil = ctx.currentTime + at + 0.15;
   }
 
   const sfx = {
