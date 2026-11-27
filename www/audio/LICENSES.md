@@ -55,5 +55,8 @@ No attribution is required; sources are listed for provenance.
 - OpenGameArt "Female scream 1" (opengameart.org/content/female-scream-1, CC0): eat_person_high (pitched up),
   eat_person_low (pitched down)
 - OpenGameArt "Rumble FX" (opengameart.org/content/rumble-fx, CC0) with Kenney impactPlate_heavy_000: eat_building
-- BigSoundBank "Bus horn" #3594 (bigsoundbank.com/bus-horn-s3594.html, CC0): eat_bus
-Still v2 procedural: wind, sunlight, eat_car, eat_boat, eat_bicycle, eat_cat, eat_chicken, eat_sheep, eat_cow, eat_gull.
+- BigSoundBank (bigsoundbank.com, each page marked "CC0 (public domain)"): eat_bus (Bus horn #3594), eat_car (Recent car
+  horn 1 #0257), eat_boat (Horn of a ship 1 #0261), wind (Wind #0595, a 6 s stretch crossfaded into a loop),
+  eat_bicycle (Bell bike 1 #0028), eat_sheep (Sheep 1 #2343), eat_cow (Cow moos #0546), eat_chicken (Hen imitated to the
+  mouth 1 #2203), eat_gull (Gulls on the harbor #2573), sunlight (Frying pan 2 #0144), eat_cat (Little meow of a cat #0494)
+Every effect file is now a recording or a rendered instrument; nothing in sfx/ is synthesized.

@@ -30,12 +30,12 @@
     ...['nyam', 'umm', 'wow', 'yay', 'ah', 'hehe', 'hing'].flatMap(w => [1, 2, 3].map(i => `voice_${w}_${i}`)), 'voice_blip_a', 'voice_blip_o'];
   // dB per file, measured (RMS) so the pack keeps the balance the calls below were tuned to: a replaced effect plays as
   // loud as the one it replaced, a new eat sound sits with the other eat sounds, a voice sits under the effects.
-  const LEVEL = { coin: -1, combo: 3, dash: -1, eat_balloon: -5, eat_bicycle: -1, eat_boat: -8, eat_building: 1, eat_bus: -9,
+  const LEVEL = { coin: -1, combo: 3, dash: -1, eat_balloon: -5, eat_bicycle: 5, eat_boat: -8, eat_building: 1, eat_bus: -9,
     eat_car: -3, eat_carousel: -1, eat_fountain: 7, eat_metal: -6, eat_plant: -3, eat_pop: -1, eat_reindeer: -3, eat_soft: 3,
     eat_stone: -3, eat_wood: -2, grow: -2, gulp_big: -2, gulp_small: -3, hit: 1, level_up: 2, lose: 1, night: -1, parade: 2,
-    rain: 2, shard: -3, spit: -1, star: -2, sunlight: -2, tap: 3, tick: 0, win: 0, wind: 0, yuck: -1,
-    eat_person_high: -5, eat_person_low: -4, eat_cat: -5, eat_chicken: -5, eat_sheep: -4, eat_cow: -4, eat_camel: -2,
-    eat_gull: -6, eat_zombie: -1, voice: -8 };
+    rain: 2, shard: -3, spit: -1, star: -2, sunlight: 0, tap: 3, tick: 0, win: 0, wind: 0, yuck: -1,
+    eat_person_high: -5, eat_person_low: -4, eat_cat: -3, eat_chicken: -5, eat_sheep: -3, eat_cow: -4, eat_camel: -2,
+    eat_gull: -5, eat_zombie: -1, voice: -8 };
   const buffers = {}, loading = {};
   const canFetch = () => !!(root.fetch && root.location && root.location.protocol !== 'file:');
   function load(path) {
