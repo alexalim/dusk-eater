@@ -60,7 +60,7 @@
     return true;
   }
   const semis = n => Math.pow(2, n / 12);
-  const unlock = () => { if (init()) { if (ctx.state === 'suspended') ctx.resume(); preloadVoice(); } };
+  const unlock = () => { if (init()) { if (ctx.state === 'suspended') ctx.resume(); SFX_FILES.forEach(n => load(`audio/sfx/${n}.m4a`)); } }; // every effect and voice, so none is missed the first time
   if (root.addEventListener) {
     root.addEventListener('pointerdown', unlock, true);
     // Leaving the app stops the sound; coming back resumes it.
@@ -70,48 +70,14 @@
     });
   }
 
-  // One enveloped oscillator: frequency glides from f0 to f1 over `dur` seconds.
-  function tone(f0, f1, dur, { type = 'sine', vol = 0.5, at = 0, bus = sfxBus, attack = 0.005 } = {}) {
-    if (!ctx || ctx.state !== 'running') return;
-    const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = type;
-    o.frequency.setValueAtTime(f0, t);
-    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + attack);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(bus);
-    o.start(t); o.stop(t + dur + 0.02);
-  }
-  const note = n => 440 * Math.pow(2, (n - 69) / 12); // MIDI note number to Hz
+  const note = n => 440 * Math.pow(2, (n - 69) / 12); // MIDI note number to Hz (the band below)
   const R = (a, b) => a + Math.random() * (b - a); // small pitch/timing spread so repeats never sound identical
 
-  // Filtered noise burst (rustle, pop, splash, rumble).
-  let noiseBuf = null;
-  function hiss(dur, { f = 2000, q = 1, type = 'bandpass', vol = 0.3, at = 0 } = {}) {
-    if (!ctx || ctx.state !== 'running') return;
-    if (!noiseBuf) { const len = ctx.sampleRate * 0.3, b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1; noiseBuf = b; }
-    const t = ctx.currentTime + at, src = ctx.createBufferSource(), flt = ctx.createBiquadFilter(), g = ctx.createGain();
-    src.buffer = noiseBuf; src.loop = true; flt.type = type; flt.frequency.value = f; flt.Q.value = q;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(flt).connect(g).connect(sfxBus); src.start(t); src.stop(t + dur + 0.02);
-  }
-  // A vowel-ish cry: a saw (or other wave) through a closing low-pass, pitch gliding f0 -> f1 with vibrato.
-  function cry(f0, f1, dur, { vol = 0.25, cutoff = 1200, vib = 6, depth = 0.04, at = 0, type = 'sawtooth' } = {}) {
-    if (!ctx || ctx.state !== 'running') return;
-    const t = ctx.currentTime + at, o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
-    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-    lfo.frequency.value = vib; lg.gain.value = f0 * depth; lfo.connect(lg).connect(o.frequency);
-    lp.type = 'lowpass'; lp.Q.value = 3; lp.frequency.setValueAtTime(cutoff, t); lp.frequency.exponentialRampToValueAtTime(cutoff * 0.5, t + dur);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(lp).connect(g).connect(sfxBus); o.start(t); lfo.start(t); o.stop(t + dur + 0.02); lfo.stop(t + dur + 0.02);
-  }
-
-  // Effects. `size` 0..1 makes a bigger swallow a lower, rounder pop.
+  // Effects: every one is a file (audio/sfx, see LICENSES.md), all fetched at the first tap; nothing is synthesized, so
+  // an effect whose file has not arrived yet is simply skipped.
   // What each kind says as it is sucked in: people cry out (a mix of higher and lower voices), animals call,
   // vehicles honk, plants rustle, boxes thud, metal rattles, a balloon pops, a building rumbles.
   const PEOPLE = ['person', 'worker', 'officer', 'visitor', 'skier', 'hanbok', 'student', 'grandma', 'commuter', 'umbrella', 'fan', 'sunbather', 'traveler', 'caroler', 'surfer'];
-  const VEHICLES = ['car', 'taxi', 'bus', 'foodtruck', 'tractor', 'excavator', 'scooter'];
   const PLANTS = ['tree', 'pine', 'persimmon', 'palm', 'planter', 'haystack'];
   const WOOD = ['bench', 'crate', 'container', 'kiosk', 'stall', 'jangdok', 'pot', 'fruit', 'gift', 'tube', 'towel', 'parasol', 'tent', 'sled'];
   const METAL = ['trash', 'vending', 'beam', 'pipe', 'cone'];
@@ -131,36 +97,7 @@
     if (!ctx || ctx.state !== 'running') return;
     let file = EAT_FILE(type);
     if (file === 'eat_person') file = personFile(type);
-    if (file && sample(file, { vol: 0.6, rate: R(0.94, 1.06) })) return;
-    if (type === 'cat') { const f = R(520, 720); cry(f, f * 1.45, 0.16, { vol: .22, cutoff: 2200, vib: 9, depth: .03, type: 'triangle' }); cry(f * 1.4, f * 0.8, 0.28, { vol: .2, cutoff: 1800, vib: 7, depth: .05, type: 'triangle', at: 0.15 }); return; } // 야옹
-    if (type === 'zombie') { const f = R(90, 130); cry(f, f * 0.75, 0.55, { vol: .25, cutoff: 700, vib: 4, depth: .06 }); return; } // 으어어
-    if (PEOPLE.includes(type) || type === 'guard' || type === 'boss') { // 와앙 / 으악, half higher voices, half lower
-      const low = type === 'guard' || type === 'boss' || type === 'grandma' ? type !== 'grandma' : Math.random() < 0.5;
-      const f = low ? R(170, 240) : R(330, 440), dur = type === 'boss' ? 0.9 : R(0.35, 0.5);
-      cry(f, f * (low ? 0.6 : 0.7), dur, { vol: low ? .28 : .24, cutoff: low ? 900 : 1600, vib: 11, depth: .06 });
-      if (!low) cry(f * 2, f * 1.3, dur * 0.8, { vol: .08, cutoff: 2600, vib: 11, depth: .06, at: 0.02 });
-      return;
-    }
-    if (type === 'gull') { [0, 0.13, 0.26].forEach(at => cry(R(1400, 1700), 1100, 0.1, { vol: .14, cutoff: 3000, vib: 20, depth: .08, type: 'square', at })); return; } // 끼룩
-    if (type === 'chicken') { [0, 0.08, 0.16, 0.26].forEach((at, i) => cry(R(700, 900) * (i === 3 ? 1.4 : 1), 600, i === 3 ? 0.22 : 0.07, { vol: .16, cutoff: 2200, type: 'square', at })); return; } // 꼬꼬댁
-    if (type === 'sheep') { cry(R(240, 300), 230, 0.5, { vol: .2, cutoff: 1400, vib: 14, depth: .1 }); return; } // 메에
-    if (type === 'cow') { cry(R(100, 130), 90, 0.7, { vol: .3, cutoff: 700, vib: 5, depth: .05 }); return; } // 음메
-    if (type === 'camel') { cry(R(130, 170), 100, 0.6, { vol: .26, cutoff: 800, vib: 8, depth: .12 }); return; }
-    if (type === 'reindeer') { [0, 0.09, 0.18, 0.3].forEach(at => tone(R(2400, 3200), R(2400, 3200), 0.12, { type: 'sine', vol: .12, at })); return; } // 방울
-    if (VEHICLES.includes(type)) { const f = ['bus', 'tractor', 'excavator'].includes(type) ? 220 : R(330, 400); tone(f, f, 0.22, { type: 'square', vol: .12 }); tone(f * 1.26, f * 1.26, 0.22, { type: 'square', vol: .12 }); hiss(0.25, { f: 3000, q: .7, vol: .06, at: 0.05 }); return; } // 빵
-    if (type === 'boat') { tone(110, 95, 0.6, { type: 'sawtooth', vol: .18 }); tone(165, 140, 0.6, { type: 'sawtooth', vol: .08 }); return; } // 부웅
-    if (type === 'bicycle') { [0, 0.07].forEach(at => tone(2600, 2400, 0.12, { type: 'sine', vol: .14, at })); return; } // 따르릉
-    if (type === 'balloon') { hiss(0.05, { f: 4000, q: .5, vol: .4, type: 'highpass' }); tone(900, 120, 0.12, { type: 'sine', vol: .25 }); return; } // 펑
-    if (PLANTS.includes(type)) { hiss(0.3, { f: 5000, q: .8, vol: .18, type: 'highpass' }); hiss(0.2, { f: 2500, q: 1, vol: .1, at: 0.12 }); return; } // 바스락
-    if (METAL.includes(type)) { tone(R(700, 900), 600, 0.1, { type: 'square', vol: .12 }); hiss(0.12, { f: 6000, q: 2, vol: .15 }); tone(R(1100, 1300), 1000, 0.08, { type: 'square', vol: .08, at: 0.05 }); return; } // 달그락
-    if (WOOD.includes(type)) { tone(R(140, 190), 70, 0.14, { type: 'triangle', vol: .3 }); hiss(0.08, { f: 1200, q: 1, vol: .12 }); return; } // 툭
-    if (STONE.includes(type)) { tone(90, 45, 0.3, { type: 'sine', vol: .35 }); hiss(0.15, { f: 900, q: 1, vol: .15 }); return; } // 쿵
-    if (type === 'fountain') { hiss(0.4, { f: 1800, q: .6, vol: .2 }); [0, .1, .2].forEach(at => tone(R(1500, 2200), R(900, 1300), 0.1, { type: 'sine', vol: .08, at })); return; } // 첨벙
-    if (type === 'carousel') { [72, 76, 79, 84, 79].forEach((n, i) => tone(note(n), note(n), 0.25, { type: 'sine', vol: .14, at: i * 0.1 })); return; } // 오르골
-    if (SOFT.includes(type)) { hiss(0.12, { f: 600, q: .8, vol: .18 }); tone(300, 120, 0.12, { type: 'sine', vol: .12 }); return; } // 푹
-    if (type === 'building') { tone(70, 28, 0.7, { type: 'sine', vol: .45 }); hiss(0.6, { f: 300, q: .7, vol: .25 }); hiss(0.3, { f: 1500, q: 1, vol: .1, at: .1 }); return; } // 쿠궁
-    if (!PEOPLE.includes(type) && sample('eat_pop', { vol: 0.6, rate: R(0.94, 1.06) })) return;
-    tone(R(600, 800), 260, 0.12, { type: 'sine', vol: .3 }); // anything else: a plain pop
+    sample(file || 'eat_pop', { vol: 0.6, rate: R(0.94, 1.06) }); // anything without its own sound: a pop
   }
 
   // The character's own voice (tester: "a cute voice for the character", then "no synth"): recorded singers from
@@ -179,8 +116,6 @@
     ah: [['a', 0.1, 1.2, 1.65]],                                                                // 앗!
     umm: [['m', 0.05], ['u', 0.12, 1.0, 1.15], ['m', 0.08]],                                    // 음!
   };
-  const VOICE_FILES = [...Object.keys(WORDS).flatMap(w => [1, 2, 3].map(i => `voice_${w}_${i}`)), 'voice_blip_a', 'voice_blip_o'];
-  const preloadVoice = () => VOICE_FILES.forEach(n => load(`audio/sfx/${n}.m4a`)); // so the first line is not lost
   const lastSaid = []; // the words said most recently (tests read this)
   let saidAt = -9;
   function say(word, { at = 0, vol = 0.75, every = 0 } = {}) {
@@ -227,42 +162,31 @@
     speak, get lastSpoken() { return lastSpoken.slice(); },
     gulp(size = 0, combo = 0) { // a combo climbs: each swallow in the chain is a step higher, up to a fifth
       const up = Math.min(7, Math.max(0, combo - 1));
-      if (!sample(size > 0.5 ? 'gulp_big' : 'gulp_small', { vol: 0.8, rate: semis(up) * R(0.96, 1.04) })) {
-        const f = (720 - size * 420) * R(0.92, 1.08) * semis(up);
-        tone(f, f * 0.35, 0.13, { type: 'sine', vol: 0.55 });
-        tone(f * 2.1, f * 0.9, 0.06, { type: 'triangle', vol: 0.12 });
-      }
+      sample(size > 0.5 ? 'gulp_big' : 'gulp_small', { vol: 0.8, rate: semis(up) * R(0.96, 1.04) });
       if (combo >= 3 && combo % 4 === 3) say('nyam', { at: 0.06, every: 1.6 }); // a 냠 now and then in a chain, never a chatter
       else if (size > 0.7) say('umm', { at: 0.08, every: 1.6 }); // something big: a satisfied 음!
     },
-    tap() { if (!sample('tap', { vol: 0.5 })) tone(1200, 900, 0.04, { type: 'triangle', vol: 0.18 }); },
-    star() { if (!sample('star')) [72, 76, 79, 84].forEach((n, i) => tone(note(n), note(n), 0.22, { type: 'triangle', vol: 0.3, at: i * 0.07 })); say('yay', { at: 0.3 }); },
-    coin() { if (sample('coin', { vol: 0.6 })) return; tone(note(88), note(88), 0.09, { type: 'square', vol: 0.08 }); tone(note(95), note(95), 0.25, { type: 'square', vol: 0.08, at: 0.08 }); },
-    level() { if (!sample('level_up')) [67, 72, 76, 79, 84].forEach((n, i) => tone(note(n), note(n), 0.3, { type: 'triangle', vol: 0.32, at: i * 0.09 })); },
-    lit() { if (!sample('sunlight', { vol: 0.55 })) { tone(260, 180, 0.18, { type: 'sawtooth', vol: 0.07 }); tone(250, 175, 0.18, { type: 'sawtooth', vol: 0.07, at: 0.2 }); } say('ah', { at: 0.02, every: 3 }); }, // 앗! (out in the sun)
-    night() { if (!sample('night')) [84, 79, 76, 72, 67].forEach((n, i) => tone(note(n), note(n), 0.5, { type: 'sine', vol: 0.25, at: i * 0.12 })); },
-    grow() { if (!sample('grow')) { tone(320, 960, 0.35, { type: 'triangle', vol: 0.25 }); [79, 84, 88].forEach((n, i) => tone(note(n), note(n), 0.25, { type: 'sine', vol: 0.22, at: 0.3 + i * 0.08 })); } say('wow', { at: 0.12 }); },
-    hit() { if (sample('hit')) return; tone(180, 60, 0.18, { type: 'square', vol: 0.35 }); tone(900, 1800, 0.12, { type: 'triangle', vol: 0.2, at: 0.02 }); [84, 91].forEach((n, i) => tone(note(n), note(n), 0.3, { type: 'triangle', vol: 0.25, at: 0.1 + i * 0.08 })); },
-    tick() { if (!sample('tick', { vol: 0.5 })) tone(1500, 1500, 0.06, { type: 'square', vol: 0.12 }); },
-    spit() { if (sample('spit')) return; hiss(0.09, { f: 1600, q: 1.2, vol: .32 }); tone(460, 150, 0.13, { type: 'triangle', vol: .3, at: 0.02 }); }, // 퉤: a short burst and a falling thump
-    yuck() { // 으엑: a zombie went down, then three seconds of queasy gurgling
-      if (sample('yuck')) return;
-      tone(300, 110, 0.28, { type: 'sawtooth', vol: 0.2 }); tone(520, 130, 0.32, { type: 'square', vol: 0.07 });
-      for (let i = 0; i < 7; i++) tone(90 + (i % 2) * 25, 60, 0.22, { type: 'sawtooth', vol: 0.06, at: 0.45 + i * 0.38 });
-    },
-    shard(kind) { // a light shard: a quick rising sparkle, higher for the bolt
-      if (sample('shard', { rate: kind === 'bolt' ? semis(5) : kind === 'cloud' ? semis(-7) : 1 })) return;
-      const base = kind === 'bolt' ? 84 : kind === 'cloud' ? 72 : 79;
-      [0, 4, 7, 12].forEach((n, i) => tone(note(base + n), note(base + n) * 1.02, 0.12, { type: 'triangle', vol: 0.14, at: i * 0.05 }));
-    },
-    dash() { if (!sample('dash', { vol: 0.35, rate: R(0.95, 1.05) })) tone(2200, 1800, 0.03, { type: 'square', vol: 0.05 }); }, // quick footsteps while the bolt lasts
-    rain(dur) { if (!sample('rain', { vol: 0.5, loopFor: dur })) hiss(dur, { f: 1800, q: 0.5, vol: 0.12 }); }, // a shower: soft broadband hiss for its length
-    wind(dur) { if (!sample('wind', { vol: 0.5, loopFor: dur })) hiss(dur, { f: 420, q: 0.8, type: 'lowpass', vol: 0.16 }); }, // a cloud front rolling in
-    parade() { if (!sample('parade')) [67, 71, 74, 79, 74, 79].forEach((n, i) => tone(note(n), note(n), 0.13, { type: 'square', vol: 0.09, at: i * 0.12 })); }, // a little march
-    combo(n) { if (sample('combo', { vol: 0.5, rate: semis(Math.min(12, n)) })) return; const f = note(72 + Math.min(12, n)); tone(f, f * 1.5, 0.08, { type: 'square', vol: 0.1 }); }, // each link a step higher
-    win() { if (!sample('win')) [60, 64, 67, 72, 76].forEach((n, i) => tone(note(n), note(n), 0.35, { type: 'triangle', vol: 0.3, at: i * 0.1 })); say('hehe', { at: 0.6 }); },
-    lose() { if (!sample('lose')) [67, 64, 60].forEach((n, i) => tone(note(n), note(n), 0.4, { type: 'triangle', vol: 0.25, at: i * 0.16 })); say('hing', { at: 0.55 }); },
+    tap() { sample('tap', { vol: 0.5 }); },
+    star() { sample('star'); say('yay', { at: 0.3 }); },
+    coin() { sample('coin', { vol: 0.6 }); },
+    level() { sample('level_up'); },
+    lit() { sample('sunlight', { vol: 0.55 }); say('ah', { at: 0.02, every: 3 }); }, // 앗! (out in the sun)
+    night() { sample('night'); },
+    grow() { sample('grow'); say('wow', { at: 0.12 }); },
+    hit() { sample('hit'); },
+    tick() { sample('tick', { vol: 0.5 }); },
+    spit() { sample('spit'); }, // 퉤
+    yuck() { sample('yuck'); }, // 으엑: a zombie went down
+    shard(kind) { sample('shard', { rate: kind === 'bolt' ? semis(5) : kind === 'cloud' ? semis(-7) : 1 }); }, // higher for the bolt
+    dash() { sample('dash', { vol: 0.35, rate: R(0.95, 1.05) }); }, // quick footsteps while the bolt lasts
+    rain(dur) { sample('rain', { vol: 0.5, loopFor: dur }); }, // a shower for its length
+    wind(dur) { sample('wind', { vol: 0.5, loopFor: dur }); }, // a cloud front rolling in
+    parade() { sample('parade'); }, // a little march
+    combo(n) { sample('combo', { vol: 0.5, rate: semis(Math.min(12, n)) }); }, // each link a step higher
+    win() { sample('win'); say('hehe', { at: 0.6 }); },
+    lose() { sample('lose'); say('hing', { at: 0.55 }); },
   };
+
 
   // Background music: a small band, scheduled a little ahead of time. Every region shares one core (a soft pad
   // of seventh chords, chord stabs, a bass, a light kit, a pentatonic lead) and swaps in its own players:
