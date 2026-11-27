@@ -1264,12 +1264,13 @@
   function ruleStep(dt) {
     const r = stage.rule; if (!r) return;
     for (const c of clouds) {
-      if (c.rule === 'arm' || c.rule === 'blimp' || c.rule === 'copter') { c.a += c.w * dt; c.x = c.cx + Math.cos(c.a) * c.R; c.y = c.cy + Math.sin(c.a) * c.R; }
-      else if (c.rule === 'traffic') { const span = (c.down ? waterY : WORLD) + 200; c.at += c.v * dt; const u = ((c.at % span) + span) % span - 100; c.x = c.down ? c.lane : u; c.y = c.down ? u : c.lane; }
-      else if (c.rule === 'mist') { c.x = c.hx; c.y = c.hy; c.r = 62 + 46 * Math.sin(elapsed * 0.7 + c.t0); } // swells to 108, shrinks to 16
+      if (c.rule === 'arm' || c.rule === 'blimp' || c.rule === 'copter') { c.a += c.w * dt; c.x = c.cx + Math.cos(c.a) * c.R; c.y = c.cy + Math.sin(c.a) * c.R;
+        c.h = c.rule === 'arm' ? c.a + (c.icon === 'swing' ? Math.PI / 2 : 0) : c.a + Math.sign(c.w) * Math.PI / 2; } // a jib lies along its arm; a flyer faces where it goes
+      else if (c.rule === 'traffic') { const span = (c.down ? waterY : WORLD) + 200; c.at += c.v * dt; const u = ((c.at % span) + span) % span - 100; c.x = c.down ? c.lane : u; c.y = c.down ? u : c.lane; c.h = (c.down ? Math.PI / 2 : 0) + (c.v < 0 ? Math.PI : 0); }
+      else if (c.rule === 'mist') { c.x = c.hx; c.y = c.hy; c.r = 62 + 46 * Math.sin(elapsed * 0.7 + c.t0); c.h = c.t0; } // swells to 108, shrinks to 16
       else if (c.rule === 'kite') { const u = elapsed * c.w + c.t0; c.x = c.cx + Math.sin(u) * 190; c.y = c.cy + Math.sin(u * 2) * 95; }
       else if (c.rule === 'wheel') { c.a += c.w * dt; c.x = c.cx + Math.cos(c.a) * c.R; c.y = c.cy + Math.sin(c.a) * c.R; }
-      else if (c.rule === 'caravan') { c.at += c.v * dt; c.x = ((c.at % (WORLD + 200)) + WORLD + 200) % (WORLD + 200) - 100; c.y = c.row; }
+      else if (c.rule === 'caravan') { c.at += c.v * dt; c.x = ((c.at % (WORLD + 200)) + WORLD + 200) % (WORLD + 200) - 100; c.y = c.row; c.h = c.v < 0 ? Math.PI : 0; }
       else if (c.rule === 'awning') { const on = (elapsed + c.t0) % AWNING.cycle < AWNING.open; c.x = on ? c.hx : -9999; c.y = on ? c.hy : -9999; } // folded away: nowhere on the map
     }
     if (r.kind === 'blizzard' && !tut) {
@@ -1685,7 +1686,7 @@
     $('snow').classList.toggle('hidden', !(stage.look && stage.look.snow)); // it snows all run on winter maps
     fallShow(true);
     shards = []; nextShard = C.SHARD.from; lastShardKind = null; fastUntil = bubbleUntil = magnetUntil = 0; dashTick = 0;
-    clouds = stage.twist === 'clouds' ? Array.from({ length: 7 }, (_, k) => ({ x: rnd() * WORLD, y: rnd() * waterY, r: 70 + rnd() * 50 })) : [];
+    clouds = stage.twist === 'clouds' ? Array.from({ length: 7 }, (_, k) => ({ x: rnd() * WORLD, y: rnd() * waterY, r: 70 + rnd() * 50, h: k * 0.9 })) : []; // h: each cloud turned its own way
     tut = list === STAGES && i === 0 ? { i: 0, t: 0, moved: 0, lx: null, ly: null } : null;
     ruleStart();
     if (stage.special && !tut) banner(`${ico(specialIco[stage.special.kind])} ${stage.special.name} — ${stage.special.text}`, 4);
@@ -1778,7 +1779,7 @@
   function isShaded(o, exclude) {
     if (inBeam(o.x, o.y, exclude)) return false;
     if (phase.night || eclipse || darkEvent()) return true;
-    if (clouds.some(c => Math.hypot(o.x - c.x, o.y - c.y) < c.r)) return true;
+    if (clouds.some(c => C.inPatch(c, o.x, o.y))) return true; // shaped like what casts it (core SHAPES)
     if (elapsed < bubbleUntil && Math.hypot(o.x - player.x, o.y - player.y) < bubbleR()) return true; // the cloud shard's bubble
     return C.inAnyShadow(shadeNear(o.x, o.y), o.x, o.y, exclude);
   }

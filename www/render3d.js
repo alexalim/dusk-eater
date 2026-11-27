@@ -875,9 +875,27 @@
 
     // Twists: cloud shade drifting on the ground and gold rings under golden friends, instanced; counts set per frame.
     const MAX_CLOUDS = 28, MAX_GOLD = 6;
-    const cloudGeo = new T.CircleGeometry(1, 36); cloudGeo.rotateX(-Math.PI / 2);
-    const cloudShade = new T.InstancedMesh(cloudGeo, new T.MeshBasicMaterial({ color: 0x120a2a, transparent: true, opacity: 0.45, depthWrite: false }), MAX_CLOUDS);
-    cloudShade.renderOrder = 4; cloudShade.count = 0; cloudShade.frustumCulled = false;
+    // Each patch of shade is shaped like what casts it (core SHAPES, the very parts the game tests points against):
+    // one mask per shape (white on black, so overlapping parts never darken twice), on a flat square
+    // that reaches as far as the shape does. All are built here, so no shader is compiled mid-run.
+    const Core = root.DuskCore, shadeMat = { color: 0x120a2a, transparent: true, opacity: 0.45, depthWrite: false };
+    const shadeOf = {};
+    for (const [name, { parts, ext }] of Object.entries(Core.SHAPES)) {
+      const n = 256, cv = document.createElement('canvas'); cv.width = cv.height = n; const g = cv.getContext('2d');
+      g.fillStyle = '#000'; g.fillRect(0, 0, n, n); g.fillStyle = '#fff';
+      g.setTransform(n / 2 / ext, 0, 0, n / 2 / ext, n / 2, n / 2); // shape units, +y down: the plane below lays canvas-down along +z
+      for (const q of parts) { // each part filled on its own: on a mask the union is just white, never a hole where parts cross
+        g.beginPath();
+        if (q[0] === 'c') g.arc(q[1], q[2], q[3], 0, Math.PI * 2);
+        else if (q[0] === 'e') g.ellipse(q[1], q[2], q[3], q[4], 0, 0, Math.PI * 2);
+        else if (q[0] === 'b') g.rect(q[1] - q[3], q[2] - q[4], q[3] * 2, q[4] * 2);
+        else { q[1].forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); }
+        g.fill();
+      }
+      const geo = new T.PlaneGeometry(ext * 2, ext * 2); geo.rotateX(-Math.PI / 2);
+      const m = new T.InstancedMesh(geo, new T.MeshBasicMaterial(Object.assign({ alphaMap: new T.CanvasTexture(cv) }, shadeMat)), MAX_CLOUDS);
+      m.renderOrder = 4; m.count = 0; m.frustumCulled = false; scene.add(m); shadeOf[name] = m;
+    }
     const goldGeo = new T.RingGeometry(0.75, 1.15, 28); goldGeo.rotateX(-Math.PI / 2);
     const goldMat = new T.MeshBasicMaterial({ color: 0xfff1a0, transparent: true, opacity: 0.9, depthWrite: false });
     const goldRings = new T.InstancedMesh(goldGeo, goldMat, MAX_GOLD);
@@ -886,7 +904,7 @@
     const goldBeam = new T.InstancedMesh(new T.CylinderGeometry(1, 1, 1, 12, 1, true),
       new T.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.25, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide }), MAX_GOLD);
     goldBeam.renderOrder = 8; goldBeam.count = 0; goldBeam.frustumCulled = false;
-    scene.add(cloudShade, goldRings, goldBeam);
+    scene.add(goldRings, goldBeam);
     // What casts a map rule's shade (index.html ruleStart gives each patch an `icon`): a little picture standing on
     // the patch, or flying high above it (`sky`), facing the camera like the character's card. Drawn once per kind on a
     // canvas, in flat cheerful shapes. Looks only: the shade is the patch itself.
@@ -927,7 +945,7 @@
     };
     // Each kind has a painted picture too (img/casters, tools/casters/pack.py), in the characters' own style (tester: the
     // flat shapes, the map and the characters "each go their own way"): the flat shape shows until it has loaded.
-    const casterTex = {}, casterOf = icon => casterTex[icon] || (casterTex[icon] = (() => {
+    const casterTex = {}, casterBase = icon => casterTex[icon] || (casterTex[icon] = (() => {
       const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
       g.save(); g.scale(2, 2); g.shadowColor = 'rgba(30,12,60,.35)'; g.shadowBlur = 4; g.shadowOffsetY = 3; CASTER_ART[icon](g); g.restore();
       const tex = new T.CanvasTexture(c), img = new Image();
@@ -935,6 +953,17 @@
       img.src = `img/casters/${icon}.png`;
       return tex;
     })());
+    // A caster that travels faces where it goes: the picture is mirrored when its heading and the way it was painted
+    // disagree (FACING: true = painted facing left), as the shade under it is turned. The others never flip.
+    const FACING = { plane: true, whale: true, camel: true, blimp: true, cart: true, bus: false, copter: false };
+    const casterFlip = {}, casterOf = (icon, flip) => {
+      const tex = casterBase(icon); if (!flip) return tex;
+      return casterFlip[icon] || (casterFlip[icon] = (() => {
+        const m = tex.clone(); m.repeat.x = -1; m.offset.x = 1;
+        const up = tex.onUpdate; tex.onUpdate = () => { m.needsUpdate = true; if (up) up(); }; // the painted picture arriving updates both
+        return m;
+      })());
+    };
     const casters = Array.from({ length: MAX_CLOUDS }, () => {
       const sp = new T.Sprite(new T.SpriteMaterial({ transparent: true, depthWrite: false, alphaTest: 0.02 }));
       sp.visible = false; sp.renderOrder = 6; sp.userData.icon = null; scene.add(sp); return sp;
@@ -1918,17 +1947,20 @@
       } else if (artHid) { artHid = false; for (const o of artAlways) o.visible = true; } // back to the 3D body (the car, first person)
 
       const clouds = f.clouds || [], golden = f.golden || [];
-      cloudShade.count = Math.min(MAX_CLOUDS, clouds.length);
-      for (let i = 0; i < cloudShade.count; i++) {
-        dummy.position.set(clouds[i].x, 1.1, clouds[i].y); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(clouds[i].r); dummy.updateMatrix();
-        cloudShade.setMatrixAt(i, dummy.matrix);
+      const shown = Math.min(MAX_CLOUDS, clouds.length);
+      for (const m of Object.values(shadeOf)) m.count = 0;
+      for (let i = 0; i < shown; i++) { // turned by the patch's heading: a shape's nose (+x) points along h
+        const c = clouds[i], m = shadeOf[Core.patchShape(c)];
+        dummy.position.set(c.x, 1.1, c.y); dummy.rotation.set(0, -(c.h || 0), 0); dummy.scale.setScalar(c.r); dummy.updateMatrix();
+        m.setMatrixAt(m.count++, dummy.matrix);
       }
-      cloudShade.instanceMatrix.needsUpdate = true;
+      for (const m of Object.values(shadeOf)) m.instanceMatrix.needsUpdate = true;
       casters.forEach((sp, i) => { // one picture per rule patch that has one: standing on it, or bobbing in the sky above it
-        const c = i < cloudShade.count ? clouds[i] : null;
+        const c = i < shown ? clouds[i] : null;
         sp.visible = !!(c && c.icon && CASTER_ART[c.icon]);
         if (!sp.visible) return;
-        if (sp.userData.icon !== c.icon) { sp.userData.icon = c.icon; sp.material.map = casterOf(c.icon); sp.material.needsUpdate = true; }
+        const flip = c.icon in FACING && (Math.cos(c.h || 0) < 0) !== FACING[c.icon]; // turned to face where it goes
+        if (sp.userData.icon !== c.icon || sp.userData.flip !== flip) { sp.userData.icon = c.icon; sp.userData.flip = flip; sp.material.map = casterOf(c.icon, flip); sp.material.needsUpdate = true; }
         const size = c.r * (!c.sky ? 1.25 : c.r > 120 ? 0.85 : 1.4); // the blimp's patch is huge: the blimp itself stays a sane size
         sp.center.set(0.5, c.sky ? 0.5 : 0.08);
         sp.position.set(c.x, c.sky ? 75 + Math.sin(t * 1.3 + i) * 6 : 1.5, c.y); sp.scale.set(size, size, 1);

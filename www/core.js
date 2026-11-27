@@ -163,6 +163,65 @@
     return Math.abs(diff) <= g.half;
   }
 
+  // Shade patches (clouds, a map rule's casters) are shaped like what casts them, seen from above (tester: "a round
+  // shadow is odd; a shadow should take the thing's shape, a cloud a cloud's"). A shape is a few parts in unit space,
+  // its nose to +x: ['c', x, y, r] circle, ['e', x, y, rx, ry] ellipse, ['b', x, y, hw, hh] box, ['p', [[x, y], ...]]
+  // polygon. Each is scaled once, here, to the area of the unit circle, so a patch of radius r covers what the round
+  // patch did (the map's shade budget does not move) and always contains its centre. The game tests points with
+  // inPatch; render3d draws the same parts, so what looks shaded is shaded.
+  const SHAPE_PARTS = {
+    cloud: [['c', -0.6, 0.15, 0.55], ['c', -0.1, -0.25, 0.65], ['c', 0.55, -0.05, 0.55], ['c', 0.2, 0.35, 0.5], ['c', -0.25, 0.3, 0.45]],
+    steam: [['c', -0.35, 0.25, 0.45], ['c', 0.3, 0.2, 0.5], ['c', 0, -0.3, 0.5], ['c', 0.5, -0.35, 0.3], ['c', -0.5, -0.25, 0.3]],
+    round: [['c', 0, 0, 1]], // parasol, lantern, saucer, clock face: round from above too
+    blimp: [['e', 0, 0, 1.6, 0.6], ['p', [[-1.3, 0], [-1.85, -0.55], [-1.85, 0.55]]]],
+    copter: [['e', 0.2, 0, 0.75, 0.5], ['b', -0.95, 0, 0.65, 0.1], ['b', 0.2, 0, 1.25, 0.08], ['b', 0.2, 0, 0.08, 1.25], ['b', -1.55, 0, 0.06, 0.28]],
+    kite: [['p', [[0, -1.4], [0.75, -0.2], [0, 1.0], [-0.75, -0.2]]], ['c', 0.15, 1.2, 0.12], ['c', -0.1, 1.45, 0.12]],
+    whale: [['e', 0.25, 0, 1.15, 0.6], ['e', 0.35, 0.6, 0.35, 0.14], ['e', 0.35, -0.6, 0.35, 0.14], ['p', [[-0.7, 0], [-1.5, -0.6], [-1.25, 0], [-1.5, 0.6]]]],
+    plane: [['e', 0, 0, 1.5, 0.2], ['p', [[0.35, 0], [-0.15, -1.4], [-0.45, -1.4], [-0.15, 0]]], ['p', [[0.35, 0], [-0.15, 1.4], [-0.45, 1.4], [-0.15, 0]]],
+      ['p', [[-1.1, 0], [-1.45, -0.5], [-1.6, -0.5], [-1.4, 0]]], ['p', [[-1.1, 0], [-1.45, 0.5], [-1.6, 0.5], [-1.4, 0]]]],
+    bus: [['b', 0, 0, 1.25, 0.55]],
+    car: [['b', 0, 0, 0.9, 0.75]], // a wheel's cabin, hanging level
+    camel: [['e', -0.15, 0, 0.95, 0.45], ['b', 0.95, 0, 0.32, 0.1], ['e', 1.35, 0, 0.3, 0.18]],
+    cart: [['b', -0.1, 0, 1.0, 0.65], ['b', 1.2, 0.35, 0.35, 0.05], ['b', 1.2, -0.35, 0.35, 0.05]],
+    awning: [['b', 0, 0, 1.0, 0.7]],
+    hook: [['b', 0, -0.25, 0.55, 0.4], ['c', 0, 0.55, 0.4]],
+    swing: [['b', 0, 0, 1.1, 0.3]],
+    arm: [['b', 0, 0, 1.4, 0.42]], // a crane's jib: the patches along it join into one bar
+  };
+  const SHAPE_OF = { parasol: 'round', lantern: 'round', ufo: 'round', clock: 'round' };
+  function inPart(p, x, y) {
+    if (p[0] === 'c') return (x - p[1]) ** 2 + (y - p[2]) ** 2 <= p[3] * p[3];
+    if (p[0] === 'e') return ((x - p[1]) / p[3]) ** 2 + ((y - p[2]) / p[4]) ** 2 <= 1;
+    if (p[0] === 'b') return Math.abs(x - p[1]) <= p[3] && Math.abs(y - p[2]) <= p[4];
+    let inside = false; const v = p[1]; // even-odd, so a concave tail works too
+    for (let i = 0, j = v.length - 1; i < v.length; j = i++)
+      if ((v[i][1] > y) !== (v[j][1] > y) && x < (v[j][0] - v[i][0]) * (y - v[i][1]) / (v[j][1] - v[i][1]) + v[i][0]) inside = !inside;
+    return inside;
+  }
+  const SHAPES = {}; // name -> { parts (scaled to area pi), ext (how far it reaches, in r) }
+  for (const [name, raw] of Object.entries(SHAPE_PARTS)) {
+    let ext = 0;
+    for (const p of raw) ext = Math.max(ext, ...(p[0] === 'p' ? p[1].map(([a, b]) => Math.hypot(a, b))
+      : p[0] === 'c' ? [Math.hypot(p[1], p[2]) + p[3]] : [Math.hypot(Math.abs(p[1]) + p[3], Math.abs(p[2]) + p[4])]));
+    let hit = 0; const N = 160; // area by a grid over the reach
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      const x = ((i + 0.5) / N * 2 - 1) * ext, y = ((j + 0.5) / N * 2 - 1) * ext;
+      if (raw.some(p => inPart(p, x, y))) hit++;
+    }
+    const k = Math.sqrt(Math.PI / (hit / (N * N) * 4 * ext * ext));
+    const parts = raw.map(p => p[0] === 'p' ? ['p', p[1].map(([a, b]) => [a * k, b * k])] : [p[0], ...p.slice(1).map(v => v * k)]);
+    SHAPES[name] = { parts, ext: ext * k };
+  }
+  // A patch: { x, y, r, h (heading, radians; the shape's nose points that way), icon, rule }.
+  const patchShape = c => SHAPES[SHAPE_OF[c.icon] || c.icon] ? (SHAPE_OF[c.icon] || c.icon) : c.rule === 'arm' ? 'arm' : c.rule === 'mist' ? 'steam' : 'cloud';
+  function inPatch(c, x, y) {
+    const dx = x - c.x, dy = y - c.y, s = SHAPES[patchShape(c)];
+    if (dx * dx + dy * dy > (s.ext * c.r) ** 2) return false;
+    const h = c.h || 0, cos = Math.cos(h), sin = Math.sin(h);
+    const lx = (dx * cos + dy * sin) / c.r, ly = (-dx * sin + dy * cos) / c.r;
+    return s.parts.some(p => inPart(p, lx, ly));
+  }
+
   // The one eat rule: object sits in darkness, is smaller than the player, and touches it.
   function canEat(playerR, objR, shaded, dist) {
     return shaded && objR < playerR * EAT_RATIO && dist < playerR;
@@ -209,7 +268,7 @@
   const api = {
     DURATION, NIGHT_START, EAT_RATIO, MAX_SHADOW,
     mulberry32, dayPhase, sunState, shadowLength, convexHull, pointInConvex,
-    shadowPolygon, propShadow, inAnyShadow, inCone, canEat, grow, HUNGER, hungerState, COMBO, comboMult, SHARD, SHARD_KINDS, nextShardKind, EVENTS, EVENT_KINDS, eventWindow,
+    shadowPolygon, propShadow, inAnyShadow, inCone, SHAPES, patchShape, inPatch, canEat, grow, HUNGER, hungerState, COMBO, comboMult, SHARD, SHARD_KINDS, nextShardKind, EVENTS, EVENT_KINDS, eventWindow,
     goalProgress, evaluateStars, isUnlocked, isCleared,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

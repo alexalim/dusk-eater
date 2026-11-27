@@ -112,3 +112,29 @@ test('size and rush goals: size reads the biggest body in metres; rush only coun
   assert.deepEqual(C2.goalProgress({ kind: 'rush', n: 500, t: 60 }, { score: 900, rushDone: false }), { cur: 500, n: 500, done: false });
   assert.equal(C2.goalProgress({ kind: 'rush', n: 500, t: 60 }, { score: 300, rushDone: true }).done, true);
 });
+
+test('shade patches take the shape of what casts them, cover what a round patch did and contain their centre', () => {
+  const St = require('../www/stages.js');
+  const casts = Object.values(St.RULES).flatMap(r => [r.icon, r.tip].filter(Boolean));
+  for (const icon of casts) assert.ok(C.SHAPES[C.patchShape({ icon })], `a shape for ${icon}`);
+  assert.equal(C.patchShape({}), 'cloud'); assert.equal(C.patchShape({ rule: 'arm' }), 'arm');
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (const [name, s] of Object.entries(C.SHAPES)) {
+    const c = { x: 300, y: 200, r: 50, h: 1.1, icon: name === 'arm' || name === 'cloud' ? null : name, rule: name === 'arm' ? 'arm' : null };
+    if (name === 'steam') c.rule = 'mist', c.icon = null;
+    assert.equal(C.patchShape(c), name);
+    assert.ok(C.inPatch(c, c.x, c.y), `${name}: its centre is shade`);
+    let hit = 0; const N = 40000, e = s.ext * c.r;
+    for (let i = 0; i < N; i++) if (C.inPatch(c, c.x + (rnd() * 2 - 1) * e, c.y + (rnd() * 2 - 1) * e)) hit++;
+    const ratio = hit / N * 4 * e * e / (Math.PI * c.r * c.r);
+    assert.ok(Math.abs(ratio - 1) < 0.05, `${name}: area ${ratio.toFixed(3)} of the round patch`);
+    assert.ok(!C.inPatch(c, c.x + e * 1.01, c.y), `${name}: nothing beyond its reach`);
+  }
+});
+
+test('a patch turns with its heading: a bus along x is long along x, along y once it turns', () => {
+  const bus = { x: 0, y: 0, r: 50, icon: 'bus', h: 0 };
+  assert.ok(C.inPatch(bus, 55, 0) && !C.inPatch(bus, 0, 55));
+  bus.h = Math.PI / 2;
+  assert.ok(!C.inPatch(bus, 55, 0) && C.inPatch(bus, 0, 55));
+});
