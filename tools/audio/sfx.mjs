@@ -39,6 +39,29 @@ const CUES = {
   gulp_big: { prog: { 0: 12, 1: 108, 2: 116 }, len: 0.55, notes: [[0, 57, 0.11, 105], [0.12, 67, 0.14, 110, 1], [0.12, 43, 0.12, 60, 2]],
     bends: [[0, 0, 0], [0.1, -4, 0], [0.12, -6, 1], [0.22, 5, 1]] },
 };
+// Dusk's voice on recorded singers (GM 52 choir "aah", 53 voice "ooh"): the words of sound.js WORDS, three takes each
+// a step apart in pitch, and two single syllables (blip_a, blip_o) that speak() repitches for every syllable of a line.
+// A syllable is [vowel, seconds, start pitch, end pitch] (pitch a multiple of the take's base); 'n'/'m' is a hum.
+const WORDS = {
+  nyam: [['n', 0.035], ['a', 0.13, 1.1, 1.35], ['m', 0.06]], wow: [['u', 0.09, 0.95, 1.05], ['a', 0.26, 1.15, 1.55]],
+  yay: [['i', 0.04, 1.2, 1.25], ['a', 0.12, 1.3, 1.45], ['o', 0.22, 1.55, 1.7]],
+  hehe: [['e', 0.09, 1.2, 1.35], ['e', 0.07, 1.1, 1.25], ['e', 0.13, 1.3, 1.45]],
+  hing: [['i', 0.11, 1.4, 1.3], ['i', 0.36, 1.35, 0.95]], ah: [['a', 0.1, 1.2, 1.65]], umm: [['m', 0.05], ['u', 0.12, 1.0, 1.15], ['m', 0.08]],
+};
+const AAH = new Set(['a', 'e']), st = p => 12 * Math.log2(p);
+function sung(word, base, slow = 1.6) { // the synth's syllables were short for a voice that needs a moment to open: stretched
+  const notes = [], bends = []; let t = 0, k = 0;
+  for (const [v, d, p0 = 1, p1 = p0] of word) {
+    const dur = d * slow, aah = AAH.has(v), ch = (aah ? 0 : 2) + (k++ % 2), n = Math.round(base + st(p0));
+    notes.push([t, n, dur + 0.04, v === 'n' || v === 'm' ? 70 : 118, ch]);
+    bends.push([t, base + st(p0) - n, ch], [t + dur, base + st(p1) - n, ch]);
+    t += dur + 0.01;
+  }
+  return { prog: { 0: 52, 1: 52, 2: 53, 3: 53 }, len: t + 0.3, notes, bends };
+}
+for (const [w, word] of Object.entries(WORDS)) [73, 75, 71].forEach((b, i) => { CUES[`voice_${w}_${i + 1}`] = sung(word, b); });
+CUES.voice_blip_a = { prog: { 0: 52 }, len: 0.35, notes: [[0, 72, 0.12, 118]] };
+CUES.voice_blip_o = { prog: { 0: 53 }, len: 0.35, notes: [[0, 72, 0.12, 118]] };
 const only = process.argv.slice(4);
 
 const vlq = n => { const b = [n & 0x7f]; while ((n >>= 7)) b.unshift((n & 0x7f) | 0x80); return b; };
